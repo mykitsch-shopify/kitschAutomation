@@ -47,10 +47,26 @@ const write = (line: string): void => {
   process.stdout.write(`${line}\n`);
 };
 
+/** Raised when the run has no source to read and refuses to invent one. */
+class NoTranslationSourceError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'NoTranslationSourceError';
+  }
+}
+
 /**
- * Fixture-backed unless a real Admin token is present. Defaulting the other
- * way round would mean a missing credential silently pointed the harness at
- * whatever store the environment happened to name.
+ * The source is chosen explicitly, never guessed.
+ *
+ *   --catalog <file>  → that catalogue snapshot
+ *   credentials set   → the live store
+ *   neither           → refuse
+ *
+ * The refusal is the point. Falling back to fixture data when a real store
+ * was asked about would print "gate: PASS" over a catalogue nobody checked —
+ * the same false all-clear that makes the collector distinguish "fetch
+ * failed" from "value absent". Failing to reach the store is not the same as
+ * the store being clean, and neither is failing to be told which store.
  */
 const resolveCollector = async (catalog: string | undefined): Promise<{
   readonly collector: TranslationCollector;
@@ -60,11 +76,20 @@ const resolveCollector = async (catalog: string | undefined): Promise<{
     return { collector: createFixtureTranslationCollector(catalog), label: `fixture:${catalog}` };
   }
 
+  const domain = process.env.SHOPIFY_SHOP_DOMAIN;
+  const token = process.env.SHOPIFY_ADMIN_TOKEN;
+  if (domain === undefined || domain === '' || token === undefined || token === '') {
+    throw new NoTranslationSourceError(
+      'No translation source given.\n' +
+        '  • against a catalogue snapshot: --catalog fixtures/catalog/catalog-clean.json\n' +
+        '  • against a real store:         set SHOPIFY_SHOP_DOMAIN and SHOPIFY_ADMIN_TOKEN\n' +
+        'This does not quietly fall back to fixture data — a green run over a catalogue ' +
+        'nobody asked about is worse than no run.',
+    );
+  }
+
   const { createShopifyTranslationCollector } = await import('../collectors/shopify-translations.js');
-  return {
-    collector: createShopifyTranslationCollector(),
-    label: `shopify:${process.env.SHOPIFY_SHOP_DOMAIN ?? '<unset>'}`,
-  };
+  return { collector: createShopifyTranslationCollector(), label: `shopify:${domain}` };
 };
 
 const groupCount = (findings: readonly Finding[], pick: (finding: Finding) => string): string => {
@@ -181,4 +206,14 @@ const main = async (): Promise<number> => {
   return 0;
 };
 
-process.exitCode = await main();
+try {
+  process.exitCode = await main();
+} catch (error) {
+  if (error instanceof NoTranslationSourceError) {
+    // A usage error, not a crash. A stack trace here just buries the fix.
+    console.error(error.message);
+    process.exitCode = 2;
+  } else {
+    throw error;
+  }
+}

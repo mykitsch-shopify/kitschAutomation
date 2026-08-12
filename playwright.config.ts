@@ -31,6 +31,10 @@ const usingFixture = baseURL === fixtureURL;
  * does not match the pinned @playwright/test version, and where downloading
  * the matching one is blocked. Set KITSCH_CHROMIUM_PATH to that binary.
  *
+ * Applies to the Chromium-backed projects only. `desktop-edge` is deliberately
+ * excluded: it pins `channel: 'msedge'`, and an executablePath override there
+ * would quietly run Chromium while the report said Edge.
+ *
  * Not a default: silently falling back to whatever browser is lying around
  * would mean the version we report as tested is not the version we tested.
  */
@@ -99,13 +103,13 @@ export default defineConfig({
     },
     {
       name: 'mobile-chrome',
-      use: { ...devices['Pixel 7'] },
+      use: { ...devices['Pixel 7'], ...chromiumLaunch },
     },
 
     // ── Tier 2: desktop — nightly and pre-launch ──────────────────────
     {
       name: 'desktop-chrome',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], ...chromiumLaunch },
     },
     {
       name: 'desktop-safari',

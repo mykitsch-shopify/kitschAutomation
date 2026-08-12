@@ -177,6 +177,8 @@ in `docs/TRACEABILITY.md` rather than being quietly marked green.
 | Modal and popup coverage (§11.2) added | Overlays are hidden in the DOM, so a page-level text scan never saw them — and they are exactly where translation wiring gets missed. |
 | Order confirmation (§15.3) added | Was listed as manual. Now automated, skipping loudly against a real store until a test order exists. |
 | `locale shell` split into four tests; all routes walked | As one compound test, the first failing assertion hid the rest — a missing `hreflang` masked a leaked `{{ amount }}` on the same page. And `@smoke`-only route filtering meant `/pages/about` was never visited. |
+| `npm run verify` fixed and aligned to CI | It crashed: with no `--catalog` the run reached for the Shopify collector and threw on a missing credential, and the quickstart in the README told people to run it. `run-parity` now refuses explicitly (exit 2, usage message) instead of stack-tracing, and refuses to fall back to fixture data — a green gate over a catalogue nobody asked about is the same false all-clear as reporting a failed fetch as a clean locale. |
+| CI gained a clean-fixture render step | The `engine` job asserted the render specs *fail* against a broken store but never that they *pass* against a clean one. A spec broken badly enough to always fail would have satisfied it. Both directions are needed or neither means anything. |
 | `desktop-firefox` project and `playwright.grid.config.ts` added | The plan names Firefox; the CI workflow already referenced a grid config that did not exist, so the real-device job would have failed on a missing file. The grid config throws if `GRID_WS_ENDPOINT` is unset rather than silently reporting emulated runs as hardware coverage. |
 
 ---
@@ -187,6 +189,12 @@ in `docs/TRACEABILITY.md` rather than being quietly marked green.
 npm ci
 npx playwright install chromium
 
+npm run verify          # everything below, in the order CI runs it
+```
+
+Or step by step:
+
+```bash
 npm run typecheck
 npm run test:unit
 

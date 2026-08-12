@@ -44,10 +44,17 @@ jobs:
       # A clean catalogue must produce a passing gate. If this fails, the
       # engine has started reporting defects that are not there, and the team
       # will learn to ignore it within a week.
-      - name: Parity — clean catalogue (no false positives)
-        run: npm run i18n:parity -- --catalog fixtures/catalog/catalog-clean.json --out i18n-report/clean --gate
+      - name: Content parity — clean catalogue (no false positives)
+        run: npm run parity:clean
 
-      # ...and a knowingly broken one must fail, in both layers. This is the
+      # The same claim for the render layer. Without this, a spec broken so
+      # badly that it always fails would still satisfy the detection step
+      # below — which only asks whether the specs fail on a *broken* store.
+      # Both directions are needed or neither means anything.
+      - name: Render parity — clean fixture (no false positives)
+        run: npm run test:i18n
+
+      # ...and a knowingly broken store must fail, in both layers. This is the
       # step that keeps the gate from quietly becoming decorative.
       - name: Detection — planted defects must be caught
         run: npm run test:detection

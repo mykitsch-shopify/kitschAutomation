@@ -21,8 +21,13 @@ Translations test plan in [`docs/TEST-PLAN-TRANSLATIONS.md`](docs/TEST-PLAN-TRAN
 npm ci
 npx playwright install chromium
 
-npm run verify          # typecheck + unit + content parity + render parity
+npm run verify          # the whole gate, exactly as CI runs it
 ```
+
+`verify` mirrors the `engine` job in `.github/workflows/translation-gate.yml`
+step for step, so "green locally, red in CI" has one less way to happen:
+typecheck → unit → content parity on a clean catalogue → render parity on a
+clean fixture → detection against a broken one.
 
 Individually:
 
@@ -30,7 +35,8 @@ Individually:
 |---|---|
 | `npm run typecheck` | `tsc --noEmit`, strict |
 | `npm run test:unit` | Comparator unit tests (`node --test`) |
-| `npm run i18n:parity` | Content-layer parity — every string, every locale, no browser |
+| `npm run i18n:parity` | Content-layer parity — every string, every locale, no browser. Needs `--catalog <file>` or Shopify credentials; it will not guess |
+| `npm run parity:clean` | Content parity against the bundled clean catalogue, gated |
 | `npm run test:i18n` | Render-layer parity — Playwright at 390px |
 | `npm run test:detection` | Negative control: both layers must fail on a broken store |
 | `npm run storefront` | Serve the local storefront fixture on :4173 |
@@ -68,9 +74,14 @@ export SHOPIFY_SHOP_DOMAIN=kitsch-dev.myshopify.com
 export SHOPIFY_ADMIN_TOKEN=...          # scoped read_translations, read-only
 export KITSCH_BASE_URL=https://kitsch-dev.myshopify.com
 
-npm run i18n:parity -- --gate
+npm run i18n:parity -- --gate     # no --catalog: reads the live store
 npm run test:i18n
 ```
+
+With neither `--catalog` nor credentials, the run exits 2 with a usage error
+rather than falling back to fixture data. A green "gate: PASS" over a
+catalogue nobody asked about is the same false all-clear as reporting a failed
+fetch as a clean locale.
 
 Production is read-only, always, including "just to reproduce". Nothing in
 this repo writes to a live store; seeding belongs on the dev store.

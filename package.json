@@ -16,7 +16,8 @@
     "test:mobile-web": "playwright test --project=mobile-chrome",
     "test:detection": "tsx i18n/verify-detection.ts",
     "test:app": "maestro test mobile/maestro/",
-    "verify": "npm run typecheck && npm run test:unit && npm run i18n:parity -- --gate && npm run test:i18n"
+    "parity:clean": "tsx i18n/run-parity.ts --catalog fixtures/catalog/catalog-clean.json --out i18n-report/clean --gate",
+    "verify": "npm run typecheck && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:detection"
   },
   "devDependencies": {
     "@playwright/test": "1.62.0",
