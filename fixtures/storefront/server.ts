@@ -9,7 +9,7 @@ import {
   PRICE,
 } from '../catalog/content.js';
 import type { Locale } from '../catalog/content.js';
-import { SEEDED_DEFECTS } from '../catalog/defects.js';
+import { FETCH_FAILED, SEEDED_DEFECTS } from '../catalog/defects.js';
 
 /**
  * A seven-locale storefront fixture.
@@ -90,7 +90,7 @@ const renderDefects = profile === 'seeded' ? SEEDED_RENDER_DEFECTS : NO_RENDER_D
 const contentOverrides = new Map<string, string | null>();
 if (profile === 'seeded') {
   for (const defect of SEEDED_DEFECTS) {
-    if (defect.value !== 'FETCH_FAILED') {
+    if (defect.value !== FETCH_FAILED) {
       contentOverrides.set(`${defect.locale}:${defect.key}`, defect.value);
     }
   }

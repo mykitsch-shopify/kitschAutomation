@@ -184,7 +184,7 @@ const parseScript = (value: unknown, at: string): RegExp | undefined => {
   try {
     return new RegExp(source, 'u');
   } catch {
-    throw new Error(`i18n.yaml: "${at}" is not a valid Unicode script name: ${String(value)}`);
+    throw new Error(`i18n.yaml: "${at}" is not a valid Unicode script name: ${JSON.stringify(value)}`);
   }
 };
 

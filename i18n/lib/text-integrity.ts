@@ -56,8 +56,8 @@ const MOJIBAKE_MULTIBYTE = new RegExp(`[\\u00E0-\\u00EF][${TRAIL}][${TRAIL}]`, '
 
 /**
  * The same two-byte damage after something has normalised the trailing
- * character away — "QualitÃ superiore" is what "QualitÃ superiore"
- * becomes once a CMS collapses the non-breaking space.
+ * character away. A stray "Ã" followed by a plain space is what the same
+ * damage becomes once a CMS collapses the non-breaking space that followed it.
  *
  * Restricted to Ã/Â sitting at a word boundary. That is not a shape any of
  * the seven declared locales produces: it excludes Portuguese "SÃO", where

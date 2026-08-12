@@ -28,14 +28,17 @@ npm run verify          # the whole gate, exactly as CI runs it
 
 `verify` mirrors the `engine` job in `.github/workflows/translation-gate.yml`
 step for step, so "green locally, red in CI" has one less way to happen:
-typecheck → unit → content parity on a clean catalogue → render parity on a
-clean fixture → detection against a broken one.
+offline review (typecheck + lint + spec standards) → unit → content parity on
+a clean catalogue → render parity on a clean fixture → detection against a
+broken one.
 
 Individually:
 
 | Command | What it does |
 |---|---|
 | `npm run typecheck` | `tsc --noEmit`, strict |
+| `npm run lint` | ESLint: TypeScript, Playwright spec standards, Kitsch rules |
+| `npm run review` | Offline reviewer — runs the static gates and triages findings through bugbot |
 | `npm run test:unit` | Comparator unit tests (`node --test`) |
 | `npm run i18n:parity` | Content-layer parity — every string, every locale, no browser. Needs `--catalog <file>` or Shopify credentials; it will not guess |
 | `npm run parity:clean` | Content parity against the bundled clean catalogue, gated |
@@ -100,6 +103,33 @@ this repo writes to a live store; seeding belongs on the dev store.
 | `KITSCH_CHROMIUM_PATH` | Escape hatch for images with a pre-baked Chromium that does not match the pinned Playwright version |
 | `KITSCH_ORDER_STATUS_URL` | Path to a test order's status page, so the §15.3 order-confirmation specs can run against a real store |
 | `GRID_WS_ENDPOINT` | Cloud device grid, for `playwright.grid.config.ts`. That config refuses to load without it rather than silently running local browsers |
+
+---
+
+## The offline reviewer
+
+`npm run review` runs the static gates — TypeScript, ESLint, the Playwright
+spec standards and four Kitsch rules — and routes every finding through
+`tools/review/bugbot.ts` into the same four severities the parity engine uses,
+so a lint violation and a translation gap land on one scorecard rather than in
+two inboxes.
+
+Offline in the literal sense: no network, no model, no service. That is what
+makes it safe to gate on.
+
+The four Kitsch rules encode standing agreements that were otherwise enforced
+by memory:
+
+| Rule | Why |
+|---|---|
+| `kitsch/no-prod-target` | The harness never points at production, including "just to reproduce" |
+| `kitsch/no-hardcoded-price` | A stale expected price yields a green test asserting the wrong number |
+| `kitsch/no-write-operation` | Collectors are read-only; GraphQL reads are POSTs, so only the `mutation` keyword is honest evidence |
+| `kitsch/require-spec-rationale` | Every spec must state what it catches that an API check cannot |
+
+Each rule has a RuleTester test giving it code it must reject and code it must
+accept, for the same reason the comparators do: a rule that never fires leaves
+the gate green while it has stopped looking.
 
 ---
 

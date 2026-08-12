@@ -11,15 +11,22 @@ import type { Locale } from './content.js';
  * comparator regresses into silence, that run goes red.
  *
  * `value` semantics match the collector:
- *   string          — the (damaged) translation the store would return
- *   null            — no translation registered
- *   'FETCH_FAILED'  — collector could not reach the resource
+ *   string        — the (damaged) translation the store would return
+ *   null          — no translation registered
+ *   FETCH_FAILED  — collector could not reach the resource
+ *
+ * FETCH_FAILED is a symbol rather than the string 'FETCH_FAILED' because a
+ * string literal in a `string | null | 'FETCH_FAILED'` union is swallowed by
+ * `string`, so the compiler would happily accept a typo'd sentinel as an
+ * ordinary translation value.
  */
+
+export const FETCH_FAILED = Symbol('fetch-failed');
 
 export type SeededDefect = {
   readonly locale: Locale;
   readonly key: string;
-  readonly value: string | null | 'FETCH_FAILED';
+  readonly value: string | null | typeof FETCH_FAILED;
   readonly expect: FindingKind;
   readonly planRef: string;
   readonly note: string;
@@ -190,7 +197,7 @@ export const SEEDED_DEFECTS: readonly SeededDefect[] = [
   {
     locale: 'fr',
     key: 'footer.link_faq',
-    value: 'FETCH_FAILED',
+    value: FETCH_FAILED,
     expect: 'collector_error',
     planRef: '§3',
     note: 'Collector outage. Must be reported as harness debt, never as a clean or failing locale.',

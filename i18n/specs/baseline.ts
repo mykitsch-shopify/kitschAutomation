@@ -56,10 +56,6 @@ const localeStrings = (locale: string): LocaleStrings => {
 export const englishSentinels = (locale: string): readonly Sentinel[] =>
   buildSentinels(localeStrings('en'), localeStrings(locale));
 
-/** The contracted translation for a key, used for meta-tag assertions. */
-export const expectedValue = (locale: string, key: string): string | undefined =>
-  localeStrings(locale)[key] ?? undefined;
-
 /** Literal fragments of a contracted string that must appear on the page. */
 export const renderedFragments = (locale: string, key: string): readonly string[] =>
   fragmentsOf(localeStrings(locale)[key]);

@@ -414,7 +414,8 @@ const auditConsistency = (
       continue;
     }
 
-    const renderings = groups.get(sourceNorm) ?? new Map();
+    const renderings =
+      groups.get(sourceNorm) ?? new Map<string, { key: string; value: string }>();
     const targetNorm = normalize(target.value);
     if (!renderings.has(targetNorm)) {
       renderings.set(targetNorm, { key: target.key, value: collapse(target.value) });

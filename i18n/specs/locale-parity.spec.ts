@@ -4,7 +4,7 @@ import { resolveLaunchHandle } from '@kitsch/fixtures/launch-set.js';
 
 import { loadI18nConfig, targetLocales } from '../lib/config.js';
 import { describeDefects, findEncodingDefects, matchesScript } from '../lib/text-integrity.js';
-import { englishSentinels, expectedValue, renderedFragments, showsEnglish } from './baseline.js';
+import { englishSentinels, renderedFragments, showsEnglish } from './baseline.js';
 
 /**
  * Locale parity — render layer.
@@ -51,6 +51,42 @@ const tags = (route: { readonly tags: readonly string[] }): string =>
  * masks a leaked `{{ amount }}` on the same page and the report understates
  * how much is wrong.
  */
+/**
+ * Logic that needs branching lives here rather than inside a test body.
+ *
+ * Two reasons, and the second is the real one: `playwright/no-conditional-in-test`
+ * bans it, and the rule is right — a branch inside a test is one step from an
+ * assertion that only sometimes runs, which is the failure mode this whole
+ * suite is built to avoid.
+ */
+
+const TEMPLATE_MARKERS = [
+  // Shopify renders this literal when a key is missing at request time.
+  ['translation missing', 'a key is unresolved at request time'],
+  // Unresolved interpolation reaching the customer.
+  ['{{', 'a Liquid variable was never bound'],
+] as const;
+
+/** Markers that reached the customer, each quoted with its surrounding text. */
+const leakedMarkers = (text: string): readonly string[] =>
+  TEMPLATE_MARKERS.flatMap(([marker, meaning]) => {
+    const index = text.indexOf(marker);
+    return index < 0
+      ? []
+      : [`"${marker}" (${meaning}) near: ${text.slice(Math.max(0, index - 30), index + 50).replace(/\n/gu, ' ')}`];
+  });
+
+/** Contracted fragments for `keys` that are absent from `text`. */
+const missingCopy = (locale: string, keys: readonly string[], text: string): readonly string[] =>
+  keys.flatMap((key) => {
+    const absent = renderedFragments(locale, key).filter((fragment) => !text.includes(fragment));
+    return absent.length === 0 ? [] : [`${key}: expected "${absent.join('", "')}"`];
+  });
+
+/** How many of `keys` the baseline actually contracts a value for. */
+const contractedCount = (locale: string, keys: readonly string[]): number =>
+  keys.filter((key) => renderedFragments(locale, key).length > 0).length;
+
 test.describe('locale shell', () => {
   for (const locale of config.locales) {
     for (const route of browsableRoutes) {
@@ -76,15 +112,18 @@ test.describe('locale shell', () => {
 
         // Every declared market needs an alternate, or the localized page is
         // invisible to search in that market — a discovery defect, not cosmetic.
-        const missing: string[] = [];
-        for (const alternate of config.locales) {
-          const count = await page
-            .locator(`link[rel="alternate"][hreflang^="${alternate.code}"]`)
-            .count();
-          if (count !== 1) {
-            missing.push(`${alternate.code} (found ${String(count)})`);
-          }
-        }
+        const counts = await Promise.all(
+          config.locales.map(async (alternate) => ({
+            code: alternate.code,
+            count: await page
+              .locator(`link[rel="alternate"][hreflang^="${alternate.code}"]`)
+              .count(),
+          })),
+        );
+        const missing = counts
+          .filter((entry) => entry.count !== 1)
+          .map((entry) => `${entry.code} (found ${String(entry.count)})`);
+
         expect(missing, `hreflang alternates missing on the ${locale.code} ${route.name}`).toEqual(
           [],
         );
@@ -99,21 +138,8 @@ test.describe('locale shell', () => {
         // Asserted over extracted text rather than with `not.toContainText`,
         // because that reports "expect(locator).not.toContainText(expected)
         // failed" and leaves triage to go find which marker leaked where.
-        const markers: string[] = [];
-        for (const [marker, meaning] of [
-          // Shopify renders this literal when a key is missing at request time.
-          ['translation missing', 'a key is unresolved at request time'],
-          // Unresolved interpolation reaching the customer.
-          ['{{', 'a Liquid variable was never bound'],
-        ] as const) {
-          const index = text.indexOf(marker);
-          if (index >= 0) {
-            markers.push(`"${marker}" (${meaning}) near: ${text.slice(Math.max(0, index - 30), index + 50).replace(/\n/gu, ' ')}`);
-          }
-        }
-
         expect(
-          markers,
+          leakedMarkers(text),
           `template markers reached the customer on the ${locale.code} ${route.name}`,
         ).toEqual([]);
       });
@@ -275,32 +301,16 @@ test.describe('localized content renders', () => {
         await page.goto(localizedPath(locale.code, surface.route));
         const text = await page.getByTestId(surface.container).innerText();
 
-        const missing: string[] = [];
-        let checked = 0;
-        for (const key of surface.keys) {
-          const fragments = renderedFragments(locale.code, key);
-          if (fragments.length === 0) {
-            // No contracted value for this locale — the content layer owns
-            // that finding; asserting it again here would double-report.
-            continue;
-          }
-          checked += 1;
-          const absent = fragments.filter((fragment) => !text.includes(fragment));
-          if (absent.length > 0) {
-            missing.push(`${key}: expected "${absent.join('", "')}"`);
-          }
-        }
-
         // A surface where every key resolved to nothing would pass this test
         // without examining the page at all. That is the failure mode worth
         // guarding: a silent no-op looks exactly like a clean result.
         expect(
-          checked,
+          contractedCount(locale.code, surface.keys),
           `no contracted ${locale.code} copy was found for the ${surface.name} — this test would have passed without asserting anything`,
         ).toBeGreaterThan(0);
 
         expect(
-          missing,
+          missingCopy(locale.code, surface.keys, text),
           `${surface.name} is missing its ${locale.code} copy — the strings are contracted but not on the page`,
         ).toEqual([]);
       });
@@ -498,17 +508,8 @@ test.describe('dynamic content', () => {
 
         // Positive first: the overlay must show this locale's copy, not just
         // avoid showing English.
-        const missing: string[] = [];
-        for (const key of overlay.keys) {
-          const absent = renderedFragments(locale.code, key).filter(
-            (fragment) => !text.includes(fragment),
-          );
-          if (absent.length > 0) {
-            missing.push(`${key}: expected "${absent.join('", "')}"`);
-          }
-        }
         expect(
-          missing,
+          missingCopy(locale.code, overlay.keys, text),
           `${overlay.name} is missing its ${locale.code} copy`,
         ).toEqual([]);
 
@@ -560,25 +561,29 @@ test.describe('meta translation @i18n @launch', () => {
         expect(title.trim(), 'meta title must not be empty').not.toBe('');
         expect(description.trim(), 'meta description must not be empty').not.toBe('');
 
-        for (const [label, value, key] of [
-          ['title', title, route.titleKey],
-          ['description', description, route.descriptionKey],
-        ] as const) {
-          const english = expectedValue('en', key);
-          const expectedLocalized = expectedValue(locale.code, key);
+        // Asserted positively — the meta content must *be* this locale's
+        // copy. The earlier form ("must not equal the English string") only
+        // ran when the baseline happened to contract something different,
+        // so a missing baseline entry silently skipped the check entirely.
+        expect(
+          contractedCount(locale.code, [route.titleKey, route.descriptionKey]),
+          `no contracted ${locale.code} meta copy — this test would assert nothing`,
+        ).toBe(2);
 
-          if (english !== undefined && expectedLocalized !== undefined && english !== expectedLocalized) {
-            expect(
-              value.trim(),
-              `meta ${label} is still the English string in ${locale.code} — invisible on the page, visible in search results`,
-            ).not.toBe(english.trim());
-          }
+        expect(
+          missingCopy(locale.code, [route.titleKey], title),
+          `meta title is not the ${locale.code} copy — invisible on the page, visible in search results`,
+        ).toEqual([]);
 
-          expect(
-            describeDefects(findEncodingDefects(value)),
-            `meta ${label} carries encoding damage in ${locale.code}`,
-          ).toBe('');
-        }
+        expect(
+          missingCopy(locale.code, [route.descriptionKey], description),
+          `meta description is not the ${locale.code} copy`,
+        ).toEqual([]);
+
+        expect(
+          describeDefects(findEncodingDefects(`${title} ${description}`)),
+          `meta content carries encoding damage in ${locale.code}`,
+        ).toBe('');
       });
     }
   }
@@ -617,15 +622,12 @@ test.describe('checkout translation @i18n @launch', () => {
       await expect(errors.first()).toBeVisible();
 
       const message = (await errors.first().innerText()).trim();
-      const english = expectedValue('en', 'checkout.error_required');
-      const expectedLocalized = expectedValue(locale.code, 'checkout.error_required');
 
-      if (english !== undefined && expectedLocalized !== undefined && english !== expectedLocalized) {
-        expect(
-          message,
-          `validation error is still English in ${locale.code} — submitted an incomplete form and got "${message}"`,
-        ).not.toBe(english);
-      }
+      expect(
+        missingCopy(locale.code, ['checkout.error_required'], message),
+        `validation error is not the ${locale.code} copy — submitted an incomplete form and got "${message}"`,
+      ).toEqual([]);
+
       expect(
         describeDefects(findEncodingDefects(message)),
         `validation error carries encoding damage in ${locale.code}`,

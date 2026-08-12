@@ -38,7 +38,13 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
-      - run: npm run typecheck
+      # Offline review: TypeScript, ESLint, the Playwright spec standards and
+      # the four Kitsch rules, triaged through bugbot into the same four
+      # severities everything else here reports. No network, no model — the
+      # review that always runs, the same way, on every machine.
+      - name: Offline review
+        run: npm run review -- --gate
+
       - run: npm run test:unit
 
       # A clean catalogue must produce a passing gate. If this fails, the
@@ -63,7 +69,9 @@ jobs:
         if: '!cancelled()'
         with:
           name: i18n-engine-report
-          path: i18n-report/
+          path: |
+            i18n-report/
+            review-report/
           retention-days: 14
 
   parity:

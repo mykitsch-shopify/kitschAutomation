@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import type { CatalogFile } from '../../collectors/fixture-translations.js';
 import { CONTENT, KEYS, LOCALES } from './content.js';
 import type { Locale, LocaleContent } from './content.js';
-import { SEEDED_DEFECTS } from './defects.js';
+import { FETCH_FAILED, SEEDED_DEFECTS } from './defects.js';
 
 /**
  * Emits the two JSON catalogues the content-layer run reads:
@@ -48,7 +48,7 @@ export const buildCatalog = (profile: Profile): CatalogFile => {
       if (!(defect.key in target)) {
         throw new Error(`defects.ts seeds key "${defect.key}", which is not in KEYS`);
       }
-      if (defect.value === 'FETCH_FAILED') {
+      if (defect.value === FETCH_FAILED) {
         (fetchFailed[defect.locale] ??= []).push(defect.key);
         continue;
       }

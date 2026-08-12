@@ -5,3 +5,4 @@ blob-report/
 i18n-report/
 .env
 *.log
+review-report/
