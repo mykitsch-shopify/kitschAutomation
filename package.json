@@ -1,0 +1,28 @@
+{
+  "name": "kitsch-automation",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Kitsch QA automation suite — locale parity (content + render), web specs, mobile smoke",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --import tsx --test \"i18n/lib/*.test.ts\"",
+    "i18n:parity": "tsx i18n/run-parity.ts",
+    "storefront": "tsx fixtures/storefront/server.ts",
+    "test:i18n": "playwright test --project=i18n-mobile",
+    "test:mobile-web": "playwright test --project=mobile-chrome",
+    "test:detection": "tsx i18n/verify-detection.ts",
+    "test:app": "maestro test mobile/maestro/",
+    "verify": "npm run typecheck && npm run test:unit && npm run i18n:parity -- --gate && npm run test:i18n"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.23.12",
+    "typescript": "~6.0.3",
+    "yaml": "^2.9.0"
+  }
+}

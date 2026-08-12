@@ -1,0 +1,103 @@
+name: translation-gate
+
+# Replaces the recurring manual translation pass for all seven locales
+# (en/fr/de/it/es/ko/ja).
+#
+# Nightly run is informational and trend-tracked. The launch invocation is
+# blocking: a localized market surface with missing strings at launch is a
+# discovery defect that reaches customers.
+on:
+  pull_request:
+    paths:
+      - 'i18n/**'
+      - 'collectors/**'
+      - 'config/i18n.yaml'
+      - 'fixtures/**'
+  schedule:
+    - cron: '30 9 * * *'
+  workflow_dispatch:
+    inputs:
+      launch_ref:
+        description: 'Launch reference — makes the run blocking'
+        required: false
+        type: string
+
+concurrency:
+  group: translation-gate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Fast, offline, no credentials. Runs on every PR that touches the engine
+  # and proves the comparators still fire — see the detection step below.
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run typecheck
+      - run: npm run test:unit
+
+      # A clean catalogue must produce a passing gate. If this fails, the
+      # engine has started reporting defects that are not there, and the team
+      # will learn to ignore it within a week.
+      - name: Parity — clean catalogue (no false positives)
+        run: npm run i18n:parity -- --catalog fixtures/catalog/catalog-clean.json --out i18n-report/clean --gate
+
+      # ...and a knowingly broken one must fail, in both layers. This is the
+      # step that keeps the gate from quietly becoming decorative.
+      - name: Detection — planted defects must be caught
+        run: npm run test:detection
+
+      - uses: actions/upload-artifact@v4
+        if: '!cancelled()'
+        with:
+          name: i18n-engine-report
+          path: i18n-report/
+          retention-days: 14
+
+  parity:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+
+      # Content layer: every translatable string, no browser. Read-only Admin
+      # GraphQL — scoped token, and the collector paginates rather than
+      # sampling the first page and calling the catalogue clean.
+      - name: Content-layer parity
+        run: npm run i18n:parity -- ${{ inputs.launch_ref != '' && '--gate' || '' }}
+        env:
+          SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_READONLY_TOKEN }}
+          SHOPIFY_SHOP_DOMAIN: ${{ vars.SHOPIFY_SHOP_DOMAIN }}
+
+      # Render layer: formatting, hreflang, meta tags, encoding, overflow.
+      # Reads the English baseline the content layer just pulled, so the
+      # "no untranslated strings" scan cannot drift from the live catalogue.
+      - name: Render-layer parity
+        run: npx playwright test --project=i18n-mobile
+        env:
+          KITSCH_BASE_URL: ${{ vars.KITSCH_DEV_STORE_URL }}
+          KITSCH_BASELINE: i18n-report/parity-baseline.json
+
+      - uses: actions/upload-artifact@v4
+        if: '!cancelled()'
+        with:
+          name: i18n-report
+          path: |
+            i18n-report/
+            playwright-report/
+          retention-days: 30
+
+      # Findings route through the existing escalation path so severity
+      # counts land on the scorecard rather than in a second inbox.
+      - name: Escalate
+        if: failure()
+        run: python -m reporting.escalate --source i18n --report i18n-report/parity.json

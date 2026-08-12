@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    "types": ["node"],
+
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
+
+    // `baseUrl` was removed in TypeScript 6 — paths resolve relative to this
+    // file, which is what we want anyway. See FRAMEWORK-AND-ROADMAP.md §14.
+    "paths": {
+      "@kitsch/config": ["./config/index.ts"],
+      "@kitsch/core/*": ["./core/*"],
+      "@kitsch/collectors/*": ["./collectors/*"],
+      "@kitsch/fixtures/*": ["./fixtures/*"]
+    }
+  },
+  "include": ["i18n/**/*.ts", "web/**/*.ts", "core/**/*.ts", "collectors/**/*.ts", "config/**/*.ts", "fixtures/**/*.ts", "playwright.config.ts"],
+  "exclude": ["node_modules", "test-results", "playwright-report"]
+}

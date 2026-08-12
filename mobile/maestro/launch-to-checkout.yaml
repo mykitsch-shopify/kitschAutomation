@@ -1,0 +1,63 @@
+# Phase 4 — Fuego app smoke flow.
+#
+# Fuego generates a React Native app over the same Shopify Storefront data the
+# web reads, so independent data assertions here are redundant with the
+# reconciliation engine. Scope is a handoff-and-render smoke path, not a
+# second regression suite.
+#
+# Runs on a cloud device farm, not a local device. Real hardware catches what
+# emulators miss, and it keeps an iOS machine out of the critical path.
+#
+#   maestro test mobile/maestro/launch-to-checkout.yaml
+#
+# Requires testIDs on the Fuego custom React Native blocks. Where a block is
+# no-code generated and exposes no testID, request one from Fuego rather than
+# matching on visible copy — marketing changes copy without telling QA.
+
+appId: ${MAESTRO_APP_ID}
+env:
+  LAUNCH_HANDLE: ${KITSCH_LAUNCH_HANDLE}
+---
+- launchApp:
+    clearState: true
+
+# 1. Cold start renders the home screen
+- assertVisible:
+    id: 'home-hero'
+
+# 2. Browse to a collection
+- tapOn:
+    id: 'tab-shop'
+- assertVisible:
+    id: 'collection-grid'
+
+# 3. Search finds the launch product
+- tapOn:
+    id: 'search-entry'
+- inputText: '${LAUNCH_HANDLE}'
+- assertVisible:
+    id: 'search-result-card'
+
+# 4. PDP renders a formatted price. Format only — whether the amount matches
+#    NetSuite is the diff engine's claim, and the app is not a separate
+#    reconciliation node unless Fuego caches pricing in its own layer.
+- tapOn:
+    id: 'search-result-card'
+- assertVisible:
+    id: 'pdp-price'
+
+# 5. Add to cart, then confirm the checkout handoff. This is the one thing
+#    only the app can tell us: whether the native cart reaches Shopify
+#    checkout with the line item intact.
+- tapOn:
+    id: 'add-to-cart'
+- assertVisible:
+    id: 'cart-line-item'
+- tapOn:
+    id: 'checkout-button'
+- assertVisible:
+    id: 'checkout-webview'
+
+# 6. Stop at the checkout boundary. No test writes an order against
+#    production, and the sandbox store is where payment paths are exercised.
+- stopApp

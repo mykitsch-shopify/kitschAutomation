@@ -1,0 +1,171 @@
+# Locale parity contract — mykitsch.com
+#
+# This file is the single declaration of what "translated correctly" means.
+# The parity engine reads it; nothing in the engine hardcodes a locale, a
+# route, a severity or a threshold. Adding an eighth language is an edit here,
+# not a code change.
+#
+# Scope note: the Aug-11 framework proposal scoped four locales (en/fr/de/it)
+# and explicitly deferred Korean and Japanese. The Translations test plan
+# supersedes that decision and requires all seven. The engine never assumed
+# four, so this is a config edit — see docs/TEST-PLAN-TRANSLATIONS.md.
+
+source_locale: en
+
+locales:
+  en:
+    market: US
+    currency: USD
+    price_pattern: '^\$\d{1,3}(,\d{3})*\.\d{2}$'
+  fr:
+    market: FR
+    currency: EUR
+    # French uses a group separator that may be a plain, non-breaking, or
+    # narrow non-breaking space. Accepting only U+0020 fails on real Shopify
+    # output, which emits U+202F.
+    price_pattern: '^\d{1,3}([\s  ]\d{3})*,\d{2}[\s  ]?€$'
+    expect_diacritics: true
+    diacritics: ['é', 'è', 'ê', 'à', 'ç', 'ù', 'â', 'î', 'ô', 'œ']
+  de:
+    market: DE
+    currency: EUR
+    price_pattern: '^\d{1,3}(\.\d{3})*,\d{2}[\s  ]?€$'
+    expect_diacritics: true
+    diacritics: ['ü', 'ö', 'ä', 'ß', 'Ü', 'Ö', 'Ä']
+  it:
+    market: IT
+    currency: EUR
+    price_pattern: '^\d{1,3}(\.\d{3})*,\d{2}[\s  ]?€$'
+    expect_diacritics: true
+    diacritics: ['à', 'è', 'é', 'ì', 'ò', 'ù']
+  es:
+    market: ES
+    currency: EUR
+    price_pattern: '^\d{1,3}(\.\d{3})*,\d{2}[\s  ]?€$'
+    expect_diacritics: true
+    diacritics: ['á', 'é', 'í', 'ó', 'ú', 'ñ', '¿', '¡']
+  ko:
+    market: KR
+    currency: KRW
+    # KRW has no minor unit — a decimal here is itself a formatting defect.
+    price_pattern: '^₩\d{1,3}(,\d{3})*$'
+    # A Korean surface with no Hangul in it has not been translated, whatever
+    # the translation table claims.
+    expect_script: Hangul
+  ja:
+    market: JP
+    currency: JPY
+    price_pattern: '^¥\d{1,3}(,\d{3})*$'
+    # Any of the three Japanese scripts satisfies this; requiring all three
+    # per string would fail on legitimately katakana-only product names.
+    expect_script: Hiragana|Katakana|Han
+
+# Routes for the render layer. Keep this list short — the content layer
+# already checks every string exhaustively without a browser.
+routes:
+  - { path: '/', name: home, tags: ['@smoke'] }
+  - { path: '/collections/hair-tools', name: collection, tags: ['@smoke'] }
+  - { path: '/products/{launch_handle}', name: pdp, tags: ['@smoke', '@launch'] }
+  - { path: '/cart', name: cart, tags: ['@smoke'] }
+  - { path: '/checkout', name: checkout, tags: ['@smoke', '@launch'] }
+  - { path: '/pages/about', name: content_page, tags: [] }
+
+# Resource types pulled for the content layer, via Shopify Admin GraphQL
+# translatableResources (read-only) and Storefront @inContext.
+resources:
+  - PRODUCT
+  - PRODUCT_OPTION
+  - PRODUCT_OPTION_VALUE
+  - COLLECTION
+  - ONLINE_STORE_THEME_LOCALE_CONTENT
+  - ONLINE_STORE_MENU
+  - SHOP_POLICY
+  - METAFIELD
+  - EMAIL_TEMPLATE
+  - ONLINE_STORE_PAGE
+
+# Terms that must stay identical across locales. A string equal to the
+# English source is only a finding if it is NOT covered here.
+do_not_translate:
+  - Kitsch
+  - Satin
+  - Eco-Friendly
+  - Pro
+  - XL
+  - TikTok
+  - Ulta
+  - Target
+
+# Strings a locale is allowed to leave in English (legal, regulatory, or
+# untranslatable). Each entry needs a reason — an unexplained exemption is
+# how coverage quietly erodes.
+exemptions:
+  - key: 'shop_policy.terms_of_service'
+    locales: [fr, de, it, es, ko, ja]
+    reason: 'Legal copy pending counsel review — tracked in Asana QA-412'
+
+  # Cognates: the correct translation is the English word. These are per-key
+  # and per-locale rather than glossary entries, because the same word is a
+  # real defect elsewhere — "Shop" is right in German and wrong in French,
+  # where it should be "Boutique".
+  - key: 'nav.collections'
+    locales: [fr]
+    reason: 'Cognate — "Collections" is the correct French term. Confirmed against the FR nav.'
+  - key: 'footer.heading_shop'
+    locales: [de]
+    reason: 'Cognate — "Shop" is standard German retail usage.'
+  - key: 'nav.account'
+    locales: [it]
+    reason: 'Cognate — Italian storefronts use "Account" rather than "Conto".'
+  - key: 'checkout.contact_email'
+    locales: [it]
+    reason: 'Cognate — "Email" is the standard Italian checkout label.'
+  - key: 'cart.subtotal'
+    locales: [es]
+    reason: 'Cognate — "Subtotal" is identical in Spanish.'
+
+# Severity is declared, not compiled in. The Translations test plan grades an
+# untranslated string in a non-English mode as High, where the Aug-11
+# framework graded it minor-by-volume; that disagreement is settled here in
+# one place rather than by forking the engine.
+#
+#   test-plan High   -> major     test-plan Medium -> minor
+severities:
+  missing_translation: major
+  empty_translation: major
+  placeholder_drift: major
+  untranslated_candidate: major
+  encoding_error: major
+  script_missing: major
+  protected_term_translated: minor
+  length_overflow_risk: minor
+  diacritic_absent: minor
+  meta_untranslated: minor
+
+thresholds:
+  # German runs long. Anything past this against the English source is
+  # flagged for a visual check, not failed outright.
+  length_ratio_warn: 1.45
+  # …but only for strings long enough for the ratio to mean anything. A
+  # three-character nav label routinely triples in translation and still fits;
+  # applying the ratio to those produced 62 findings against a clean
+  # catalogue, which is how a check teaches people to ignore it.
+  length_ratio_min_source_chars: 20
+  # Horizontal overflow tolerance in CSS px at 390px viewport width.
+  overflow_px: 2
+  # Content-layer gate. Exceeding either count fails the run.
+  #
+  # `max_minor` is set against a measured baseline, not picked: a clean
+  # catalogue currently produces 7 length-ratio flags, all of them French and
+  # Spanish expansion on headings and product titles (1.5–1.8x). Those are
+  # advisory by design — the render layer's 390px overflow spec is what
+  # confirms or clears them — so the budget has to sit above the known-good
+  # floor or the gate fails on a clean store and gets switched off.
+  max_major: 0
+  max_minor: 10
+
+placeholder_syntaxes:
+  - '\{\{\s*[\w.]+\s*\}\}'   # Liquid / i18n interpolation
+  - '\{\s*[\w.]+\s*\}'       # ICU-style
+  - '%\{[\w.]+\}'            # Ruby-style
+  - '%[sd]'                  # printf-style

@@ -1,0 +1,7 @@
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+i18n-report/
+.env
+*.log
