@@ -53,6 +53,12 @@ type RenderDefects = {
    * which is invisible until something opens the modal.
    */
   readonly untranslatedModal: Locale | undefined;
+  /**
+   * Locale whose mobile nav stays English behind the hamburger. The desktop
+   * nav on the same page is translated, so only a spec that opens the menu
+   * sees it — TRM-001.
+   */
+  readonly untranslatedMobileNav: Locale | undefined;
 };
 
 const NO_RENDER_DEFECTS: RenderDefects = {
@@ -63,6 +69,7 @@ const NO_RENDER_DEFECTS: RenderDefects = {
   translationMissingMarker: undefined,
   unresolvedToken: undefined,
   untranslatedModal: undefined,
+  untranslatedMobileNav: undefined,
 };
 
 const SEEDED_RENDER_DEFECTS: RenderDefects = {
@@ -73,6 +80,7 @@ const SEEDED_RENDER_DEFECTS: RenderDefects = {
   translationMissingMarker: 'es',
   unresolvedToken: 'fr',
   untranslatedModal: 'it',
+  untranslatedMobileNav: 'ko',
 };
 
 const profile: Profile = process.env.KITSCH_FIXTURE_PROFILE === 'seeded' ? 'seeded' : 'clean';
@@ -228,6 +236,27 @@ ${SUPPLEMENTAL_KEYS.map(
     )}</p>
     <button data-testid="newsletter-open" type="button">${escape(t(locale, 'footer.newsletter_cta'))}</button>
     <button data-testid="language-open" type="button">${escape(t(locale, 'modal.language_heading'))}</button>
+    <button data-testid="mobile-nav-toggle" type="button" aria-expanded="false">${escape(
+      t(locale, 'nav.search'),
+    )}</button>
+    <nav data-testid="mobile-nav" aria-label="Mobile" hidden>
+      <ul>
+${NAV_KEYS.map(
+  (key) =>
+    `        <li><a data-testid="mobile-nav-link" href="${localePrefix(locale)}/collections/hair-tools">${escape(
+      t(renderDefects.untranslatedMobileNav === locale ? 'en' : locale, key),
+    )}</a></li>`,
+).join('\n')}
+      </ul>
+      <div data-testid="mega-menu">
+${SUPPLEMENTAL_KEYS.map(
+  (key) =>
+    `        <a data-testid="mega-menu-link" href="${localePrefix(locale)}/pages/about">${escape(
+      t(renderDefects.untranslatedMobileNav === locale ? 'en' : locale, key),
+    )}</a>`,
+).join('\n')}
+      </div>
+    </nav>
   </header>`;
 
 /**
@@ -250,9 +279,11 @@ const overlays = (locale: Locale): string => `
     for (const [opener, panel] of [
       ['newsletter-open', 'newsletter-modal'],
       ['language-open', 'language-popup'],
+      ['mobile-nav-toggle', 'mobile-nav'],
     ]) {
-      document.querySelector('[data-testid="' + opener + '"]').addEventListener('click', () => {
+      document.querySelector('[data-testid="' + opener + '"]').addEventListener('click', (event) => {
         document.querySelector('[data-testid="' + panel + '"]').hidden = false;
+        event.currentTarget.setAttribute('aria-expanded', 'true');
       });
     }
   </script>`;

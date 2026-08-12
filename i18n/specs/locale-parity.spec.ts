@@ -4,7 +4,7 @@ import { resolveLaunchHandle } from '@kitsch/fixtures/launch-set.js';
 
 import { loadI18nConfig, targetLocales } from '../lib/config.js';
 import { describeDefects, findEncodingDefects, matchesScript } from '../lib/text-integrity.js';
-import { englishSentinels, expectedValue, showsEnglish } from './baseline.js';
+import { englishSentinels, expectedValue, renderedFragments, showsEnglish } from './baseline.js';
 
 /**
  * Locale parity — render layer.
@@ -154,6 +154,181 @@ test.describe('locale price formatting @i18n @launch', () => {
 });
 
 /**
+ * Positive translation assertions — TRD-001 through TRD-006, TRD-008,
+ * TRD-010, TRD-012, TRD-014, TRD-015, TRD-018, TRD-022.
+ *
+ * The English-fallback scan below is negative-only: it proves English is
+ * *absent*, never that the right copy is *present*. A page that dropped its
+ * navigation entirely, or served German strings on the French route, passes
+ * every negative check in this file. The test cases ask the opposite
+ * question — "do the French nav items display?" — so this asks it directly.
+ *
+ * The surface map is spec-local rather than config, because it describes how
+ * this theme composes its pages, which is the same reason the testids live
+ * here. Running it across all seven locales covers the English baseline
+ * (TRS-001) with the same code path as the six translations.
+ */
+const SURFACES = [
+  {
+    name: 'primary navigation',
+    route: '/',
+    container: 'site-header',
+    keys: [
+      'nav.hair',
+      'nav.sleep',
+      'nav.accessories',
+      'nav.skin',
+      'nav.shower',
+      'nav.collections',
+      'nav.best_sellers',
+      'nav.new',
+      'nav.sale',
+      'nav.search',
+      'nav.account',
+      'nav.cart',
+      'nav.hair_quiz',
+      'nav.rewards',
+      'nav.gift_cards',
+    ],
+  },
+  {
+    name: 'footer',
+    route: '/',
+    container: 'site-footer',
+    keys: [
+      'footer.heading_help',
+      'footer.heading_shop',
+      'footer.heading_about',
+      'footer.link_contact',
+      'footer.link_shipping',
+      'footer.link_returns',
+      'footer.link_faq',
+      'footer.newsletter_heading',
+      'footer.newsletter_body',
+      'footer.newsletter_cta',
+      'footer.legal_privacy',
+    ],
+  },
+  {
+    name: 'homepage',
+    route: '/',
+    container: 'main',
+    keys: [
+      'home.hero_heading',
+      'home.hero_sub',
+      'home.hero_cta',
+      'home.section_bestsellers',
+      'home.section_new',
+    ],
+  },
+  {
+    name: 'product page',
+    route: `/products/${resolveLaunchHandle()}`,
+    container: 'main',
+    keys: [
+      'pdp.title',
+      'pdp.description',
+      'pdp.add_to_cart',
+      'pdp.size_label',
+      'pdp.color_label',
+      'pdp.reviews_label',
+      'pdp.in_stock',
+    ],
+  },
+  {
+    name: 'cart',
+    route: '/cart',
+    container: 'main',
+    keys: [
+      'cart.heading',
+      'cart.subtotal',
+      'cart.checkout_cta',
+      'cart.shipping_note',
+      'cart.remove',
+    ],
+  },
+  {
+    name: 'checkout',
+    route: '/checkout',
+    container: 'main',
+    keys: [
+      'checkout.heading',
+      'checkout.contact_email',
+      'checkout.first_name',
+      'checkout.last_name',
+      'checkout.address',
+      'checkout.city',
+      'checkout.postal_code',
+      'checkout.phone',
+      'checkout.shipping_method',
+      'checkout.continue_cta',
+    ],
+  },
+] as const;
+
+test.describe('localized content renders', () => {
+  for (const locale of config.locales) {
+    for (const surface of SURFACES) {
+      test(`${locale.code} — ${surface.name} shows the contracted copy @i18n @smoke`, async ({
+        page,
+      }) => {
+        await page.goto(localizedPath(locale.code, surface.route));
+        const text = await page.getByTestId(surface.container).innerText();
+
+        const missing: string[] = [];
+        for (const key of surface.keys) {
+          const fragments = renderedFragments(locale.code, key);
+          if (fragments.length === 0) {
+            // No contracted value for this locale — the content layer owns
+            // that finding; asserting it again here would double-report.
+            continue;
+          }
+          const absent = fragments.filter((fragment) => !text.includes(fragment));
+          if (absent.length > 0) {
+            missing.push(`${key}: expected "${absent.join('", "')}"`);
+          }
+        }
+
+        expect(
+          missing,
+          `${surface.name} is missing its ${locale.code} copy — the strings are contracted but not on the page`,
+        ).toEqual([]);
+      });
+    }
+  }
+});
+
+/**
+ * Test plan §6.2, §9.2 / TRD-007, TRD-013, TRM-004 — the accented characters
+ * have to survive to the rendered page, not merely exist in the catalogue.
+ * The content layer's `diacritic_absent` check works on the whole catalogue;
+ * this asks the narrower question a tester asks with their eyes.
+ */
+test.describe('accented characters render', () => {
+  for (const locale of targetLocales(config).filter((entry) => entry.expectDiacritics)) {
+    test(`${locale.code} — ${locale.market} accented characters appear on the page @i18n @smoke`, async ({
+      page,
+    }) => {
+      await page.goto(localizedPath(locale.code, '/'));
+      const text = await page.locator('body').innerText();
+
+      const found = locale.diacritics.filter((character) => text.includes(character));
+      expect(
+        found,
+        `not one of ${locale.market}'s accented characters (${locale.diacritics.join(' ')}) reached the rendered ${locale.code} homepage — either the copy is not really in ${locale.code} or the characters are being stripped`,
+      ).not.toEqual([]);
+
+      // ...and nothing on the page is damaged, which is the other half of the
+      // same question: present is not the same as correct.
+      expect(
+        describeDefects(findEncodingDefects(text)),
+        `accented characters are present but damaged in ${locale.code}`,
+      ).toBe('');
+    });
+  }
+});
+
+/**
  * Test plan §11.1 — the systematic "is any English still showing" scan, which
  * is the single most repetitive part of the manual pass.
  *
@@ -273,8 +448,27 @@ test.describe('character integrity', () => {
  */
 test.describe('dynamic content', () => {
   const overlays = [
-    { opener: 'newsletter-open', panel: 'newsletter-modal', name: 'newsletter modal' },
-    { opener: 'language-open', panel: 'language-popup', name: 'language popup' },
+    {
+      opener: 'newsletter-open',
+      panel: 'newsletter-modal',
+      name: 'newsletter modal',
+      keys: ['footer.newsletter_heading', 'footer.newsletter_cta', 'modal.close'],
+    },
+    {
+      opener: 'language-open',
+      panel: 'language-popup',
+      name: 'language popup',
+      keys: ['modal.language_heading', 'modal.close'],
+    },
+    // TRM-001. The desktop nav on the same page can be perfectly translated
+    // while the menu behind the hamburger is not — they are separate template
+    // fragments, and only one of them is visible without a click.
+    {
+      opener: 'mobile-nav-toggle',
+      panel: 'mobile-nav',
+      name: 'mobile nav',
+      keys: ['nav.hair', 'nav.sleep', 'nav.accessories', 'nav.sale', 'nav.hair_quiz', 'nav.rewards'],
+    },
   ] as const;
 
   for (const locale of targetLocales(config)) {
@@ -291,6 +485,22 @@ test.describe('dynamic content', () => {
         await expect(panel).toBeVisible();
 
         const text = await panel.innerText();
+
+        // Positive first: the overlay must show this locale's copy, not just
+        // avoid showing English.
+        const missing: string[] = [];
+        for (const key of overlay.keys) {
+          const absent = renderedFragments(locale.code, key).filter(
+            (fragment) => !text.includes(fragment),
+          );
+          if (absent.length > 0) {
+            missing.push(`${key}: expected "${absent.join('", "')}"`);
+          }
+        }
+        expect(
+          missing,
+          `${overlay.name} is missing its ${locale.code} copy`,
+        ).toEqual([]);
 
         const leaked = englishSentinels(locale.code).filter((sentinel) =>
           showsEnglish(text, sentinel.english),

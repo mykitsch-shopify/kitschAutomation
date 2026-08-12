@@ -60,6 +60,25 @@ export const englishSentinels = (locale: string): readonly Sentinel[] => {
 export const expectedValue = (locale: string, key: string): string | undefined =>
   catalog.locales[locale]?.[key] ?? undefined;
 
+/**
+ * The literal fragments of a contracted string that must appear on the page.
+ *
+ * Interpolated strings cannot be matched whole — "{{ count }} avis" never
+ * appears verbatim once the count is bound — so the placeholder is removed
+ * and the surrounding literals are matched instead. Fragments under four
+ * characters are dropped: they collide with unrelated copy and prove nothing.
+ */
+export const renderedFragments = (locale: string, key: string): readonly string[] => {
+  const value = expectedValue(locale, key);
+  if (value === null || value === undefined || value.trim() === '') {
+    return [];
+  }
+  return value
+    .split(/\{\{[^}]*\}\}|\{[^}]*\}|%\{[^}]*\}|%[sd]/u)
+    .map((fragment) => fragment.trim())
+    .filter((fragment) => fragment.length >= 4);
+};
+
 const ASCII_ONLY = /^[\p{ASCII}]+$/u;
 
 /**

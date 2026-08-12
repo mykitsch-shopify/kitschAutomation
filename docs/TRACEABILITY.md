@@ -3,6 +3,10 @@
 Maps every section of `docs/TEST-PLAN-TRANSLATIONS.md` to the check that
 covers it, the layer it runs in, and its honest status.
 
+Cross-verification against the written test cases in
+`testcasestranslations.xlsx` — 27 cases, 12 scenarios — lives in
+[`TEST-CASE-COVERAGE.md`](TEST-CASE-COVERAGE.md).
+
 **Layers**
 
 | Layer | Where | What it can see |
@@ -25,15 +29,15 @@ covers it, the layer it runs in, and its honest status.
 
 | Plan § | Requirement | Layer | Check | Status |
 |---|---|---|---|---|
-| §4.1 | English nav baseline | content | `auditSource` + full key comparison | automated |
-| §4.2 | English footer baseline | content | `auditSource` | automated |
-| §4.3 | English homepage baseline | content | `auditSource` | automated |
-| §4.4 | English PDP baseline | content | `auditSource` | automated |
-| §4.5 | English cart/checkout baseline | content | `auditSource` | automated |
-| §5.1–5.5 | French nav / footer / home / PDP / cart / checkout | content + render | `compareCatalog`, `no untranslated strings`, `checkout translation` | automated |
+| §4.1 | English nav baseline | content + render | `auditSource` + `localized content renders` (en, primary navigation) | automated |
+| §4.2 | English footer baseline | content + render | `auditSource` + `localized content renders` (en, footer) | automated |
+| §4.3 | English homepage baseline | content + render | `auditSource` + `localized content renders` (en, homepage) | automated |
+| §4.4 | English PDP baseline | content + render | `auditSource` + `localized content renders` (en, product page) | automated |
+| §4.5 | English cart/checkout baseline | content + render | `auditSource` + `localized content renders` (en, cart and checkout) | automated |
+| §5.1–5.5 | French nav / footer / home / PDP / cart / checkout | content + render | `localized content renders` (positive), `no untranslated strings` (negative), `checkout translation` | automated |
 | §5.6 | No untranslated strings — French | content + render | `untranslated_candidate`, English-sentinel scan | automated |
 | §6.1 | German content translated | content + render | `compareCatalog` | automated |
-| §6.2 | German ü ö ä ß render correctly | content + render | `encoding_error` (mojibake, U+FFFD, `?` substitution, entities) + `diacritic_absent` | automated |
+| §6.2 | German ü ö ä ß render correctly | content + render | `encoding_error` (mojibake, U+FFFD, `?` substitution, entities), `diacritic_absent`, and `accented characters render` on the page itself | automated |
 | §6.3 | No untranslated strings — German | content + render | English-sentinel scan | automated |
 | §7.1 | Korean content translated | content + render | `compareCatalog`, `script_missing` | automated |
 | §7.2 | Korean Hangul renders, no garbling | content + render | `encoding_error`, `matchesScript(Hangul)` | automated |
@@ -42,12 +46,12 @@ covers it, the layer it runs in, and its honest status.
 | §8.2 | Hiragana/katakana/kanji render, no mojibake | content + render | `encoding_error`, `matchesScript(Hiragana\|Katakana\|Han)` | automated |
 | §8.3 | No untranslated strings — Japanese | content + render | English-sentinel scan | automated |
 | §9.1 | Spanish content translated | content + render | `compareCatalog` | automated |
-| §9.2 | Spanish á é í ó ú ñ ¿ ¡ render | content + render | `encoding_error` + `diacritic_absent` | automated |
+| §9.2 | Spanish á é í ó ú ñ ¿ ¡ render | content + render | `encoding_error`, `diacritic_absent`, and `accented characters render` on the page itself | automated |
 | §9.3 | No untranslated strings — Spanish | content + render | English-sentinel scan | automated |
 | §10.1 | Italian content translated | content + render | `compareCatalog` | automated |
 | §10.2 | No untranslated strings — Italian | content + render | English-sentinel scan | automated |
 | §11.1 | Systematic English-string scan, 6 locales × 6 surfaces | content + render | `untranslated_candidate` (every key) + per-page sentinel scan | automated |
-| §11.2 | Dynamic content (banners, popups, modals) respects locale | render | `dynamic content` spec — opens the newsletter modal and language popup, then scans both for English fallbacks and encoding damage | automated |
+| §11.2 | Dynamic content (banners, popups, modals, mobile nav) respects locale | render | `dynamic content` spec — opens the newsletter modal, language popup and hamburger menu, then asserts each shows its contracted copy, no English fallback and no encoding damage | automated |
 | §12.1 | Cross-language character test | content + render | `findEncodingDefects` over every string and every rendered page | automated |
 | §12.2 | Font support for each character set | render | `theme declares a font covering the script` — asserts the computed stack names a script-appropriate family and the text paints at non-zero width. Does **not** assert which font drew the glyphs | partial |
 | §13.1 | Terminology consistent across page types | content | `inconsistent_translation` — same English source rendered two ways in one locale, with declared exemptions for legitimate divergences | automated |

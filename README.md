@@ -10,6 +10,8 @@ Translations test plan in [`docs/TEST-PLAN-TRANSLATIONS.md`](docs/TEST-PLAN-TRAN
 
 - Coverage mapping, including what is deliberately *not* automated:
   [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md)
+- Written test cases (`testcasestranslations.xlsx`) cross-verified against the
+  suite: [`docs/TEST-CASE-COVERAGE.md`](docs/TEST-CASE-COVERAGE.md)
 - Executed sample run and its caveats:
   [`docs/RUN-REPORT-2026-08-12.md`](docs/RUN-REPORT-2026-08-12.md)
 
