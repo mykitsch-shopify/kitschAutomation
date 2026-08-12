@@ -276,6 +276,7 @@ test.describe('localized content renders', () => {
         const text = await page.getByTestId(surface.container).innerText();
 
         const missing: string[] = [];
+        let checked = 0;
         for (const key of surface.keys) {
           const fragments = renderedFragments(locale.code, key);
           if (fragments.length === 0) {
@@ -283,11 +284,20 @@ test.describe('localized content renders', () => {
             // that finding; asserting it again here would double-report.
             continue;
           }
+          checked += 1;
           const absent = fragments.filter((fragment) => !text.includes(fragment));
           if (absent.length > 0) {
             missing.push(`${key}: expected "${absent.join('", "')}"`);
           }
         }
+
+        // A surface where every key resolved to nothing would pass this test
+        // without examining the page at all. That is the failure mode worth
+        // guarding: a silent no-op looks exactly like a clean result.
+        expect(
+          checked,
+          `no contracted ${locale.code} copy was found for the ${surface.name} — this test would have passed without asserting anything`,
+        ).toBeGreaterThan(0);
 
         expect(
           missing,

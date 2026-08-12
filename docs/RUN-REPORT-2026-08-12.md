@@ -12,7 +12,7 @@
 | Stage | Result |
 |---|---|
 | `npm run typecheck` (TS 6.0.3, strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`) | clean |
-| `npm run test:unit` — comparator unit tests | **63 / 63 passed** |
+| `npm run test:unit` — comparator unit tests | **83 / 83 passed** |
 | Content parity, clean catalogue — 414 key comparisons across 6 target locales | **gate PASS** (0 critical, 0 major, 7 minor, 0 harness) |
 | Render parity, clean storefront — 350 specs, 7 locales × 6 routes | **350 / 350 passed**, 0 skipped |
 | Content parity, seeded catalogue | **gate FAIL** — 18 major, 8 minor, 1 harness, as intended |
@@ -180,6 +180,9 @@ in `docs/TRACEABILITY.md` rather than being quietly marked green.
 | `locale shell` split into four tests; all routes walked | As one compound test, the first failing assertion hid the rest — a missing `hreflang` masked a leaked `{{ amount }}` on the same page. And `@smoke`-only route filtering meant `/pages/about` was never visited. |
 | `npm run verify` fixed and aligned to CI | It crashed: with no `--catalog` the run reached for the Shopify collector and threw on a missing credential, and the quickstart in the README told people to run it. `run-parity` now refuses explicitly (exit 2, usage message) instead of stack-tracing, and refuses to fall back to fixture data — a green gate over a catalogue nobody asked about is the same false all-clear as reporting a failed fetch as a clean locale. |
 | CI gained a clean-fixture render step | The `engine` job asserted the render specs *fail* against a broken store but never that they *pass* against a clean one. A spec broken badly enough to always fail would have satisfied it. Both directions are needed or neither means anything. |
+| Render-layer helpers moved to `i18n/lib/sentinels.ts` and unit-tested | They decide what the render layer looks for, and each fails *silently*: a sentinel list that comes back empty turns "no English is showing" into a test that examines nothing. 20 tests, including the regex-metacharacter and CJK-containment cases the matcher would otherwise get wrong quietly. |
+| Baseline loader refuses an unknown locale | The `?? {}` it replaces was the most dangerous line in the render layer: a locale missing from the baseline — a typo'd `KITSCH_BASELINE`, or an eighth language added to config before the artifact caught up — produced zero sentinels and zero expected fragments, making every content assertion pass without examining anything. |
+| Fragment matching requires a distinctive word | `"de la"` clears a five-character bar and appears all over a French page. Length alone made a weak assertion look like coverage. |
 | Positive translation assertions added (`localized content renders`) | Cross-checking the 27 written test cases against the suite exposed that the English-fallback scan is negative-only: it proves English is *absent*, never that the right copy is *present*. A page that dropped its navigation, or served German copy on the French route, passed everything. Thirteen of the 27 cases ask that question directly. See `docs/TEST-CASE-COVERAGE.md`. |
 | Mobile nav / hamburger coverage added | TRM-001. The suite walked routes but never opened the mobile menu, which a theme renders from a different fragment than the desktop nav — one can be translated while the other is not. |
 | Rendered-accent check added | TRD-007, TRD-013, TRM-004 checked umlauts and Spanish accents in the *catalogue*, not on the *rendered page*. A template or transport can strip them after the API says they are fine. |
