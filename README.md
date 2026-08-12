@@ -85,15 +85,22 @@ this repo writes to a live store; seeding belongs on the dev store.
 | `KITSCH_FIXTURE_PROFILE` | `clean` (default) or `seeded` |
 | `KITSCH_FIXTURE_PORT` | Fixture storefront port, default `4173` |
 | `KITSCH_CHROMIUM_PATH` | Escape hatch for images with a pre-baked Chromium that does not match the pinned Playwright version |
+| `KITSCH_ORDER_STATUS_URL` | Path to a test order's status page, so the §15.3 order-confirmation specs can run against a real store |
+| `GRID_WS_ENDPOINT` | Cloud device grid, for `playwright.grid.config.ts`. That config refuses to load without it rather than silently running local browsers |
 
 ---
 
 ## Why there is a negative control
 
-`npm run test:detection` runs the engine over a catalogue with 18 deliberately
+`npm run test:detection` runs the engine over a catalogue with 19 deliberately
 planted defects and asserts that each one produces the finding it was planted
 to produce, then runs the render specs against a deliberately broken
 storefront and asserts they **fail**.
+
+It has already paid for itself: it caught the §13.1 consistency check keying
+its findings on the string that was *correct* rather than the one that needed
+changing — a check that fired, passed every unit test, and produced an
+unactionable report.
 
 A comparator that never fires is the most dangerous code here: it makes an
 unchecked catalogue look like a clean one. This is the step that keeps the

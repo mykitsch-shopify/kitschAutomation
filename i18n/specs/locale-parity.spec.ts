@@ -28,17 +28,35 @@ import { englishSentinels, expectedValue, showsEnglish } from './baseline.js';
  */
 
 const config = loadI18nConfig();
-const smokeRoutes = config.routes.filter((route) => route.tags.includes('@smoke'));
+
+/**
+ * Routes a browser can simply visit. The order-confirmation route needs an
+ * order to exist, so it is handled separately rather than reporting a 404 as
+ * a translation defect.
+ */
+const browsableRoutes = config.routes.filter((route) => !route.tags.includes('@order'));
 
 const localizedPath = (localeCode: string, path: string): string => {
   const resolved = path.replace('{launch_handle}', resolveLaunchHandle());
   return localeCode === config.sourceLocale ? resolved : `/${localeCode}${resolved}`;
 };
 
-test.describe('locale shell @i18n @smoke', () => {
+/** Route tags travel into the test title, so `--grep @smoke` selects correctly. */
+const tags = (route: { readonly tags: readonly string[] }): string =>
+  ['@i18n', ...route.tags].join(' ');
+
+/**
+ * These are three separate tests rather than one, deliberately. As a single
+ * test the first failing assertion hides the rest, so a missing hreflang
+ * masks a leaked `{{ amount }}` on the same page and the report understates
+ * how much is wrong.
+ */
+test.describe('locale shell', () => {
   for (const locale of config.locales) {
-    for (const route of smokeRoutes) {
-      test(`${locale.code} — ${route.name} renders in-locale`, async ({ page }) => {
+    for (const route of browsableRoutes) {
+      test(`${locale.code} — ${route.name} resolves and applies lang ${tags(route)}`, async ({
+        page,
+      }) => {
         const response = await page.goto(localizedPath(locale.code, route.path));
         expect(
           response?.status(),
@@ -49,25 +67,60 @@ test.describe('locale shell @i18n @smoke', () => {
           'lang',
           new RegExp(`^${locale.code}`, 'i'),
         );
+      });
+
+      test(`${locale.code} — ${route.name} declares hreflang alternates ${tags(route)}`, async ({
+        page,
+      }) => {
+        await page.goto(localizedPath(locale.code, route.path));
 
         // Every declared market needs an alternate, or the localized page is
         // invisible to search in that market — a discovery defect, not cosmetic.
+        const missing: string[] = [];
         for (const alternate of config.locales) {
-          await expect(
-            page.locator(`link[rel="alternate"][hreflang^="${alternate.code}"]`),
-            `hreflang alternate for ${alternate.code} is missing`,
-          ).toHaveCount(1);
+          const count = await page
+            .locator(`link[rel="alternate"][hreflang^="${alternate.code}"]`)
+            .count();
+          if (count !== 1) {
+            missing.push(`${alternate.code} (found ${String(count)})`);
+          }
         }
-
-        const body = page.locator('body');
-
-        // Shopify renders this literal when a key is missing at request time.
-        await expect(body).not.toContainText('translation missing');
-        // Unresolved interpolation reaching the customer.
-        await expect(body).not.toContainText('{{');
+        expect(missing, `hreflang alternates missing on the ${locale.code} ${route.name}`).toEqual(
+          [],
+        );
       });
 
-      test(`${locale.code} — ${route.name} fits the mobile viewport`, async ({ page }) => {
+      test(`${locale.code} — ${route.name} leaks no template markers ${tags(route)}`, async ({
+        page,
+      }) => {
+        await page.goto(localizedPath(locale.code, route.path));
+        const text = await page.locator('body').innerText();
+
+        // Asserted over extracted text rather than with `not.toContainText`,
+        // because that reports "expect(locator).not.toContainText(expected)
+        // failed" and leaves triage to go find which marker leaked where.
+        const markers: string[] = [];
+        for (const [marker, meaning] of [
+          // Shopify renders this literal when a key is missing at request time.
+          ['translation missing', 'a key is unresolved at request time'],
+          // Unresolved interpolation reaching the customer.
+          ['{{', 'a Liquid variable was never bound'],
+        ] as const) {
+          const index = text.indexOf(marker);
+          if (index >= 0) {
+            markers.push(`"${marker}" (${meaning}) near: ${text.slice(Math.max(0, index - 30), index + 50).replace(/\n/gu, ' ')}`);
+          }
+        }
+
+        expect(
+          markers,
+          `template markers reached the customer on the ${locale.code} ${route.name}`,
+        ).toEqual([]);
+      });
+
+      test(`${locale.code} — ${route.name} fits the mobile viewport ${tags(route)}`, async ({
+        page,
+      }) => {
         await page.goto(localizedPath(locale.code, route.path));
         await expect(page.getByTestId('site-header')).toBeVisible();
 
@@ -109,10 +162,12 @@ test.describe('locale price formatting @i18n @launch', () => {
  * is what keeps it from firing on "Collections", which is the same word in
  * four of these locales.
  */
-test.describe('no untranslated strings @i18n @smoke', () => {
+test.describe('no untranslated strings', () => {
   for (const locale of targetLocales(config)) {
-    for (const route of smokeRoutes) {
-      test(`${locale.code} — ${route.name} shows no English fallback copy`, async ({ page }) => {
+    for (const route of browsableRoutes) {
+      test(`${locale.code} — ${route.name} shows no English fallback copy ${tags(route)}`, async ({
+        page,
+      }) => {
         await page.goto(localizedPath(locale.code, route.path));
         const text = await page.locator('body').innerText();
 
@@ -133,10 +188,12 @@ test.describe('no untranslated strings @i18n @smoke', () => {
  * Test plan §6.2, §7.2, §8.2, §9.2, §12 — characters have to survive the
  * template and the transport, not just the translation table.
  */
-test.describe('character integrity @i18n @smoke', () => {
+test.describe('character integrity', () => {
   for (const locale of config.locales) {
-    for (const route of smokeRoutes) {
-      test(`${locale.code} — ${route.name} renders without encoding damage`, async ({ page }) => {
+    for (const route of browsableRoutes) {
+      test(`${locale.code} — ${route.name} renders without encoding damage ${tags(route)}`, async ({
+        page,
+      }) => {
         await page.goto(localizedPath(locale.code, route.path));
         const text = await page.locator('body').innerText();
 
@@ -150,7 +207,9 @@ test.describe('character integrity @i18n @smoke', () => {
   }
 
   for (const locale of targetLocales(config).filter((entry) => entry.expectScript !== undefined)) {
-    test(`${locale.code} — page renders in the ${locale.market} writing system`, async ({ page }) => {
+    test(`${locale.code} — page renders in the ${locale.market} writing system @i18n @smoke`, async ({
+      page,
+    }) => {
       await page.goto(localizedPath(locale.code, '/'));
       const heading = await page.getByTestId('hero-heading').innerText();
 
@@ -161,6 +220,92 @@ test.describe('character integrity @i18n @smoke', () => {
         `hero heading "${heading}" contains no ${locale.market} script characters — the font or the locale routing is wrong`,
       ).toBe(true);
     });
+  }
+
+  /**
+   * Test plan §12.2 — font support.
+   *
+   * What this asserts: the theme declares a font family that covers the
+   * locale's script, and the localized text actually paints at a non-zero
+   * size. That catches the real, recurring product defect — CSS that never
+   * names a CJK family, so Korean falls through to whatever the customer's
+   * device happens to have.
+   *
+   * What it deliberately does not assert: which font ultimately drew the
+   * glyphs. That depends on the fonts installed on the customer's device, so
+   * no CI machine can answer it — a headless Linux container has a different
+   * font set from an iPhone. Claiming otherwise would be a green check that
+   * means nothing. Visual regression in Phase 5 is where appearance gets
+   * verified.
+   */
+  for (const locale of targetLocales(config).filter((entry) => entry.fontFamilies.length > 0)) {
+    test(`${locale.code} — theme declares a font covering the ${locale.market} script @i18n @smoke`, async ({
+      page,
+    }) => {
+      await page.goto(localizedPath(locale.code, '/'));
+      const heading = page.getByTestId('hero-heading');
+
+      const stack = await heading.evaluate((node) => getComputedStyle(node).fontFamily);
+      const normalized = stack.toLowerCase().replace(/["']/gu, '');
+      const declared = locale.fontFamilies.filter((family) =>
+        normalized.includes(family.toLowerCase()),
+      );
+
+      expect(
+        declared,
+        `the font stack for ${locale.code} is "${stack}" and names none of ${locale.fontFamilies.join(', ')} — ${locale.market} customers fall through to whatever their device provides`,
+      ).not.toEqual([]);
+
+      // ...and the text is actually painted, not collapsed to nothing.
+      const box = await heading.boundingBox();
+      expect(box?.width ?? 0, 'localized heading must render with a measurable width').toBeGreaterThan(0);
+    });
+  }
+});
+
+/**
+ * Test plan §11.2 — dynamically loaded content.
+ *
+ * A newsletter modal and a language popup are in the DOM but hidden, so a
+ * page-level text scan never sees them. They are also exactly where
+ * translation wiring gets missed: the section renders from a different
+ * template and nobody notices until a customer opens it.
+ */
+test.describe('dynamic content', () => {
+  const overlays = [
+    { opener: 'newsletter-open', panel: 'newsletter-modal', name: 'newsletter modal' },
+    { opener: 'language-open', panel: 'language-popup', name: 'language popup' },
+  ] as const;
+
+  for (const locale of targetLocales(config)) {
+    for (const overlay of overlays) {
+      test(`${locale.code} — ${overlay.name} respects the selected language @i18n @smoke`, async ({
+        page,
+      }) => {
+        await page.goto(localizedPath(locale.code, '/'));
+
+        const panel = page.getByTestId(overlay.panel);
+        await expect(panel, 'overlay must start hidden, or the scan proves nothing').toBeHidden();
+
+        await page.getByTestId(overlay.opener).click();
+        await expect(panel).toBeVisible();
+
+        const text = await panel.innerText();
+
+        const leaked = englishSentinels(locale.code).filter((sentinel) =>
+          showsEnglish(text, sentinel.english),
+        );
+        expect(
+          leaked.map((sentinel) => `${sentinel.key}: "${sentinel.english}"`),
+          `${overlay.name} renders English copy in ${locale.code} mode`,
+        ).toEqual([]);
+
+        expect(
+          describeDefects(findEncodingDefects(text)),
+          `${overlay.name} carries encoding damage in ${locale.code}`,
+        ).toBe('');
+      });
+    }
   }
 });
 
@@ -265,6 +410,61 @@ test.describe('checkout translation @i18n @launch', () => {
         describeDefects(findEncodingDefects(message)),
         `validation error carries encoding damage in ${locale.code}`,
       ).toBe('');
+    });
+  }
+});
+
+/**
+ * Test plan §15.3 — order confirmation.
+ *
+ * Needs an order to exist. Against the storefront fixture the route is
+ * always available; against a real store it is reachable only via an order
+ * status URL, so set KITSCH_ORDER_STATUS_URL to a test order's path. Without
+ * one this skips loudly rather than reporting a 404 as a translation defect,
+ * and rather than being quietly deleted because it is inconvenient.
+ */
+test.describe('order confirmation', () => {
+  const confirmationRoute = config.routes.find((route) => route.tags.includes('@order'));
+  const orderPath = process.env.KITSCH_ORDER_STATUS_URL ?? confirmationRoute?.path;
+  // Matches how playwright.config resolves baseURL: an unset KITSCH_BASE_URL
+  // means the local fixture, not a real store.
+  const explicitBaseURL = process.env.KITSCH_BASE_URL;
+  const usingFixture = explicitBaseURL === undefined || explicitBaseURL.includes('127.0.0.1');
+
+  test.skip(
+    orderPath === undefined || (!usingFixture && process.env.KITSCH_ORDER_STATUS_URL === undefined),
+    'needs a test order — set KITSCH_ORDER_STATUS_URL against a real store (framework §12.4)',
+  );
+
+  for (const locale of targetLocales(config)) {
+    test(`${locale.code} — order confirmation is localized @i18n @launch @order`, async ({
+      page,
+    }) => {
+      await page.goto(localizedPath(locale.code, orderPath ?? '/checkout/confirmation'));
+
+      const heading = page.getByTestId('confirmation-heading');
+      await expect(heading).toBeVisible();
+
+      const text = await page.getByTestId('main').innerText();
+
+      const leaked = englishSentinels(locale.code)
+        .filter((sentinel) => sentinel.key.startsWith('confirmation.'))
+        .filter((sentinel) => showsEnglish(text, sentinel.english));
+      expect(
+        leaked.map((sentinel) => `${sentinel.key}: "${sentinel.english}"`),
+        `order confirmation shows English copy in ${locale.code} mode`,
+      ).toEqual([]);
+
+      expect(
+        describeDefects(findEncodingDefects(text)),
+        `order confirmation carries encoding damage in ${locale.code}`,
+      ).toBe('');
+
+      // The order number and customer email are interpolated; a dropped
+      // binding here means the customer is told about someone else's order,
+      // or about "{{ email }}".
+      await expect(page.getByTestId('confirmation-order')).not.toContainText('{{');
+      await expect(page.getByTestId('confirmation-email')).toContainText('@');
     });
   }
 });

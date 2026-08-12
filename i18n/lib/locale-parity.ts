@@ -363,6 +363,103 @@ const auditDiacritics = (
 };
 
 /**
+ * Terminology consistency — test plan §13.1.
+ *
+ * Within a locale, if the same English string is translated two different
+ * ways, one of them is probably wrong, and the customer meets both while
+ * moving between the homepage, a collection and the cart.
+ *
+ * The trap this check has to avoid: "Checkout" is a cart button and a page
+ * heading, and those are correctly different words in most of these locales.
+ * Grouping by resource type does not separate them — both are theme strings —
+ * so the divergences that are legitimate are declared in
+ * `consistency_exemptions` with a reason, exactly like the other exemptions.
+ * The alternative was shipping a check that cried wolf five times on a clean
+ * catalogue, which costs more trust than the check is worth.
+ */
+const auditConsistency = (
+  sourceEntries: readonly TranslationEntry[],
+  targetEntries: readonly TranslationEntry[],
+  locale: LocaleSpec,
+  config: I18nConfig,
+): readonly Finding[] => {
+  const exemptSources = new Set(
+    config.consistencyExemptions.map((exemption) => normalize(exemption.source)),
+  );
+
+  const sourceByKey = new Map(sourceEntries.map((entry) => [entry.key, entry]));
+
+  // English value → the target renderings it maps to, with the key each
+  // rendering came from.
+  const groups = new Map<string, Map<string, { key: string; value: string }>>();
+
+  for (const target of targetEntries) {
+    if (target.status !== 'present' || target.value === undefined) {
+      continue;
+    }
+    const source = sourceByKey.get(target.key);
+    if (source?.status !== 'present' || source.value === undefined) {
+      continue;
+    }
+    if (
+      isNonLinguistic(source.value) ||
+      isProtectedTerm(config, source.value) ||
+      isExempt(config, target.key, target.locale)
+    ) {
+      continue;
+    }
+
+    const sourceNorm = normalize(source.value);
+    if (exemptSources.has(sourceNorm)) {
+      continue;
+    }
+
+    const renderings = groups.get(sourceNorm) ?? new Map();
+    const targetNorm = normalize(target.value);
+    if (!renderings.has(targetNorm)) {
+      renderings.set(targetNorm, { key: target.key, value: collapse(target.value) });
+    }
+    groups.set(sourceNorm, renderings);
+  }
+
+  const findings: Finding[] = [];
+  for (const [sourceNorm, renderings] of groups) {
+    if (renderings.size < 2) {
+      continue;
+    }
+    const [reference, ...divergent] = [...renderings.values()];
+    if (reference === undefined) {
+      continue;
+    }
+    const source = sourceEntries.find((entry) => normalize(entry.value ?? '') === sourceNorm);
+
+    // One finding per divergent key, not one per group. A finding keyed on
+    // the group's first occurrence names the string that is probably
+    // *correct* and never names the one that needs changing, which makes the
+    // row unactionable — and invisible to anything checking coverage by key.
+    for (const variant of divergent) {
+      findings.push(
+        finding(
+          {
+            key: variant.key,
+            locale: locale.code,
+            resourceType: 'CATALOG',
+            resourceId: `consistency:${locale.code}`,
+          },
+          config,
+          'inconsistent_translation',
+          `"${source?.value ?? sourceNorm}" is rendered "${variant.value}" here but "${reference.value}" at ${reference.key}. Same concept, two terms, both visible while moving between pages.`,
+          source?.value,
+          variant.value,
+        ),
+      );
+    }
+  }
+
+  return findings;
+};
+
+/**
  * English baseline audit — test plan §4. The source locale is the reference
  * every other check leans on, so damage in it is worth its own finding rather
  * than being inherited silently by all six targets.
@@ -479,13 +576,9 @@ export const compareCatalog = (
       );
       continue;
     }
-    findings.push(
-      ...auditDiacritics(
-        targetEntries.filter((entry) => entry.locale === code),
-        locale,
-        config,
-      ),
-    );
+    const forLocale = targetEntries.filter((entry) => entry.locale === code);
+    findings.push(...auditDiacritics(forLocale, locale, config));
+    findings.push(...auditConsistency(sourceEntries, forLocale, locale, config));
   }
 
   return findings;

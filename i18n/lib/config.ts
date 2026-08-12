@@ -26,6 +26,7 @@ export type FindingKind =
   | 'script_missing'
   | 'diacritic_absent'
   | 'meta_untranslated'
+  | 'inconsistent_translation'
   | 'collector_error';
 
 /**
@@ -43,6 +44,7 @@ const DEFAULT_SEVERITIES: Readonly<Record<FindingKind, Severity>> = {
   script_missing: 'major',
   diacritic_absent: 'minor',
   meta_untranslated: 'minor',
+  inconsistent_translation: 'minor',
   // Never configurable. A collector failure is our fault, and letting a
   // config edit downgrade it is how an outage becomes a clean report.
   collector_error: 'harness',
@@ -63,6 +65,11 @@ export type LocaleSpec = {
   readonly expectScript: RegExp | undefined;
   readonly expectDiacritics: boolean;
   readonly diacritics: readonly string[];
+  /**
+   * Font families the theme must declare for this locale's script. Empty for
+   * locales where the default Latin stack is sufficient.
+   */
+  readonly fontFamilies: readonly string[];
 };
 
 export type RouteSpec = {
@@ -74,6 +81,18 @@ export type RouteSpec = {
 export type Exemption = {
   readonly key: string;
   readonly locales: readonly LocaleCode[];
+  readonly reason: string;
+};
+
+/**
+ * An English source string that is allowed to translate differently in
+ * different places. "Checkout" is a button in the cart and a heading on the
+ * checkout page, and those are correctly different words in five of the six
+ * target locales — without this list the consistency check would report all
+ * five as defects.
+ */
+export type ConsistencyExemption = {
+  readonly source: string;
   readonly reason: string;
 };
 
@@ -98,6 +117,7 @@ export type I18nConfig = {
   readonly resources: readonly string[];
   readonly doNotTranslate: readonly string[];
   readonly exemptions: readonly Exemption[];
+  readonly consistencyExemptions: readonly ConsistencyExemption[];
   readonly severities: Readonly<Record<FindingKind, Severity>>;
   readonly thresholds: Thresholds;
   readonly placeholderPatterns: readonly RegExp[];
@@ -180,6 +200,7 @@ const parseLocales = (value: unknown): readonly LocaleSpec[] => {
       expectScript: parseScript(spec.expect_script, `locales.${code}.expect_script`),
       expectDiacritics: optionalBoolean(spec.expect_diacritics, `locales.${code}.expect_diacritics`),
       diacritics: optionalStringList(spec.diacritics, `locales.${code}.diacritics`),
+      fontFamilies: optionalStringList(spec.font_families, `locales.${code}.font_families`),
     };
   });
 };
@@ -207,6 +228,19 @@ const parseExemptions = (value: unknown): readonly Exemption[] => {
       // An exemption without a stated reason is indistinguishable from a
       // dropped requirement six months later.
       reason: requireString(entry.reason, `exemptions[${String(index)}].reason`),
+    };
+  });
+};
+
+const parseConsistencyExemptions = (value: unknown): readonly ConsistencyExemption[] => {
+  if (value === undefined) {
+    return [];
+  }
+  return requireArray(value, 'consistency_exemptions').map((raw, index) => {
+    const entry = requireRecord(raw, `consistency_exemptions[${String(index)}]`);
+    return {
+      source: requireString(entry.source, `consistency_exemptions[${String(index)}].source`),
+      reason: requireString(entry.reason, `consistency_exemptions[${String(index)}].reason`),
     };
   });
 };
@@ -264,6 +298,7 @@ export const loadI18nConfig = (path = 'config/i18n.yaml'): I18nConfig => {
     resources: stringList(root.resources, 'resources'),
     doNotTranslate: stringList(root.do_not_translate, 'do_not_translate'),
     exemptions: parseExemptions(root.exemptions),
+    consistencyExemptions: parseConsistencyExemptions(root.consistency_exemptions),
     severities: parseSeverities(root.severities),
     thresholds: parseThresholds(root.thresholds),
     placeholderPatterns: stringList(root.placeholder_syntaxes, 'placeholder_syntaxes').map(

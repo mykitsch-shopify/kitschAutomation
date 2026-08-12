@@ -244,6 +244,30 @@
       "resourceType": "PRODUCT",
       "resourceId": "gid://shopify/Product/8801"
     },
+    "modal.close": {
+      "resourceType": "ONLINE_STORE_THEME_LOCALE_CONTENT",
+      "resourceId": "gid://shopify/OnlineStoreTheme/1"
+    },
+    "modal.language_heading": {
+      "resourceType": "ONLINE_STORE_THEME_LOCALE_CONTENT",
+      "resourceId": "gid://shopify/OnlineStoreTheme/1"
+    },
+    "confirmation.heading": {
+      "resourceType": "ONLINE_STORE_THEME_LOCALE_CONTENT",
+      "resourceId": "gid://shopify/OnlineStoreTheme/1"
+    },
+    "confirmation.order_number": {
+      "resourceType": "ONLINE_STORE_THEME_LOCALE_CONTENT",
+      "resourceId": "gid://shopify/OnlineStoreTheme/1"
+    },
+    "confirmation.email_sent": {
+      "resourceType": "ONLINE_STORE_THEME_LOCALE_CONTENT",
+      "resourceId": "gid://shopify/OnlineStoreTheme/1"
+    },
+    "confirmation.continue_shopping": {
+      "resourceType": "ONLINE_STORE_THEME_LOCALE_CONTENT",
+      "resourceId": "gid://shopify/OnlineStoreTheme/1"
+    },
     "brand.name": {
       "resourceType": "ONLINE_STORE_THEME_LOCALE_CONTENT",
       "resourceId": "gid://shopify/OnlineStoreTheme/1"
@@ -316,6 +340,12 @@
       "meta.home_description": "Shop satin pillowcases, scrunchies and hair tools designed for healthier hair. Free shipping on qualifying orders.",
       "meta.pdp_title": "Satin Pillowcase Set | Kitsch",
       "meta.pdp_description": "A satin pillowcase set that is gentler on hair and skin. Machine washable, five colours.",
+      "modal.close": "Close",
+      "modal.language_heading": "Choose your language",
+      "confirmation.heading": "Thank you for your order",
+      "confirmation.order_number": "Order {{ number }}",
+      "confirmation.email_sent": "A confirmation email is on its way to {{ email }}",
+      "confirmation.continue_shopping": "Continue shopping",
       "brand.name": "Kitsch",
       "brand.material": "Satin"
     },
@@ -381,6 +411,12 @@
       "meta.home_description": "Découvrez nos taies d’oreiller en satin, chouchous et outils coiffants pensés pour des cheveux en santé. Livraison offerte dès 50 €.",
       "meta.pdp_title": "Ensemble de taies d’oreiller en satin | Kitsch",
       "meta.pdp_description": "Un ensemble de taies d’oreiller en satin, plus doux pour les cheveux et la peau. Lavable en machine, cinq couleurs.",
+      "modal.close": "Fermer",
+      "modal.language_heading": "Choisissez votre langue",
+      "confirmation.heading": "Merci pour votre commande",
+      "confirmation.order_number": "Commande {{ number }}",
+      "confirmation.email_sent": "Un e-mail de confirmation est en route vers {{ email }}",
+      "confirmation.continue_shopping": "Continuer mes achats",
       "brand.name": "Kitsch",
       "brand.material": "Satin"
     },
@@ -446,6 +482,12 @@
       "meta.home_description": "Entdecken Sie Satin-Kissenbezüge, Haargummis und Haarwerkzeuge für gesünderes Haar. Kostenloser Versand ab 50 €.",
       "meta.pdp_title": "Satin-Kissenbezug-Set | Kitsch",
       "meta.pdp_description": "Ein Satin-Kissenbezug-Set, das sanfter zu Haar und Haut ist. Maschinenwaschbar, fünf Farben.",
+      "modal.close": "Schliessen",
+      "modal.language_heading": "Sprache wählen",
+      "confirmation.heading": "Vielen Dank für Ihre Bestellung",
+      "confirmation.order_number": "Bestellung {{ number }}",
+      "confirmation.email_sent": "Eine Bestätigungs-E-Mail ist unterwegs an {{ email }}",
+      "confirmation.continue_shopping": "Weiter einkaufen",
       "brand.name": "Kitsch",
       "brand.material": "Satin"
     },
@@ -511,6 +553,12 @@
       "meta.home_description": "Scopri federe in raso, elastici e strumenti per capelli più sani. Spedizione gratuita sopra i 50 €.",
       "meta.pdp_title": "Set di federe in raso | Kitsch",
       "meta.pdp_description": "Un set di federe in raso, più delicato su capelli e pelle. Lavabile in lavatrice, cinque colori.",
+      "modal.close": "Chiudi",
+      "modal.language_heading": "Scegli la tua lingua",
+      "confirmation.heading": "Grazie per il tuo ordine",
+      "confirmation.order_number": "Ordine {{ number }}",
+      "confirmation.email_sent": "Un’email di conferma è in arrivo a {{ email }}",
+      "confirmation.continue_shopping": "Continua lo shopping",
       "brand.name": "Kitsch",
       "brand.material": "Satin"
     },
@@ -576,6 +624,12 @@
       "meta.home_description": "Descubre fundas de almohada de satén, coleteros y herramientas para un cabello más sano. Envío gratis desde 50 €.",
       "meta.pdp_title": "Juego de fundas de almohada de satén | Kitsch",
       "meta.pdp_description": "Un juego de fundas de almohada de satén, más suave con el cabello y la piel. Lavable a máquina, cinco colores.",
+      "modal.close": "Cerrar",
+      "modal.language_heading": "Elige tu idioma",
+      "confirmation.heading": "Gracias por tu pedido",
+      "confirmation.order_number": "Pedido {{ number }}",
+      "confirmation.email_sent": "Un correo de confirmación está en camino a {{ email }}",
+      "confirmation.continue_shopping": "Seguir comprando",
       "brand.name": "Kitsch",
       "brand.material": "Satin"
     },
@@ -641,6 +695,12 @@
       "meta.home_description": "건강한 머릿결을 위한 새틴 베개 커버, 헤어 타이, 헤어 툴을 만나보세요. 일정 금액 이상 무료 배송.",
       "meta.pdp_title": "새틴 베개 커버 세트 | Kitsch",
       "meta.pdp_description": "머릿결과 피부에 더 부드러운 새틴 베개 커버 세트. 세탁기 사용 가능, 다섯 가지 색상.",
+      "modal.close": "닫기",
+      "modal.language_heading": "언어 선택",
+      "confirmation.heading": "주문해 주셔서 감사합니다",
+      "confirmation.order_number": "주문 {{ number }}",
+      "confirmation.email_sent": "확인 이메일이 {{ email }}(으)로 발송됩니다",
+      "confirmation.continue_shopping": "쇼핑 계속하기",
       "brand.name": "Kitsch",
       "brand.material": "Satin"
     },
@@ -706,6 +766,12 @@
       "meta.home_description": "健やかな髪のためのサテン枕カバー、ヘアゴム、ヘアツール。対象注文は送料無料。",
       "meta.pdp_title": "サテン枕カバーセット | Kitsch",
       "meta.pdp_description": "髪と肌にやさしいサテン枕カバーセット。洗濯機で洗え、5色展開。",
+      "modal.close": "閉じる",
+      "modal.language_heading": "言語を選択",
+      "confirmation.heading": "ご注文ありがとうございます",
+      "confirmation.order_number": "注文 {{ number }}",
+      "confirmation.email_sent": "確認メールを{{ email }}へお送りします",
+      "confirmation.continue_shopping": "お買い物を続ける",
       "brand.name": "Kitsch",
       "brand.material": "Satin"
     }

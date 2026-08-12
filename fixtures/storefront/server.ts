@@ -47,6 +47,12 @@ type RenderDefects = {
   readonly translationMissingMarker: Locale | undefined;
   /** Locale that renders an unresolved interpolation token. */
   readonly unresolvedToken: Locale | undefined;
+  /**
+   * Locale whose modal content stays English even though the page around it
+   * is translated — the §11.2 "dynamic content ignores the locale" defect,
+   * which is invisible until something opens the modal.
+   */
+  readonly untranslatedModal: Locale | undefined;
 };
 
 const NO_RENDER_DEFECTS: RenderDefects = {
@@ -56,6 +62,7 @@ const NO_RENDER_DEFECTS: RenderDefects = {
   overflow: undefined,
   translationMissingMarker: undefined,
   unresolvedToken: undefined,
+  untranslatedModal: undefined,
 };
 
 const SEEDED_RENDER_DEFECTS: RenderDefects = {
@@ -65,6 +72,7 @@ const SEEDED_RENDER_DEFECTS: RenderDefects = {
   overflow: 'de',
   translationMissingMarker: 'es',
   unresolvedToken: 'fr',
+  untranslatedModal: 'it',
 };
 
 const profile: Profile = process.env.KITSCH_FIXTURE_PROFILE === 'seeded' ? 'seeded' : 'clean';
@@ -98,14 +106,30 @@ const t = (locale: Locale, key: string): string => {
   return value;
 };
 
-const interpolate = (locale: Locale, key: string, token: string, value: string): string => {
+const interpolate = (
+  locale: Locale,
+  key: string,
+  bindings: Readonly<Record<string, string>>,
+): string => {
   const raw = t(locale, key);
   if (renderDefects.unresolvedToken === locale) {
     // A Liquid variable that never got bound — reaches the customer as "{{ amount }}".
     return raw;
   }
-  return raw.replace(new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, 'gu'), value);
+  let out = raw;
+  for (const [token, value] of Object.entries(bindings)) {
+    out = out.replace(new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, 'gu'), value);
+  }
+  return out;
 };
+
+/**
+ * Modal copy, which in the seeded profile ignores the locale entirely. Real
+ * theme modals are often rendered by a separate section that misses the
+ * translation wiring — the page looks right and the popup does not.
+ */
+const modal = (locale: Locale, key: string): string =>
+  t(renderDefects.untranslatedModal === locale ? 'en' : locale, key);
 
 const NAV_KEYS = [
   'nav.hair',
@@ -200,9 +224,38 @@ ${SUPPLEMENTAL_KEYS.map(
       </ul>
     </nav>
     <p data-testid="promo-banner" class="overflow-probe">${escape(
-      interpolate(locale, 'home.banner_promo', 'amount', FREE_SHIPPING_THRESHOLD[locale]),
+      interpolate(locale, 'home.banner_promo', { amount: FREE_SHIPPING_THRESHOLD[locale] }),
     )}</p>
+    <button data-testid="newsletter-open" type="button">${escape(t(locale, 'footer.newsletter_cta'))}</button>
+    <button data-testid="language-open" type="button">${escape(t(locale, 'modal.language_heading'))}</button>
   </header>`;
+
+/**
+ * Dynamically revealed surfaces — test plan §11.2. Present in the DOM but
+ * hidden, exactly like a theme's newsletter modal and region switcher, so a
+ * spec has to open them before it can judge them.
+ */
+const overlays = (locale: Locale): string => `
+  <div data-testid="newsletter-modal" hidden>
+    <h2>${escape(modal(locale, 'footer.newsletter_heading'))}</h2>
+    <p>${escape(modal(locale, 'footer.newsletter_body'))}</p>
+    <button type="button">${escape(modal(locale, 'footer.newsletter_cta'))}</button>
+    <button data-testid="newsletter-close" type="button">${escape(modal(locale, 'modal.close'))}</button>
+  </div>
+  <div data-testid="language-popup" hidden>
+    <h2>${escape(modal(locale, 'modal.language_heading'))}</h2>
+    <button data-testid="language-close" type="button">${escape(modal(locale, 'modal.close'))}</button>
+  </div>
+  <script>
+    for (const [opener, panel] of [
+      ['newsletter-open', 'newsletter-modal'],
+      ['language-open', 'language-popup'],
+    ]) {
+      document.querySelector('[data-testid="' + opener + '"]').addEventListener('click', () => {
+        document.querySelector('[data-testid="' + panel + '"]').hidden = false;
+      });
+    }
+  </script>`;
 
 const footer = (locale: Locale): string => `
   <footer data-testid="site-footer">
@@ -235,6 +288,7 @@ ${header(locale)}
 ${main}
   </main>
 ${footer(locale)}
+${overlays(locale)}
 </body>
 </html>
 `;
@@ -270,7 +324,7 @@ const pdpMain = (locale: Locale): string => `
     <label data-testid="pdp-color-label">${escape(t(locale, 'pdp.color_label'))}
       <select data-testid="pdp-color"><option>Blush</option></select>
     </label>
-    <p data-testid="pdp-reviews">${escape(interpolate(locale, 'pdp.reviews_label', 'count', '128'))}</p>
+    <p data-testid="pdp-reviews">${escape(interpolate(locale, 'pdp.reviews_label', { count: '128' }))}</p>
     <button data-testid="add-to-cart" type="button">${escape(t(locale, 'pdp.add_to_cart'))}</button>`;
 
 const cartMain = (locale: Locale): string => `
@@ -304,6 +358,18 @@ ${CHECKOUT_FIELD_KEYS.map(
       </fieldset>
       <button data-testid="checkout-continue" type="submit">${escape(t(locale, 'checkout.continue_cta'))}</button>
     </form>`;
+
+const confirmationMain = (locale: Locale): string => `
+    <h1 data-testid="confirmation-heading">${escape(t(locale, 'confirmation.heading'))}</h1>
+    <p data-testid="confirmation-order">${escape(
+      interpolate(locale, 'confirmation.order_number', { number: '#1042' }),
+    )}</p>
+    <p data-testid="confirmation-email">${escape(
+      interpolate(locale, 'confirmation.email_sent', { email: 'qa@mykitsch.com' }),
+    )}</p>
+    <a data-testid="confirmation-continue" href="${localePrefix(locale)}/">${escape(
+      t(locale, 'confirmation.continue_shopping'),
+    )}</a>`;
 
 const aboutMain = (locale: Locale): string => `
     <h1 data-testid="page-heading">${escape(t(locale, 'footer.heading_about'))}</h1>
@@ -346,6 +412,12 @@ const render = (route: Route): { readonly status: number; readonly body: string 
     return {
       status: 200,
       body: page(locale, 'meta.home_title', 'meta.home_description', checkoutMain(locale, submitted)),
+    };
+  }
+  if (path === '/checkout/confirmation') {
+    return {
+      status: 200,
+      body: page(locale, 'meta.home_title', 'meta.home_description', confirmationMain(locale)),
     };
   }
   if (path === '/pages/about') {

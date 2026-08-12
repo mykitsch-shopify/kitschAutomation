@@ -176,6 +176,16 @@ export const SEEDED_DEFECTS: readonly SeededDefect[] = [
     note: 'Romanised Korean — differs from English, so only a script check catches it.',
   },
 
+  // ── Terminology consistency (§13.1) ───────────────────────────────────
+  {
+    locale: 'de',
+    key: 'home.section_bestsellers',
+    value: 'Meistverkaufte Produkte',
+    expect: 'inconsistent_translation',
+    planRef: '§13.1',
+    note: '"Best sellers" is "Bestseller" in the nav and "Meistverkaufte Produkte" on the homepage — the same concept, two terms, both visible while moving between pages.',
+  },
+
   // ── Harness debt, not a client defect ─────────────────────────────────
   {
     locale: 'fr',

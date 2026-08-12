@@ -112,6 +112,14 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
     {
+      name: 'desktop-firefox',
+      // Named in the Translations test plan §3. Under 1% of this store's
+      // traffic, so it is nightly rather than on the PR gate — but it is in
+      // the matrix, because "we don't test Firefox" and "Firefox is covered"
+      // are different statements and only one of them is true.
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
       name: 'desktop-edge',
       // Edge is a named requirement from the QA scorecard, and it is a
       // distinct channel rather than plain Chromium.

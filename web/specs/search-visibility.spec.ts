@@ -20,7 +20,10 @@ import { launchSet } from '@kitsch/fixtures/launch-set.js';
  * rewritten into something that passes without proving anything.
  */
 
-const isFixture = (process.env.KITSCH_BASE_URL ?? '').includes('127.0.0.1');
+// An unset KITSCH_BASE_URL means the local fixture — playwright.config
+// defaults to it rather than to a real store.
+const baseURL = process.env.KITSCH_BASE_URL;
+const isFixture = baseURL === undefined || baseURL.includes('127.0.0.1');
 
 test.describe('search visibility @smoke', () => {
   test.skip(

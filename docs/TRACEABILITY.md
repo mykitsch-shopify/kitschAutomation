@@ -47,55 +47,73 @@ covers it, the layer it runs in, and its honest status.
 | §10.1 | Italian content translated | content + render | `compareCatalog` | automated |
 | §10.2 | No untranslated strings — Italian | content + render | English-sentinel scan | automated |
 | §11.1 | Systematic English-string scan, 6 locales × 6 surfaces | content + render | `untranslated_candidate` (every key) + per-page sentinel scan | automated |
-| §11.2 | Dynamic content (banners, popups, modals) respects locale | render | Promo banner and interpolation covered; **popups and modals are not** | partial |
+| §11.2 | Dynamic content (banners, popups, modals) respects locale | render | `dynamic content` spec — opens the newsletter modal and language popup, then scans both for English fallbacks and encoding damage | automated |
 | §12.1 | Cross-language character test | content + render | `findEncodingDefects` over every string and every rendered page | automated |
-| §12.2 | Font support for each character set | render | `matchesScript` proves the characters reach the page; it does **not** prove which font drew them | partial |
-| §13.1 | Terminology consistent across page types | — | See "Known gaps" below | gap |
+| §12.2 | Font support for each character set | render | `theme declares a font covering the script` — asserts the computed stack names a script-appropriate family and the text paints at non-zero width. Does **not** assert which font drew the glyphs | partial |
+| §13.1 | Terminology consistent across page types | content | `inconsistent_translation` — same English source rendered two ways in one locale, with declared exemptions for legitimate divergences | automated |
 | §13.2 | Promotional/campaign content translated | content | `placeholder_drift` + banner key comparison | automated |
 | §14.1 | Meta title translated (German) | render | `meta translation` spec, all 6 locales | automated |
 | §14.2 | Meta description translated (French) | render | `meta translation` spec, all 6 locales | automated |
 | §14.3 | Meta spot-check for Korean/Japanese | render | `meta translation` spec + encoding check on meta content | automated |
 | §15.1 | Checkout form labels translated | render | `checkout translation` spec, all 6 locales | automated |
 | §15.2 | Checkout validation errors translated | render | `checkout validation errors` spec — submits an incomplete form | automated |
-| §15.3 | Order confirmation page translated | manual | Requires placing a real order. Production is read-only here, so this runs on the dev store as a manual step until §12.4 (dev-store access) is answered | manual |
+| §15.3 | Order confirmation page translated | render | `order confirmation` spec — localized copy, no English fallback, no encoding damage, and order-number/email interpolation bound. Needs `KITSCH_ORDER_STATUS_URL` against a real store; skips loudly without one | automated (fixture) / blocked on a test order |
 
 ---
 
 ## Known gaps, with reasons
 
-**§13.1 — terminology consistency across pages.** The obvious implementation
-is: within a locale, if the same English source maps to two different target
-strings, flag it. It was written and then dropped, because on this content it
-fires on `cart.checkout_cta` ("Checkout" → *Passer la commande*) versus
-`checkout.heading` ("Checkout" → *Commande*) in five of six locales — a CTA
-and a page heading that are *correctly* different. Scoping by `resourceType`
-does not separate them; both are theme strings.
+**§12.2 — which font actually drew the glyphs.** The check asserts the theme
+*declares* a family covering the locale's script, and that localized text
+paints at non-zero width. It cannot assert which font the browser finally
+picked, because that depends on the fonts installed on the customer's device:
+a headless Linux container and an iPhone have different font sets, so any CI
+assertion about the resolved family would be a green check that means nothing
+about real customers. Appearance verification belongs to Phase 5 visual
+regression, on real devices.
 
-A version worth shipping needs a surface dimension the Shopify collector does
-not currently carry. Phase 2 work, not a one-line addition, and shipping the
-noisy version would cost more trust than the check is worth.
+**§15.3 — order confirmation, against a real store.** The spec exists and runs
+green against the fixture, covering localized copy, English fallbacks,
+encoding and the order-number/email interpolation. Against a live store it
+needs a real order to point at: set `KITSCH_ORDER_STATUS_URL`. Without one it
+skips with that reason rather than reporting a 404 as a translation defect.
+Blocked on dev-store access — framework proposal §12.4.
 
-**§11.2 — popups and modals.** The render layer walks routes, not
-interaction states. Covering a newsletter modal or a region-switcher popup
-means driving it open first. Worth doing; needs the storefront team to
-confirm which of these are theme-rendered versus third-party app-rendered,
-since app-rendered content is out of scope per the plan.
+**§13.1 — consistency exemptions need an owner.** The check ships with one
+declared exemption ("Checkout": a cart CTA and a page heading, correctly
+different words in five of six locales). That list will grow, and every entry
+is a judgement about copy rather than about code. It should be reviewed by
+whoever owns localisation copy, on the same cadence as the do-not-translate
+glossary — otherwise exemptions accumulate and the check quietly stops
+covering anything.
 
-**§12.2 — font support.** Proving *which* font drew a glyph needs
-`document.fonts` interrogation plus a per-locale expected family list, and it
-goes wrong the moment marketing changes a font. The current check proves the
-correct characters reach the page, which catches the failure that actually
-matters (garbling). Genuine font-fallback detection is Phase 5 visual-
-regression material.
+**Third-party app content (§11.2, partial).** The modal and popup checks cover
+theme-rendered overlays. Content injected by third-party apps — reviews
+widgets, chat — is out of scope per the plan itself, and the suite does not
+distinguish the two. If an app starts rendering customer-visible copy inside a
+theme container, this check will report it and the triage answer will be "not
+ours". Worth knowing before it happens.
 
-**Firefox.** The plan names Chrome, Firefox and Safari. The Playwright
-project matrix carries mobile Safari, mobile Chrome, desktop Chrome, desktop
-Safari and desktop Edge — Edge because the QA scorecard names it, Firefox not
-yet because it is under 1% of this store's traffic. If the plan's Firefox
-requirement is firm, it is a one-line project addition; flagging it rather
-than silently reporting Firefox as covered.
+**Firefox.** Now in the project matrix (`desktop-firefox`), nightly rather
+than on the PR gate, since it is under 1% of this store's traffic. It has
+**not been executed** — the Firefox binary cannot be downloaded in this
+environment. The project is wired; the first green Firefox run has to happen
+somewhere with normal browser installs.
 
-**Real devices.** Emulated `mobile-safari` is WebKit on Linux. It is close to
-iOS Safari and it is not iOS Safari. Only the cloud-grid job may be reported
-as real-device coverage, and that job needs the device-farm budget decision
-(§12.6 of the framework proposal).
+**Real devices.** `playwright.grid.config.ts` now exists and the nightly job
+references it. It throws at load time if `GRID_WS_ENDPOINT` is unset, rather
+than silently falling back to local browsers and reporting emulated runs as
+hardware runs. Still blocked on the device-farm budget decision (§12.6).
+Emulated `mobile-safari` is WebKit on Linux: close to iOS Safari, and not iOS
+Safari.
+
+**WebKit and production, in this environment specifically.** Neither is a
+design decision:
+
+- `mykitsch.com` returns `403` from the egress proxy — an organization policy
+  denial, confirmed against the proxy status endpoint. Not routable around,
+  and the proxy documentation is explicit that it should be reported rather
+  than retried.
+- WebKit and Firefox binaries cannot be downloaded here, so the executed run
+  is Chromium only. Since ~80% of this store's traffic is mobile Safari, that
+  is the single largest caveat on the sample run.

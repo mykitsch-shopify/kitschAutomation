@@ -115,6 +115,16 @@ export const KEYS: readonly KeyMeta[] = [
   meta('meta.pdp_title', 'meta', PRODUCT, 'gid://shopify/Product/8801'),
   meta('meta.pdp_description', 'meta', PRODUCT, 'gid://shopify/Product/8801'),
 
+  // Dynamic content — modal and popup surfaces (§11.2)
+  meta('modal.close', 'nav', THEME, 'gid://shopify/OnlineStoreTheme/1'),
+  meta('modal.language_heading', 'nav', THEME, 'gid://shopify/OnlineStoreTheme/1'),
+
+  // Order confirmation (§15.3)
+  meta('confirmation.heading', 'checkout', THEME, 'gid://shopify/OnlineStoreTheme/1'),
+  meta('confirmation.order_number', 'checkout', THEME, 'gid://shopify/OnlineStoreTheme/1'),
+  meta('confirmation.email_sent', 'checkout', THEME, 'gid://shopify/OnlineStoreTheme/1'),
+  meta('confirmation.continue_shopping', 'checkout', THEME, 'gid://shopify/OnlineStoreTheme/1'),
+
   // Do-not-translate probes — the glossary is only worth having if something
   // exercises it.
   meta('brand.name', 'brand', THEME, 'gid://shopify/OnlineStoreTheme/1'),
@@ -195,6 +205,13 @@ const en: LocaleContent = {
   'meta.pdp_description':
     'A satin pillowcase set that is gentler on hair and skin. Machine washable, five colours.',
 
+  'modal.close': 'Close',
+  'modal.language_heading': 'Choose your language',
+  'confirmation.heading': 'Thank you for your order',
+  'confirmation.order_number': 'Order {{ number }}',
+  'confirmation.email_sent': 'A confirmation email is on its way to {{ email }}',
+  'confirmation.continue_shopping': 'Continue shopping',
+
   'brand.name': 'Kitsch',
   'brand.material': 'Satin',
 };
@@ -271,6 +288,13 @@ const fr: LocaleContent = {
   'meta.pdp_title': 'Ensemble de taies d’oreiller en satin | Kitsch',
   'meta.pdp_description':
     'Un ensemble de taies d’oreiller en satin, plus doux pour les cheveux et la peau. Lavable en machine, cinq couleurs.',
+
+  'modal.close': 'Fermer',
+  'modal.language_heading': 'Choisissez votre langue',
+  'confirmation.heading': 'Merci pour votre commande',
+  'confirmation.order_number': 'Commande {{ number }}',
+  'confirmation.email_sent': 'Un e-mail de confirmation est en route vers {{ email }}',
+  'confirmation.continue_shopping': 'Continuer mes achats',
 
   'brand.name': 'Kitsch',
   'brand.material': 'Satin',
@@ -349,6 +373,13 @@ const de: LocaleContent = {
   'meta.pdp_description':
     'Ein Satin-Kissenbezug-Set, das sanfter zu Haar und Haut ist. Maschinenwaschbar, fünf Farben.',
 
+  'modal.close': 'Schliessen',
+  'modal.language_heading': 'Sprache wählen',
+  'confirmation.heading': 'Vielen Dank für Ihre Bestellung',
+  'confirmation.order_number': 'Bestellung {{ number }}',
+  'confirmation.email_sent': 'Eine Bestätigungs-E-Mail ist unterwegs an {{ email }}',
+  'confirmation.continue_shopping': 'Weiter einkaufen',
+
   'brand.name': 'Kitsch',
   'brand.material': 'Satin',
 };
@@ -425,6 +456,13 @@ const it: LocaleContent = {
   'meta.pdp_title': 'Set di federe in raso | Kitsch',
   'meta.pdp_description':
     'Un set di federe in raso, più delicato su capelli e pelle. Lavabile in lavatrice, cinque colori.',
+
+  'modal.close': 'Chiudi',
+  'modal.language_heading': 'Scegli la tua lingua',
+  'confirmation.heading': 'Grazie per il tuo ordine',
+  'confirmation.order_number': 'Ordine {{ number }}',
+  'confirmation.email_sent': 'Un’email di conferma è in arrivo a {{ email }}',
+  'confirmation.continue_shopping': 'Continua lo shopping',
 
   'brand.name': 'Kitsch',
   'brand.material': 'Satin',
@@ -503,6 +541,13 @@ const es: LocaleContent = {
   'meta.pdp_description':
     'Un juego de fundas de almohada de satén, más suave con el cabello y la piel. Lavable a máquina, cinco colores.',
 
+  'modal.close': 'Cerrar',
+  'modal.language_heading': 'Elige tu idioma',
+  'confirmation.heading': 'Gracias por tu pedido',
+  'confirmation.order_number': 'Pedido {{ number }}',
+  'confirmation.email_sent': 'Un correo de confirmación está en camino a {{ email }}',
+  'confirmation.continue_shopping': 'Seguir comprando',
+
   'brand.name': 'Kitsch',
   'brand.material': 'Satin',
 };
@@ -579,6 +624,13 @@ const ko: LocaleContent = {
   'meta.pdp_description':
     '머릿결과 피부에 더 부드러운 새틴 베개 커버 세트. 세탁기 사용 가능, 다섯 가지 색상.',
 
+  'modal.close': '닫기',
+  'modal.language_heading': '언어 선택',
+  'confirmation.heading': '주문해 주셔서 감사합니다',
+  'confirmation.order_number': '주문 {{ number }}',
+  'confirmation.email_sent': '확인 이메일이 {{ email }}(으)로 발송됩니다',
+  'confirmation.continue_shopping': '쇼핑 계속하기',
+
   'brand.name': 'Kitsch',
   'brand.material': 'Satin',
 };
@@ -654,6 +706,13 @@ const ja: LocaleContent = {
   'meta.pdp_title': 'サテン枕カバーセット | Kitsch',
   'meta.pdp_description':
     '髪と肌にやさしいサテン枕カバーセット。洗濯機で洗え、5色展開。',
+
+  'modal.close': '閉じる',
+  'modal.language_heading': '言語を選択',
+  'confirmation.heading': 'ご注文ありがとうございます',
+  'confirmation.order_number': '注文 {{ number }}',
+  'confirmation.email_sent': '確認メールを{{ email }}へお送りします',
+  'confirmation.continue_shopping': 'お買い物を続ける',
 
   'brand.name': 'Kitsch',
   'brand.material': 'Satin',

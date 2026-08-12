@@ -52,6 +52,11 @@ locales:
     # A Korean surface with no Hangul in it has not been translated, whatever
     # the translation table claims.
     expect_script: Hangul
+    # The theme has to *declare* a font that covers the script. Which font a
+    # given customer's device then picks is a property of their device, not
+    # of the store, and is not something CI can assert — see §12.2 in
+    # docs/TRACEABILITY.md.
+    font_families: ['Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Nanum Gothic']
   ja:
     market: JP
     currency: JPY
@@ -59,6 +64,7 @@ locales:
     # Any of the three Japanese scripts satisfies this; requiring all three
     # per string would fail on legitimately katakana-only product names.
     expect_script: Hiragana|Katakana|Han
+    font_families: ['Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Meiryo']
 
 # Routes for the render layer. Keep this list short — the content layer
 # already checks every string exhaustively without a browser.
@@ -69,6 +75,10 @@ routes:
   - { path: '/cart', name: cart, tags: ['@smoke'] }
   - { path: '/checkout', name: checkout, tags: ['@smoke', '@launch'] }
   - { path: '/pages/about', name: content_page, tags: [] }
+  # Needs a real order to exist. Against a live store this route is only
+  # browsable with KITSCH_ORDER_STATUS_URL pointing at a test order, so the
+  # specs skip it rather than reporting a 404 as a translation defect.
+  - { path: '/checkout/confirmation', name: confirmation, tags: ['@launch', '@order'] }
 
 # Resource types pulled for the content layer, via Shopify Admin GraphQL
 # translatableResources (read-only) and Storefront @inContext.
@@ -124,6 +134,16 @@ exemptions:
     locales: [es]
     reason: 'Cognate — "Subtotal" is identical in Spanish.'
 
+# English strings that are allowed to translate differently in different
+# places (test plan §13.1). Without these, the consistency check reports
+# correct copy as a defect — which is how a check gets switched off.
+consistency_exemptions:
+  - source: 'Checkout'
+    reason: >-
+      Cart CTA ("Zur Kasse", "Passer la commande") versus checkout page
+      heading ("Kasse", "Commande"). A verb phrase and a noun; correctly
+      different in 5 of 6 locales.
+
 # Severity is declared, not compiled in. The Translations test plan grades an
 # untranslated string in a non-English mode as High, where the Aug-11
 # framework graded it minor-by-volume; that disagreement is settled here in
@@ -141,6 +161,7 @@ severities:
   length_overflow_risk: minor
   diacritic_absent: minor
   meta_untranslated: minor
+  inconsistent_translation: minor
 
 thresholds:
   # German runs long. Anything past this against the English source is

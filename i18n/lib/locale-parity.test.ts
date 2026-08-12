@@ -30,6 +30,7 @@ const severities: Record<FindingKind, Severity> = {
   length_overflow_risk: 'minor',
   diacritic_absent: 'minor',
   meta_untranslated: 'minor',
+  inconsistent_translation: 'minor',
   collector_error: 'harness',
 };
 
@@ -40,6 +41,7 @@ const locale = (overrides: Partial<LocaleSpec> & Pick<LocaleSpec, 'code'>): Loca
   expectScript: undefined,
   expectDiacritics: false,
   diacritics: [],
+  fontFamilies: [],
   ...overrides,
 });
 
@@ -59,6 +61,7 @@ const config: I18nConfig = {
   resources: ['PRODUCT'],
   doNotTranslate: ['Kitsch'],
   exemptions: [{ key: 'policy.terms', locales: ['de'], reason: 'pending counsel review' }],
+  consistencyExemptions: [{ source: 'Checkout', reason: 'CTA versus heading' }],
   severities,
   thresholds: {
     lengthRatioWarn: 1.45,
@@ -402,6 +405,48 @@ void test('one umlaut anywhere in the catalogue clears the diacritic check', () 
     locales: [locale({ code: 'en' }), { ...de, expectDiacritics: true }],
   });
   assert.equal(kinds(findings).includes('diacritic_absent'), false);
+});
+
+// ── Terminology consistency — test plan §13.1 ─────────────────────────────
+
+void test('the same English string translated two ways is flagged', () => {
+  const findings = compareCatalog(
+    [source('nav.best_sellers', 'Best Sellers'), source('home.section_bestsellers', 'Best sellers')],
+    [
+      entry({ key: 'nav.best_sellers', locale: 'de', value: 'Bestseller' }),
+      entry({ key: 'home.section_bestsellers', locale: 'de', value: 'Meistverkaufte Produkte' }),
+    ],
+    config,
+  );
+  const inconsistent = findings.find((item) => item.kind === 'inconsistent_translation');
+  assert.ok(inconsistent !== undefined, `expected inconsistent_translation, got [${kinds(findings).join(', ')}]`);
+  assert.match(inconsistent.detail, /Bestseller/u);
+});
+
+void test('a consistently translated term produces no consistency finding', () => {
+  const findings = compareCatalog(
+    [source('nav.best_sellers', 'Best Sellers'), source('home.section_bestsellers', 'Best sellers')],
+    [
+      entry({ key: 'nav.best_sellers', locale: 'de', value: 'Bestseller' }),
+      entry({ key: 'home.section_bestsellers', locale: 'de', value: 'Bestseller' }),
+    ],
+    config,
+  );
+  assert.equal(kinds(findings).includes('inconsistent_translation'), false);
+});
+
+void test('a declared consistency exemption suppresses a legitimate divergence', () => {
+  // "Checkout" is a cart button and a page heading. Different words, on
+  // purpose, in most of these locales.
+  const findings = compareCatalog(
+    [source('cart.checkout_cta', 'Checkout'), source('checkout.heading', 'Checkout')],
+    [
+      entry({ key: 'cart.checkout_cta', locale: 'de', value: 'Zur Kasse' }),
+      entry({ key: 'checkout.heading', locale: 'de', value: 'Kasse' }),
+    ],
+    config,
+  );
+  assert.equal(kinds(findings).includes('inconsistent_translation'), false);
 });
 
 void test('entries for an undeclared locale are harness debt, not a pass', () => {

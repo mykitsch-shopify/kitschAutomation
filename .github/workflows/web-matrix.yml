@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [mobile-safari, mobile-chrome, desktop-chrome, desktop-safari, desktop-edge]
+        project: [mobile-safari, mobile-chrome, desktop-chrome, desktop-safari, desktop-firefox, desktop-edge]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
