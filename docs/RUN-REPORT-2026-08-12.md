@@ -11,8 +11,8 @@
 
 | Stage | Result |
 |---|---|
-| `npm run typecheck` (TS 6.0.3, strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`) | clean |
-| `npm run test:unit` — comparator unit tests | **83 / 83 passed** |
+| `npm run review -- --gate` — offline review (tsc, ESLint, Playwright standards, Kitsch rules) | **PASS**, 0 findings |
+| `npm run test:unit` — comparator, helper and rule tests | **95 / 95 passed** |
 | Content parity, clean catalogue — 414 key comparisons across 6 target locales | **gate PASS** (0 critical, 0 major, 7 minor, 0 harness) |
 | Render parity, clean storefront — 350 specs, 7 locales × 6 routes | **350 / 350 passed**, 0 skipped |
 | Content parity, seeded catalogue | **gate FAIL** — 18 major, 8 minor, 1 harness, as intended |
