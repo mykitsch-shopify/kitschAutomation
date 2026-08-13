@@ -27,6 +27,23 @@ const baseURL = process.env.KITSCH_BASE_URL ?? fixtureURL;
 const usingFixture = baseURL === fixtureURL;
 
 /**
+ * Every run announces its target, loudly, before the first spec.
+ *
+ * A green "350 passed" against the local fixture says the suite is internally
+ * consistent. It says nothing whatever about a real store — and read out of
+ * context it is easily mistaken for the opposite. That mistake is cheap to
+ * make and expensive to act on, so the run labels itself rather than relying
+ * on whoever quotes the number to add the caveat.
+ */
+process.stdout.write(
+  usingFixture
+    ? `\n  TARGET: local fixture at ${fixtureURL} (profile: ${fixtureProfile}) — NOT a real store.\n` +
+        `  Passing here proves the suite runs and does not false-positive on its own fixture.\n` +
+        `  It is not evidence about mykitsch.com. See docs/LIVE-RUN.md.\n\n`
+    : `\n  TARGET: ${baseURL} — real store. Results are evidence about this storefront.\n\n`,
+);
+
+/**
  * Escape hatch for images that ship a pre-baked Chromium whose build number
  * does not match the pinned @playwright/test version, and where downloading
  * the matching one is blocked. Set KITSCH_CHROMIUM_PATH to that binary.
