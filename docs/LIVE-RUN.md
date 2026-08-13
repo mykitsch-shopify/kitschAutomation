@@ -42,6 +42,43 @@ policy, not a rule aimed at this store. The proxy documentation is explicit
 that a 403 should be reported rather than retried or routed around, so no
 workaround was attempted.
 
+### Stealth plugins, user agents and headful mode do not apply
+
+`playwright-extra` + `puppeteer-extra-plugin-stealth` was tried, with a
+desktop Chrome user agent, a 1280x720 viewport and `locale: en-US`:
+
+```
+stealth + headless   navigator.webdriver=false  -> net::ERR_TUNNEL_CONNECTION_FAILED
+stealth + headful    launch failed (no display server in this container)
+plain   + headless   navigator.webdriver=true   -> net::ERR_TUNNEL_CONNECTION_FAILED
+```
+
+The plugin worked — it masked `navigator.webdriver` — and the result was
+byte-identical. That is the tell. Bot fingerprinting is JavaScript the *site*
+evaluates after it answers a request; here the request never leaves the
+network:
+
+```
+> CONNECT www.mykitsch.com:443 HTTP/1.1
+< HTTP/1.1 403 Forbidden
+* CONNECT tunnel failed, response 403
+```
+
+The 403 answers the **CONNECT**, so it comes from the egress gateway before
+any TLS handshake with Shopify. `curl --noproxy '*'` returns 403 as well, so
+all traffic is forced through that gateway; and DNS resolves correctly
+(`www.mykitsch.com` → `23.227.38.74`, a Shopify address), so it is not name
+resolution either.
+
+Nothing configurable inside the browser changes a connection that is refused
+before the browser's bytes reach the internet. The packages were removed
+again rather than left in the tree: they add forty transitive dependencies to
+a suite whose value depends on being small and trusted, and they would be
+solving a problem this repo has not observed. If a live run ever returns a
+genuine `403` **from the store** — a Cloudflare challenge page rather than a
+tunnel error — that is different evidence and worth revisiting; `npm run
+preflight` will show which of the two it is.
+
 ### Correcting an earlier statement
 
 Earlier notes in this repo described the block as an egress-policy denial
@@ -122,19 +159,38 @@ means the selectors need mapping, not that the kits diverge. The spec is
 written to say which of the two it is, because a suite that reports a missing
 selector as a product defect wastes a triage cycle every time.
 
-### A faster first step
-
-Before running the whole suite, confirm the four handles resolve and the
-selectors bite:
+### Start with preflight
 
 ```bash
-KITSCH_BASE_URL=https://www.mykitsch.com \
-  npx playwright test --project=mobile-chrome --grep "@kits @smoke"
+KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight
 ```
 
-That is the four page-load checks only — title, Add to Cart, and a sale price
-below its struck-through original. If those pass, the selectors are broadly
-right and the full parity run is worth doing.
+One command, and it separates the three failures that otherwise look alike in
+a test report — an unreachable network, a handle that no longer resolves, and
+a selector that does not match the theme:
+
+```
+Preflight against https://www.mykitsch.com
+
+  reachable      HTTP 200
+
+  Winter Welcome Kit Combos  (HTTP 200)
+    pdp_title         1 match(es)
+    pdp_price         1 match(es)
+    kit_item          6 match(es)
+    ...
+    → unmatched: kit_item_badge — map these in config/kits.yaml "selectors"
+```
+
+Run it before the suite. A spec that cannot find the markup reports a defect
+that is not there, and every one of those costs a triage cycle.
+
+From this environment today it prints:
+
+```
+  UNREACHABLE    page.goto: net::ERR_TUNNEL_CONNECTION_FAILED
+  A tunnel or connection error here is the network, not the store.
+```
 
 ---
 

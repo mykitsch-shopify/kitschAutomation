@@ -15,6 +15,7 @@
     "i18n:parity": "tsx i18n/run-parity.ts",
     "parity:clean": "tsx i18n/run-parity.ts --catalog fixtures/catalog/catalog-clean.json --out i18n-report/clean --gate",
     "storefront": "tsx fixtures/storefront/server.ts",
+    "preflight": "tsx tools/preflight.ts",
     "test:i18n": "playwright test --project=i18n-mobile",
     "test:kits": "playwright test --project=mobile-chrome --grep @kits",
     "test:mobile-web": "playwright test --project=mobile-chrome",
