@@ -1,0 +1,55 @@
+# Welcome-kit parity contract
+#
+# The requirement: the summer and spring welcome kits must handle free items
+# exactly like the live Winter Welcome Kit Combos.
+#
+# So this is a *differential* check, not an expectations check. Nothing here
+# declares how a free item ought to behave; the live winter kit defines that,
+# and the seasonal kits are compared against whatever it does. That matters
+# because it stays correct when merchandising changes the winter kit — the
+# reference moves and the comparison moves with it.
+#
+# Dimensions are taken from the Welcome Kit test plan §7 (free gift
+# selection), §8 (free Welcome Kit validation) and §12 (no MSRP leakage).
+
+reference:
+  name: Winter Welcome Kit Combos
+  handle: winter-welcome-kit-combos
+  note: 'Live kit, SKU 2. The reference every seasonal kit is measured against.'
+
+candidates:
+  - name: Summer Welcome Kit with Shampoo & Conditioner
+    handle: summer-welcome-kit-liquid-combos
+  - name: Summer Welcome Kit with Shampoo & Conditioner Bars
+    handle: summer-welcome-kit-bar-combos
+  - name: Spring Welcome Kit Combo
+    handle: shampoo-conditioner-bar-bundle-with-free-spring-welcome-kit-combo
+
+# What "handled the same way" means. Each dimension is something a customer
+# can see or do, and each maps to a test case in testcaseswelcomekit.xlsx.
+compare:
+  # §8 — how many items in the kit cost nothing.        WK-TC-017, 021
+  - free_item_count
+  # §12 — "no MSRP leakage: free items never show a non-zero price".
+  # "Free", "$0.00" and a struck-through price are three different promises.
+  #                                                     WK-TC-018, 022, 050
+  - free_item_price_label
+  # §7 — the badge on the item: "Free gift", "Included", or nothing.
+  - free_item_badge
+  # §8 — whether adding the qualifying product puts the kit in the cart, or
+  # leaves the customer to notice it.                   WK-TC-017, 021
+  - auto_added_to_cart
+  # §8 — "Welcome Kit is never charged at any point".   WK-TC-018, 022
+  - counted_in_subtotal
+  # §7 — "Free gift cannot be removed or charged separately".
+  - independently_removable
+  # §8 negative case — remove the qualifying product and the free kit goes
+  # with it.                                            WK-TC-025, 026
+  - removed_with_qualifying_product
+  # §10 — "Free items remain at $0 in order summary".   WK-TC-019, 023, 050
+  - free_at_checkout
+  # §7 — the free-gift selector offers the same number of options.
+  #                                                     WK-TC-020, 024
+  - free_gift_option_count
+  # §7 — "Only one free gift can be selected at a time".
+  - free_gift_single_select

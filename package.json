@@ -11,15 +11,16 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "review": "tsx tools/review/run-review.ts",
-    "test:unit": "node --import tsx --test \"i18n/lib/*.test.ts\" \"tools/review/*.test.ts\"",
+    "test:unit": "node --import tsx --test \"i18n/lib/*.test.ts\" \"web/lib/*.test.ts\" \"tools/review/*.test.ts\"",
     "i18n:parity": "tsx i18n/run-parity.ts",
     "parity:clean": "tsx i18n/run-parity.ts --catalog fixtures/catalog/catalog-clean.json --out i18n-report/clean --gate",
     "storefront": "tsx fixtures/storefront/server.ts",
     "test:i18n": "playwright test --project=i18n-mobile",
+    "test:kits": "playwright test --project=mobile-chrome --grep @kits",
     "test:mobile-web": "playwright test --project=mobile-chrome",
     "test:detection": "tsx i18n/verify-detection.ts",
     "test:app": "maestro test mobile/maestro/",
-    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:detection"
+    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:detection"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

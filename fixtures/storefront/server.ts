@@ -10,6 +10,14 @@ import {
 } from '../catalog/content.js';
 import type { Locale } from '../catalog/content.js';
 import { FETCH_FAILED, SEEDED_DEFECTS } from '../catalog/defects.js';
+import {
+  NO_DIVERGENCE,
+  SEEDED_DIVERGENCE,
+  kitByHandle,
+  kitCart,
+  kitOrderSummary,
+  kitPdp,
+} from './kits.js';
 
 /**
  * A seven-locale storefront fixture.
@@ -59,6 +67,11 @@ type RenderDefects = {
    * sees it — TRM-001.
    */
   readonly untranslatedMobileNav: Locale | undefined;
+  /**
+   * Kit whose free items are handled differently from the reference kit —
+   * the merchandising defect the welcome-kit parity spec exists to catch.
+   */
+  readonly divergentKit: string | undefined;
 };
 
 const NO_RENDER_DEFECTS: RenderDefects = {
@@ -70,6 +83,7 @@ const NO_RENDER_DEFECTS: RenderDefects = {
   unresolvedToken: undefined,
   untranslatedModal: undefined,
   untranslatedMobileNav: undefined,
+  divergentKit: undefined,
 };
 
 const SEEDED_RENDER_DEFECTS: RenderDefects = {
@@ -81,6 +95,7 @@ const SEEDED_RENDER_DEFECTS: RenderDefects = {
   unresolvedToken: 'fr',
   untranslatedModal: 'it',
   untranslatedMobileNav: 'ko',
+  divergentKit: 'summer-welcome-kit-bar-combos',
 };
 
 const profile: Profile = process.env.KITSCH_FIXTURE_PROFILE === 'seeded' ? 'seeded' : 'clean';
@@ -411,6 +426,26 @@ const aboutMain = (locale: Locale): string => `
         : `<p data-testid="cms-block">${escape(t(locale, 'footer.newsletter_body'))}</p>`
     }`;
 
+
+
+/**
+ * Which kit carries the seeded divergence. Only the seasonal kits can — the
+ * winter kit is the reference, and a reference that misbehaves would make
+ * every comparison pass for the wrong reason.
+ */
+const divergenceFor = (handle: string): typeof NO_DIVERGENCE =>
+  renderDefects.divergentKit === handle ? SEEDED_DIVERGENCE : NO_DIVERGENCE;
+
+const kitView = (locale: Locale): Parameters<typeof kitPdp>[2] => ({
+  escape,
+  addToCartLabel: t(locale, 'pdp.add_to_cart'),
+  removeLabel: t(locale, 'cart.remove'),
+  subtotalLabel: t(locale, 'cart.subtotal'),
+  checkoutLabel: t(locale, 'cart.checkout_cta'),
+  cartHeading: t(locale, 'cart.heading'),
+  localePrefix: localePrefix(locale),
+});
+
 type Route = { readonly locale: Locale; readonly path: string; readonly query: URLSearchParams };
 
 const parseRoute = (url: string): Route => {
@@ -432,17 +467,57 @@ const render = (route: Route): { readonly status: number; readonly body: string 
   if (path === '/collections/hair-tools') {
     return { status: 200, body: page(locale, 'meta.home_title', 'meta.home_description', collectionMain(locale)) };
   }
+  const kitOnPdp = path.startsWith('/products/')
+    ? kitByHandle(path.slice('/products/'.length))
+    : undefined;
+  if (kitOnPdp !== undefined) {
+    return {
+      status: 200,
+      body: page(
+        locale,
+        'meta.pdp_title',
+        'meta.pdp_description',
+        kitPdp(kitOnPdp, divergenceFor(kitOnPdp.handle), kitView(locale)),
+      ),
+    };
+  }
   if (path === `/products/${LAUNCH_HANDLE}`) {
     return { status: 200, body: page(locale, 'meta.pdp_title', 'meta.pdp_description', pdpMain(locale)) };
   }
   if (path === '/cart') {
-    return { status: 200, body: page(locale, 'meta.home_title', 'meta.home_description', cartMain(locale)) };
+    const kitInCart = kitByHandle(route.query.get('kit') ?? '');
+    return {
+      status: 200,
+      body: page(
+        locale,
+        'meta.home_title',
+        'meta.home_description',
+        kitInCart === undefined
+          ? cartMain(locale)
+          : kitCart(
+              kitInCart,
+              divergenceFor(kitInCart.handle),
+              kitView(locale),
+              route.query.get('removed') === '1',
+            ),
+      ),
+    };
   }
   if (path === '/checkout') {
     const submitted = route.query.get('submitted') === '1';
+    const kitAtCheckout = kitByHandle(route.query.get('kit') ?? '');
+    const summary =
+      kitAtCheckout === undefined
+        ? ''
+        : kitOrderSummary(kitAtCheckout, divergenceFor(kitAtCheckout.handle), kitView(locale));
     return {
       status: 200,
-      body: page(locale, 'meta.home_title', 'meta.home_description', checkoutMain(locale, submitted)),
+      body: page(
+        locale,
+        'meta.home_title',
+        'meta.home_description',
+        `${checkoutMain(locale, submitted)}${summary}`,
+      ),
     };
   }
   if (path === '/checkout/confirmation') {

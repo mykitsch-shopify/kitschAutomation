@@ -11,7 +11,7 @@ checkout and meta content — replacing a recurring manual translation pass.
 |---|---|
 | **Runs offline** | Ships a local seven-locale storefront fixture; no credentials needed to run everything |
 | **Two layers** | Content (no browser, exhaustive) + render (Playwright, only what a DOM can show) |
-| **One contract** | `config/i18n.yaml` — adding a language is a config edit, not a code change |
+| **One contract** | `config/i18n.yaml` and `config/kits.yaml` — adding a language or a kit is a config edit, not a code change |
 | **Self-checking** | 19 planted defects prove the checks still fire; a check that never fires is the danger |
 
 ---
@@ -80,11 +80,12 @@ npx playwright install msedge           # for desktop-edge (a real Edge channel,
 ```
 critical 0 | major 0 | minor 0 | harness 0
 review: PASS
-# tests 95
-# pass 95
+# tests 110
+# pass 110
 critical 0 | major 0 | minor 7 | harness 0
 gate: PASS
-  350 passed (1.3m)
+  350 passed (1.9m)
+  7 passed (6.3s)
   19/19 planted defects detected
 Detection verified: both layers fail when the store is broken.
 ```
@@ -101,6 +102,8 @@ copy legitimately runs 1.5–1.8× longer than English on headings. See
 KitschAutomation/
 │
 ├── config/
+│   ├── kits.yaml              Welcome-kit parity contract — reference kit,
+│   │                          candidates, and the compared dimensions
 │   ├── i18n.yaml            ★ THE CONTRACT — locales, price patterns, writing
 │   │                          systems, glossary, exemptions, severities, thresholds
 │   └── index.ts               Declared SLAs for asynchronous nodes
@@ -132,7 +135,9 @@ KitschAutomation/
 │   ├── storefront/server.ts   Local 7-locale storefront the render specs browse
 │   └── launch-set.ts          Fixture SKUs, resolved at runtime
 │
-├── web/specs/               ── Phase 1 web specs (need a real store)
+├── web/                     ── web specs
+│   ├── lib/kit-parity.ts      Welcome-kit free-item comparison (pure, unit-tested)
+│   └── specs/                 welcome-kit-parity, search-visibility
 ├── mobile/maestro/          ── Phase 4 app smoke flow
 ├── core/consistency.ts      ── async-node SLA helper
 │
@@ -173,11 +178,12 @@ one less way to happen. Roughly 3 minutes.
 | `npm run typecheck` | `tsc --noEmit`, strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` | Fast feedback while editing |
 | `npm run lint` | ESLint: TypeScript, Playwright spec standards, Kitsch rules | Before committing |
 | `npm run review` | **Offline reviewer** — runs typecheck + lint, triages every finding by severity and route, writes `review-report/` | The static gate; add `-- --gate` to exit non-zero on failure |
-| `npm run test:unit` | 95 unit tests over the comparators, helpers and lint rules (`node --test`) | After touching anything in `i18n/lib/` or `tools/` |
+| `npm run test:unit` | 110 unit tests over the comparators, helpers, kit diffing and lint rules (`node --test`) | After touching anything in `i18n/lib/`, `web/lib/` or `tools/` |
 | `npm run parity:clean` | Content parity against the bundled clean catalogue, gated | Quick check that the engine reports no false positives |
 | `npm run i18n:parity` | Content parity, source chosen explicitly — see [§9](#9-running-against-a-real-store) | Against a real store, or a specific catalogue |
 | `npm run test:i18n` | Render-layer parity: 350 specs, 7 locales × 6 routes, at 390px | After touching specs or the storefront fixture |
 | `npm run test:mobile-web` | The `mobile-chrome` project (Pixel 7) — web specs plus locale specs | Wider mobile check |
+| `npm run test:kits` | Welcome-kit parity: the summer and spring kits must handle free items exactly like `winter-welcome-kit-combos`, across ten dimensions | After touching kits, or when marketing changes a kit |
 | `npm run test:detection` | **Negative control** — 19 planted defects must be caught, and the render specs must fail against a broken store | After touching any comparator. This is what keeps the gate honest |
 | `npm run storefront` | Serves the fixture storefront on `:4173` so you can browse it by hand | Debugging a spec, or seeing what the fixture renders |
 | `npm run test:app` | Maestro app smoke flow | Phase 4; needs Maestro and a device |
@@ -499,6 +505,7 @@ the same as a clean review.
 | [`docs/TEST-PLAN-TRANSLATIONS.md`](docs/TEST-PLAN-TRANSLATIONS.md) | The Translations test plan this suite automates |
 | [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md) | Plan section → automated check, including what is deliberately *not* automated |
 | [`docs/TEST-CASE-COVERAGE.md`](docs/TEST-CASE-COVERAGE.md) | The 27 written test cases cross-verified against the suite |
+| [`docs/WELCOME-KIT-COVERAGE.md`](docs/WELCOME-KIT-COVERAGE.md) | Welcome-kit free-item parity: the requirement, the ten dimensions, and all 57 written cases |
 | [`docs/RUN-REPORT-2026-08-12.md`](docs/RUN-REPORT-2026-08-12.md) | An executed run with its results and its caveats |
 
 ### Known limitations
