@@ -60,10 +60,36 @@ export type KitProfile = {
 
 export type KitSpec = { readonly name: string; readonly handle: string };
 
+export type SelectorName =
+  | 'pdp_title'
+  | 'pdp_price'
+  | 'pdp_compare_at'
+  | 'kit_item'
+  | 'kit_item_price'
+  | 'kit_item_badge'
+  | 'free_gift_input'
+  | 'add_to_cart'
+  | 'cart_line'
+  | 'cart_line_price'
+  | 'cart_line_remove'
+  | 'cart_subtotal'
+  | 'checkout_button'
+  | 'summary_line'
+  | 'summary_price';
+
+const SELECTOR_NAMES: readonly SelectorName[] = [
+  'pdp_title', 'pdp_price', 'pdp_compare_at', 'kit_item', 'kit_item_price',
+  'kit_item_badge', 'free_gift_input', 'add_to_cart', 'cart_line',
+  'cart_line_price', 'cart_line_remove', 'cart_subtotal', 'checkout_button',
+  'summary_line', 'summary_price',
+];
+
 export type KitConfig = {
   readonly reference: KitSpec;
   readonly candidates: readonly KitSpec[];
   readonly compare: readonly KitDimension[];
+  readonly selectors: Readonly<Record<SelectorName, string>>;
+  readonly freePricePattern: RegExp;
 };
 
 export type KitDifference = {
@@ -149,6 +175,17 @@ const parseKit = (value: unknown, at: string): KitSpec => {
   };
 };
 
+/**
+ * Whether a rendered price means "this costs nothing".
+ *
+ * Classifying by price text rather than by a `data-free` attribute is what
+ * lets the same spec run against a real theme: the fixture's attribute is a
+ * fixture invention, but every storefront has to tell the customer the price
+ * one way or another.
+ */
+export const isFreePrice = (value: string, pattern: RegExp): boolean =>
+  new RegExp(pattern.source, pattern.flags).test(normalizeLabel(value));
+
 export const loadKitConfig = (path = 'config/kits.yaml'): KitConfig => {
   const raw: unknown = parse(readFileSync(path, 'utf8'));
   if (!isRecord(raw) || !Array.isArray(raw.candidates) || !Array.isArray(raw.compare)) {
@@ -170,9 +207,17 @@ export const loadKitConfig = (path = 'config/kits.yaml'): KitConfig => {
     throw new Error('kits.yaml: "compare" is empty — the check would assert nothing.');
   }
 
+  const selectorSource = isRecord(raw.selectors) ? raw.selectors : {};
+  const selectors: Record<string, string> = {};
+  for (const name of SELECTOR_NAMES) {
+    selectors[name] = requireString(selectorSource[name], `selectors.${name}`);
+  }
+
   return {
     reference: parseKit(raw.reference, 'reference'),
     candidates: raw.candidates.map((entry, index) => parseKit(entry, `candidates[${String(index)}]`)),
     compare,
+    selectors: selectors as Record<SelectorName, string>,
+    freePricePattern: new RegExp(requireString(raw.free_price_pattern, 'free_price_pattern'), 'u'),
   };
 };

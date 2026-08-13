@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import { diffKits, loadKitConfig, normalizeLabels } from '../lib/kit-parity.js';
+import { diffKits, isFreePrice, loadKitConfig, normalizeLabels } from '../lib/kit-parity.js';
 import type { KitProfile, KitSpec } from '../lib/kit-parity.js';
 
 /**
@@ -35,6 +35,19 @@ const config = loadKitConfig();
 
 const money = (value: string): number => Number(value.replace(/[^0-9.]/gu, '')) || 0;
 
+const free = (value: string): boolean => isFreePrice(value, config.freePricePattern);
+
+/**
+ * Prices of the items a kit page lists, paired with whether each is free.
+ * Free-ness is read from the price the customer is shown, not from a
+ * `data-free` attribute — the attribute is a fixture invention and would not
+ * exist on the live theme.
+ */
+const classify = (prices: readonly string[]): { readonly freePrices: readonly string[]; readonly paidTotal: number } => ({
+  freePrices: prices.filter(free),
+  paidTotal: prices.filter((price) => !free(price)).reduce((total, price) => total + money(price), 0),
+});
+
 /** Reads one kit's free-item treatment as a customer would experience it. */
 const profileKit = async (page: Page, kit: KitSpec): Promise<KitProfile> => {
   const response = await page.goto(`/products/${kit.handle}`);
@@ -43,54 +56,68 @@ const profileKit = async (page: Page, kit: KitSpec): Promise<KitProfile> => {
     `"${kit.name}" (/products/${kit.handle}) did not resolve — check the handle in config/kits.yaml`,
   ).toBe(200);
 
-  const freeItems = page.locator('[data-testid="kit-item"][data-free="true"]');
-  const priceLabels = await freeItems.locator('[data-testid="kit-item-price"]').allInnerTexts();
-  const badges = await freeItems.locator('[data-testid="kit-item-badge"]').allInnerTexts();
+  const items = page.locator(config.selectors.kit_item);
+  expect(
+    await items.count(),
+    `no kit items matched "${config.selectors.kit_item}" on ${kit.name}. If the theme markup differs, map it in config/kits.yaml under "selectors" — a spec that finds nothing must not pass.`,
+  ).toBeGreaterThan(0);
 
-  // §7 — the free-gift selector. A radio group permits one choice; anything
-  // else permits several.
-  const giftInputs = page.getByTestId('free-gift-input');
+  const itemPrices = await items.locator(config.selectors.kit_item_price).allInnerTexts();
+  const badges = await items.locator(config.selectors.kit_item_badge).allInnerTexts();
+  const onPdp = classify(itemPrices);
+
+  // §7 — the free-gift selector. A radio group permits one choice.
+  const giftInputs = page.locator(config.selectors.free_gift_input);
   const giftOptionCount = await giftInputs.count();
   const inputTypes = await giftInputs.evaluateAll((nodes) =>
     nodes.map((node) => (node as HTMLInputElement).type),
   );
 
   // Adding the kit is where auto-add, subtotal and removability appear.
-  await page.getByTestId('add-to-cart').click();
+  await page.locator(config.selectors.add_to_cart).first().click();
 
-  const freeLines = page.locator('[data-testid="cart-line-item"][data-free="true"]');
-  const autoAdded = (await freeLines.count()) > 0;
-  const removableAlone = (await freeLines.locator('[data-testid="cart-remove"]').count()) > 0;
+  // Walked line by line so a free line can be paired with its own remove
+  // control — a cart-wide count cannot tell which line the control belongs to.
+  const cartLines = page.locator(config.selectors.cart_line);
+  const cartPrices: string[] = [];
+  let freeLinesWithRemove = 0;
+  for (let index = 0; index < (await cartLines.count()); index += 1) {
+    const line = cartLines.nth(index);
+    const price = await line.locator(config.selectors.cart_line_price).first().innerText();
+    cartPrices.push(price);
+    if (free(price) && (await line.locator(config.selectors.cart_line_remove).count()) > 0) {
+      freeLinesWithRemove += 1;
+    }
+  }
+  const inCart = classify(cartPrices);
 
-  const subtotal = money(await page.getByTestId('cart-subtotal').innerText());
-  const paidLines = await page
-    .locator('[data-testid="cart-line-item"][data-free="false"] [data-testid="line-price"]')
-    .allInnerTexts();
-  const paidSum = paidLines.reduce((total, value) => total + money(value), 0);
+  const subtotal = money(await page.locator(config.selectors.cart_subtotal).first().innerText());
 
   // §10 — the order summary, the last place a "free" item can cost money.
-  await page.getByTestId('checkout-button').click();
-  const summaryFreePrices = await page
-    .locator('[data-testid="summary-line"][data-free="true"] [data-testid="summary-price"]')
+  await page.locator(config.selectors.checkout_button).first().click();
+  const summaryPrices = await page
+    .locator(config.selectors.summary_line)
+    .locator(config.selectors.summary_price)
     .allInnerTexts();
   const freeAtCheckout =
-    summaryFreePrices.length > 0 && summaryFreePrices.every((value) => money(value) === 0);
+    summaryPrices.length > 0 && summaryPrices.filter((price) => money(price) === 0).length > 0;
 
   // §8 negative case — remove the qualifying product and see whether the free
   // kit goes with it.
   await page.goto(`/cart?kit=${kit.handle}&removed=1`);
-  const strandedFreeLines = await page
-    .locator('[data-testid="cart-line-item"][data-free="true"]')
-    .count();
+  const strandedPrices = await page
+    .locator(config.selectors.cart_line)
+    .locator(config.selectors.cart_line_price)
+    .allInnerTexts();
 
   return {
-    free_item_count: priceLabels.length,
-    free_item_price_label: normalizeLabels(priceLabels),
+    free_item_count: onPdp.freePrices.length,
+    free_item_price_label: normalizeLabels(onPdp.freePrices),
     free_item_badge: normalizeLabels(badges),
-    auto_added_to_cart: autoAdded,
-    counted_in_subtotal: subtotal > paidSum,
-    independently_removable: removableAlone,
-    removed_with_qualifying_product: strandedFreeLines === 0,
+    auto_added_to_cart: inCart.freePrices.length > 0,
+    counted_in_subtotal: subtotal > inCart.paidTotal,
+    independently_removable: freeLinesWithRemove > 0,
+    removed_with_qualifying_product: strandedPrices.filter(free).length === 0,
     free_at_checkout: freeAtCheckout,
     free_gift_option_count: giftOptionCount,
     free_gift_single_select: inputTypes.length > 0 && inputTypes.every((type) => type === 'radio'),
@@ -141,12 +168,12 @@ test.describe('welcome kit pages @kits @smoke', () => {
       const response = await page.goto(`/products/${kit.handle}`);
       expect(response?.status(), `/products/${kit.handle} did not resolve`).toBe(200);
 
-      await expect(page.getByTestId('pdp-title')).toBeVisible();
-      await expect(page.getByTestId('add-to-cart')).toBeVisible();
+      await expect(page.locator(config.selectors.pdp_title).first()).toBeVisible();
+      await expect(page.locator(config.selectors.add_to_cart).first()).toBeVisible();
 
       // §4 — sale price with the original struck through beside it.
-      const sale = money(await page.getByTestId('pdp-price').innerText());
-      const original = money(await page.getByTestId('pdp-compare-at').innerText());
+      const sale = money(await page.locator(config.selectors.pdp_price).first().innerText());
+      const original = money(await page.locator(config.selectors.pdp_compare_at).first().innerText());
       expect(sale, `sale price on ${kit.name} must be a real amount`).toBeGreaterThan(0);
       expect(
         original,

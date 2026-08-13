@@ -53,3 +53,37 @@ compare:
   - free_gift_option_count
   # §7 — "Only one free gift can be selected at a time".
   - free_gift_single_select
+
+# ─────────────────────────────────────────────────────────────────────────
+# Theme selectors.
+#
+# The fixture uses data-testid throughout. A real Shopify theme almost
+# certainly does not, so every selector below accepts a comma-separated list
+# and the first match wins: the testid first, then a plausible theme class.
+#
+# Mapping this suite onto the live theme is an edit here, not a code change.
+# The standing ask remains the one in FRAMEWORK-AND-ROADMAP.md §8 — a
+# data-testid set from the storefront team — because theme classes are
+# regenerated on deploy and merchandising reorders breaks positional
+# selectors weekly. Until then, these fallbacks are the bridge.
+# ─────────────────────────────────────────────────────────────────────────
+selectors:
+  pdp_title: '[data-testid="pdp-title"], h1.product__title, .product-single__title'
+  pdp_price: '[data-testid="pdp-price"], .price-item--sale, .product__price--sale'
+  pdp_compare_at: '[data-testid="pdp-compare-at"], .price-item--regular, .product__price--compare'
+  kit_item: '[data-testid="kit-item"], .product__included-item, .bundle-item'
+  kit_item_price: '[data-testid="kit-item-price"], .included-item__price, .bundle-item__price'
+  kit_item_badge: '[data-testid="kit-item-badge"], .included-item__badge, .bundle-item__badge'
+  free_gift_input: '[data-testid="free-gift-input"], fieldset[name*="gift"] input, input[name*="free-gift"]'
+  add_to_cart: '[data-testid="add-to-cart"], button[name="add"], .product-form__submit'
+  cart_line: '[data-testid="cart-line-item"], .cart-item, .cart__row'
+  cart_line_price: '[data-testid="line-price"], .cart-item__price, .cart__price'
+  cart_line_remove: '[data-testid="cart-remove"], .cart-item__remove, a[href*="/cart/change"]'
+  cart_subtotal: '[data-testid="cart-subtotal"], .totals__subtotal-value, .cart__subtotal'
+  checkout_button: '[data-testid="checkout-button"], button[name="checkout"], .cart__checkout'
+  summary_line: '[data-testid="summary-line"], .product-table .product, .order-summary__section--product-list .product'
+  summary_price: '[data-testid="summary-price"], .product__price, .order-summary__emphasis'
+
+# What counts as a free price, however the theme words it. Anything matching
+# is $0 to the customer; anything else is money.
+free_price_pattern: '^(free|gratis|\$?0(\.00)?|£0(\.00)?|€0([.,]00)?)$'
