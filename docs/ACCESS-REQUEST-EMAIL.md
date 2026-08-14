@@ -1,56 +1,41 @@
-# Draft — access request to leadership
+# Draft — access request
 
-Four registers of the same ask. Send the one that matches the audience.
+One recipient: the Senior Director of Technology, who is also the reporting
+manager. The ask is about the automation programme as a whole, not any single
+check, so it does not need re-writing each time a new test is added.
 
-1. **Email to leadership** — business framing, no jargon. Start here.
-2. **Slack** — same ask, five lines.
-3. **IT / DevOps ticket** — the actual rule, for whoever implements it.
-4. **If they ask "what did you already try?"** — the technical answer, held back
-   until it is wanted.
-
-Fill the bracketed items before sending. `[X]` marks a number I do not have.
+Three registers: email, Slack, and an IT ticket for whoever implements it.
+Fill `[Name]`; `[X]` marks a number I do not have.
 
 ---
 
-## 1. Email to leadership
+## 1. Email
 
-**To:** [Senior Director of Technology]
-**Cc:** [Manager], Sufian
-**Subject:** Request: network access for QA automation — blocking verification of the live Welcome Kits
+**To:** [Name], Senior Director of Technology
+**Subject:** Request: network access for the QA automation environment
 
 Hi [Name],
 
-I need a small access change to finish something that is currently sitting
-half-done, and it needs your sign-off or a pointer to whoever owns it.
+I need a small access change to make the QA automation useful, and it needs
+your approval or a pointer to whoever owns it.
 
-**The situation.** We built automation to check that our seasonal Welcome Kits
-behave the same way as the Winter kit — specifically that the free items in
-them are given away correctly rather than accidentally charged for, dropped,
-or left in a customer's basket when they should not be. It is finished and
-working.
+**The situation.** The environment our test automation runs in has no access
+to our own website. Everything we have built so far has been validated against
+a local copy of the site. That confirms the tooling works; it tells us nothing
+about the real store.
 
-The problem is that the environment it runs in has no access to our own
-website. It has been tested against a copy of the site, which tells us the
-tool works but tells us nothing about the real store.
+**Why it matters.** The point of this programme is to replace repetitive
+manual QA passes with checks that run automatically before every release.
+Until the automation can actually reach the site, none of that manual work can
+be retired, and every check we write remains unproven against reality. We are
+still signing off releases on manual spot-checks, which is what we set out to
+change ([X] hours per cycle).
 
-**The impact.** The Summer and Spring kits are live and selling now. We cannot
-confirm, automatically, that their free-gift handling matches the Winter kit.
-That leaves two risks on the table:
+It also means that when something is asked of us at short notice — is this
+page right, does this product behave like that one, is this market translated
+— the answer still takes a person a day rather than a command a few seconds.
 
-- **A free item that quietly charges.** A customer is promised something free
-  and is billed for it. That is a refund, a support ticket, and a review.
-- **A free item given away when it should not be.** Straight margin loss,
-  invisible until someone reconciles it.
-
-Neither is hypothetical — they are the exact failure modes the check was
-written to catch. Right now the only way to rule them out is by hand, which is
-the manual work this automation was meant to retire ([X] hours per launch).
-
-The same access gap also stops us checking our seven international storefronts
-for missing or broken translations, which was the main commitment for this
-phase.
-
-**The ask.** Allow our QA automation environment to reach three web addresses:
+**The ask.** Allow our QA automation environment to reach our storefront:
 
 ```
 www.mykitsch.com
@@ -58,32 +43,28 @@ mykitsch.com
 cdn.shopify.com
 ```
 
-This is read-only — the same access a person with a browser has. It is a
-firewall/allowlist change on our side, not a change to the store, and it needs
-no passwords or logins.
+Read-only, the same access any visitor with a browser has. It is an allowlist
+change on our infrastructure, not a change to the store, and it involves no
+passwords or logins.
 
-**What it is not.** To be clear about the boundaries, this does not involve:
+**Boundaries, to be clear about scope.** This gives no ability to change the
+store, its products or its prices; no payment details and no test that ever
+completes a purchase; no customer or order data; no Shopify admin access; and
+no general internet access beyond those addresses.
 
-- any ability to change the store, its products, or its prices
-- any payment details, and no test that ever completes a purchase
-- any customer or order data
-- admin access to Shopify
-- general internet access — three addresses is enough
+**One thing worth pairing with it.** For the automation to read our pages
+reliably, the storefront team would need to add a few invisible labels to the
+theme templates — a small, one-off change that keeps the tests stable when the
+site is restyled. Without it the tests work but need re-fixing after every
+design change. Could I get 30 minutes with someone from that team in the same
+window?
 
-**One thing to pair with it.** For the checks to read our product pages
-reliably, the storefront team needs to add a few invisible labels to the
-Welcome Kit and cart templates — a small, one-off theme change that makes the
-automation stable against future design updates. Without it the checks work
-but break every time the site is restyled. Could I get 30 minutes with someone
-from that team in the same window?
+**Once both are in place,** checks that currently take a person hours become a
+command that runs in seconds, on a schedule, before every release — and the
+results are specific enough to hand straight to whoever needs to act on them.
 
-**What happens once both are in place.** Verification becomes a one-command,
-ten-second job that we can run before every launch. It returns either "all
-three seasonal kits match Winter" or an exact list of what differs and why it
-matters — which I can hand straight to marketing.
-
-Happy to demo it in five minutes, or run it live with you watching once access
-is on.
+Happy to demo what is built in five minutes, or to run it with you watching
+once access is on.
 
 Thanks,
 Kuruva
@@ -93,16 +74,14 @@ QA Analyst — Automation
 
 ## 2. Slack
 
-> Hi [Name] — quick one, needs a decision or a pointer.
+> Hi [Name] — small one, needs a decision or a pointer.
 >
-> Our QA automation environment can't reach mykitsch.com — it has no outside
-> access at all. So the checks we built for the Summer and Spring Welcome Kits
-> have only ever run against a copy of the site. The kits are live and selling,
-> and we can't currently confirm their free items are handled the same way as
-> the Winter kit — i.e. that nothing free is being charged for, or given away
-> when it shouldn't be.
+> Our QA automation environment has no access to mykitsch.com, so everything
+> we have built has only ever run against a local copy of the site. It proves
+> the tooling works but not that the store is right, which means we still
+> can't retire any of the manual QA passes this was meant to replace.
 >
-> **Ask:** allow our QA environment to reach `www.mykitsch.com`,
+> **Ask:** allow that environment to reach `www.mykitsch.com`,
 > `mykitsch.com` and `cdn.shopify.com`. Read-only, no logins, no ability to
 > change anything, no payments.
 >
@@ -110,7 +89,7 @@ QA Analyst — Automation
 
 ---
 
-## 3. IT / DevOps ticket
+## 3. IT ticket
 
 **Title:** Egress allowlist — QA automation environment to Kitsch storefront
 
@@ -120,51 +99,47 @@ QA Analyst — Automation
 | **Source** | QA automation environment / CI runner for `KitschAutomation` |
 | **Destinations** | `www.mykitsch.com`, `mykitsch.com`, `cdn.shopify.com` |
 | **Protocol / port** | HTTPS, TCP 443, outbound only |
-| **Direction** | Egress only. No inbound access required |
-| **Authentication** | None. Anonymous, unauthenticated browsing |
-| **Data written** | None. Read-only; the suite never submits a form that completes a transaction |
-| **Data read** | Public storefront pages only — the same content any visitor sees |
-| **Duration** | Ongoing (this becomes a scheduled pre-launch check) |
-| **Current behaviour** | Connection refused by the egress gateway before reaching the destination; same result for all external hosts, so this reads as default-deny rather than a rule about this domain |
-| **Business justification** | Automated pre-launch verification of live product pages; replaces a recurring manual QA pass |
-| **Verification after change** | `KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight` — reports success or the precise failure |
+| **Direction** | Egress only; no inbound access required |
+| **Authentication** | None — anonymous, unauthenticated browsing |
+| **Data written** | None; read-only, never completes a transaction |
+| **Data read** | Public storefront pages only, as any visitor sees them |
+| **Duration** | Ongoing — this becomes a scheduled pre-release check |
+| **Current behaviour** | Connections refused by the egress gateway before reaching the destination; identical for all external hosts, so it reads as default-deny rather than a rule about this domain |
+| **Justification** | Automated pre-release verification of live pages; replaces recurring manual QA |
+| **Verify after change** | `KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight` |
 
 `cdn.shopify.com` is included because the storefront serves its images,
-stylesheets and scripts from there. Without it the pages load without layout,
-and the visual checks cannot mean anything.
+stylesheets and scripts from there; without it pages load without layout and
+visual checks cannot mean anything.
 
 ---
 
-## 4. If they ask what was already tried
+## 4. If asked what was already tried
 
-Keep this back unless invited — it is the answer to "did you just not
-configure it right?", not an opener.
+Hold this back unless invited — it answers "did you just misconfigure it?",
+which is not the opening question.
 
-> The environment's outbound gateway refuses the connection at the point of
-> opening it, before anything reaches Shopify. The same happens for unrelated
-> public websites, so it is a general default-deny policy rather than anything
-> about our store or about Shopify blocking us.
+> The outbound gateway refuses the connection as it is opened, before anything
+> reaches the site. The same happens for unrelated public websites, so it is a
+> general default-deny policy rather than anything about our store.
 >
-> I ruled out the likely alternatives before escalating: the proxy settings
-> with and without explicit configuration, a different browser mode, and a
-> setup that disguises automated traffic in case the store was rejecting it.
-> The failure is identical in every case and happens at the network layer, so
-> nothing configurable on our side changes it.
->
-> Evidence is in `docs/LIVE-RUN.md` if useful.
+> Before escalating I ruled out the usual causes: proxy settings with and
+> without explicit configuration, a different browser mode, and a setup that
+> disguises automated traffic in case the site was rejecting it. The failure is
+> identical in every case and occurs at the network layer, so nothing
+> configurable on our side changes it. Evidence in `docs/LIVE-RUN.md`.
 
 ---
 
-## Notes for sending
+## Notes
 
-- **Lead with the business risk, not the diagnosis.** "A free item that quietly
-  charges" lands; "403 on CONNECT" does not.
-- **Name the decision.** Asking "who owns that config?" converts the request
-  into a routing question, which is faster to answer than a favour.
-- **Keep the "what it is not" list.** A bounded request approves faster, and
-  every exclusion is genuinely enforced in the code.
-- **Do not overstate.** We do not know the kits are wrong. We know we cannot
-  confirm they are right. The drafts say the second thing — which is the honest
-  claim and, if anything, the more urgent one.
-- **Pair the theme-labels ask with it.** It needs a different team; raising it
-  a week later reads as a second interruption.
+- **Keep it programme-level.** The ask is about the automation environment, not
+  any one test. Framing it around a single feature invites a one-off exception
+  instead of a standing fix, and the next request starts from zero.
+- **Name the decision.** "Who owns that config?" is faster to answer than a
+  general request for help.
+- **Keep the boundaries list.** A bounded ask approves faster, and every
+  exclusion in it is genuinely enforced in the code.
+- **Do not overstate.** We are not claiming anything is broken. We are saying
+  we cannot confirm anything is right — which is the honest claim, and the more
+  uncomfortable one to leave standing.
