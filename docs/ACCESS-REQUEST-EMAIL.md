@@ -1,70 +1,141 @@
-# Draft — access request
+# Problem statement — what needs to be resolved
 
-One recipient: the Senior Director of Technology, who is also the reporting
-manager. The ask is about the automation programme as a whole, not any single
-check, so it does not need re-writing each time a new test is added.
+For the Senior Director of Technology, who asked: *what needs to be resolved
+for it to reach the live site?*
 
-Three registers: email, Slack, and an IT ticket for whoever implements it.
+**The short answer has changed since the last draft.** Nothing about the
+network needs resolving. The earlier version of this document asked for a
+firewall allowlist; that ask is withdrawn and should not be actioned. See
+"What changed" below — the correction is worth stating out loud, because the
+first answer was wrong in a way that would have cost someone a ticket.
+
 Fill `[Name]`; `[X]` marks a number I do not have.
 
 ---
 
-## 1. Email
+## 1. The statement
+
+**It already can reach it.**
+
+The automation runs on my own machine, on a normal internet connection — no
+VPN, no corporate proxy in the path. `mykitsch.com` is a public storefront.
+Playwright opens it the same way a browser does. There is no gateway between
+the two, so there is nothing to open.
+
+**What is actually unresolved is that the automation cannot yet *read* the
+pages it reaches.**
+
+The suite finds things on a page by their element identifiers — this is the
+price, this is a cart line, this is the free-gift selector. It was built
+against a local mock of our site, and the mock uses identifiers I invented.
+Our live Shopify theme uses its own. Pointed at the real store today, the
+checks connect fine and then report "I could not find the price" instead of
+"the summer kit prices the free item differently from winter".
+
+That is the whole gap. It is a mapping exercise, not an access problem.
+
+**To resolve it:** 30 minutes with someone from the storefront team, walking
+the welcome-kit and cart templates so I can write down what each element is
+actually called. The mapping lives in a config file, so it is an edit, not a
+code change. Better and more durable, if they will take it: a handful of
+invisible `data-testid` labels added to those templates, which survive
+restyling — theme class names regenerate on every deploy, so anything I map
+today breaks on the next design change.
+
+**Two things behind it, not blocking:**
+
+- A **read-only** Shopify Admin API token (`read_translations`,
+  `read_products`, `read_online_store_pages`). Only needed for the exhaustive
+  translation check — comparing every translatable string across all seven
+  locales, including on pages nobody thinks to open. The browser checks do
+  not need it.
+- A decision on **where this runs long-term**, covered in §3. Related to the
+  token, and the reason I am not just asking for the token.
+
+---
+
+## 2. What changed, and why I am correcting myself
+
+I previously reported that the automation was blocked from reaching our site
+and drafted a request to allowlist three hosts. That diagnosis was real but
+misattributed: the block belonged to the sandboxed environment I was
+*authoring* in, which denies general web access by policy. It is not our
+network, and it is not the environment the suite runs in.
+
+The measurement was sound — connections refused at the gateway, identical for
+every external host, unaffected by browser configuration. The inference from
+it was not. I am flagging it rather than quietly deleting the draft, because
+an allowlist request would have consumed someone's time to change nothing.
+
+The consequence for how you read the current results is unchanged, and this
+is the part that still matters: **every number this suite reports today came
+from the local mock.** The tooling is proven; the store is unexamined.
+
+---
+
+## 3. The question I would rather you answer than the token request
+
+The automation currently lives on my personal machine. That was right for
+building it. It is not right for a pre-release gate:
+
+- It runs when I remember to run it, and stops existing when I am away.
+- Results from an unmanaged machine are testimony, not evidence — nobody else
+  can reproduce them.
+- Any credential the checks need would have to sit in a file on that machine,
+  outside device management, rotation or revocation.
+
+The repository already has CI running the offline layers. Pointing it at the
+storefront is configuration, not development, and the API token would then
+live as a repository secret and never touch a laptop.
+
+So: **should this move to CI now, or stay local until the selector mapping is
+done?** If CI, the token question resolves itself and I will stop asking for
+one locally.
+
+---
+
+## 4. Email
 
 **To:** [Name], Senior Director of Technology
-**Subject:** Request: network access for the QA automation environment
+**Subject:** Live-site automation — what's actually blocking it
 
 Hi [Name],
 
-I need a small access change to make the QA automation useful, and it needs
-your approval or a pointer to whoever owns it.
+Correcting something I told you, and then the real answer.
 
-**The situation.** The environment our test automation runs in has no access
-to our own website. Everything we have built so far has been validated against
-a local copy of the site. That confirms the tooling works; it tells us nothing
-about the real store.
+**The correction.** I said the automation could not reach our site and asked
+for a firewall change. That was wrong — the block I measured was in the
+sandboxed environment I build in, not on our network. The automation runs on
+my own machine on a normal connection, and mykitsch.com is a public website,
+so it reaches it fine. Please drop that request if it went anywhere.
 
-**Why it matters.** The point of this programme is to replace repetitive
-manual QA passes with checks that run automatically before every release.
-Until the automation can actually reach the site, none of that manual work can
-be retired, and every check we write remains unproven against reality. We are
-still signing off releases on manual spot-checks, which is what we set out to
-change ([X] hours per cycle).
+**What is actually blocking it.** The automation can open our pages but
+cannot yet read them. It finds things — a price, a cart line, the free-gift
+selector — by element identifiers, and it was built against a local copy of
+the site using identifiers I made up. The real theme uses its own. So today it
+connects and then reports "couldn't find the price" instead of "the summer kit
+handles the free item differently from winter".
 
-It also means that when something is asked of us at short notice — is this
-page right, does this product behave like that one, is this market translated
-— the answer still takes a person a day rather than a command a few seconds.
+**What resolves it.** 30 minutes with someone from the storefront team to walk
+the welcome-kit and cart templates so I can map what each element is really
+called. It is a config edit afterwards, not development. If they are willing,
+adding a few invisible labels to those templates is the version that does not
+break every time the site is restyled.
 
-**The ask.** Allow our QA automation environment to reach our storefront:
+**Behind that,** and not blocking: a read-only Shopify API token for the
+exhaustive translation check, and a decision on whether this should move to CI
+rather than living on my laptop. I would rather ask the second question first —
+if it moves to CI, the token lives as a repository secret instead of in a file
+on a personal machine, which I think is the right answer anyway.
 
-```
-www.mykitsch.com
-mykitsch.com
-cdn.shopify.com
-```
+**Where that leaves us today.** Everything built so far is verified against a
+local copy of the site. That proves the tooling works and says nothing about
+the real store — so we are still signing off releases on manual spot-checks
+([X] hours per cycle), and the welcome-kit question is genuinely unanswered
+rather than answered green.
 
-Read-only, the same access any visitor with a browser has. It is an allowlist
-change on our infrastructure, not a change to the store, and it involves no
-passwords or logins.
-
-**Boundaries, to be clear about scope.** This gives no ability to change the
-store, its products or its prices; no payment details and no test that ever
-completes a purchase; no customer or order data; no Shopify admin access; and
-no general internet access beyond those addresses.
-
-**One thing worth pairing with it.** For the automation to read our pages
-reliably, the storefront team would need to add a few invisible labels to the
-theme templates — a small, one-off change that keeps the tests stable when the
-site is restyled. Without it the tests work but need re-fixing after every
-design change. Could I get 30 minutes with someone from that team in the same
-window?
-
-**Once both are in place,** checks that currently take a person hours become a
-command that runs in seconds, on a schedule, before every release — and the
-results are specific enough to hand straight to whoever needs to act on them.
-
-Happy to demo what is built in five minutes, or to run it with you watching
-once access is on.
+Happy to demo it in five minutes, or to run it with you watching once the
+selectors are mapped.
 
 Thanks,
 Kuruva
@@ -72,78 +143,56 @@ QA Analyst — Automation
 
 ---
 
-## 2. Slack
+## 5. Slack
 
-> Hi [Name] — our QA automation environment can't reach mykitsch.com. It has
-> no outside access at all, so everything we've built has only ever run
-> against a local copy of the site. Means we can't retire any of the manual QA
-> passes yet.
+> Hi [Name] — correction on what I told you about the automation. It can
+> reach mykitsch.com fine; the block I hit was in my build environment, not
+> our network. Ignore the firewall ask.
 >
-> Can we allow it to reach `www.mykitsch.com`, `mykitsch.com` and
-> `cdn.shopify.com`? Read-only, no logins, can't change anything on the store.
+> The real blocker: it opens our pages but can't read them yet. It finds
+> prices and cart lines by element names, and it was built against a mock
+> using names I invented — the live theme uses its own. So it connects, then
+> says "couldn't find the price" instead of answering the kit question.
 >
-> Is that yours to approve, or should I raise it somewhere?
+> Fix is 30 mins with someone from the storefront team to map the real
+> element names on the welcome-kit and cart templates. Config edit after
+> that, no dev work. Can you point me at the right person?
 
-Shorter, if the context is already understood:
+Shorter:
 
-> Hi [Name] — can we give the QA automation environment access to
-> `www.mykitsch.com`, `mykitsch.com` and `cdn.shopify.com`? Read-only, no
-> logins. Right now it can't reach the site at all, so the tests only run
-> against a local copy. Yours to approve, or should I raise a ticket?
+> Hi [Name] — the automation can reach the site fine (my earlier firewall ask
+> was wrong, please ignore it). What it can't do is read the pages: it looks
+> for elements by names from our local mock, and the real theme uses
+> different ones. Need 30 mins with someone on the storefront team to map
+> them. Who owns the theme templates?
 
 ---
 
-## 3. IT ticket
+## 6. If asked "are you sure it's not the network?"
 
-**Title:** Egress allowlist — QA automation environment to Kitsch storefront
-
-| Field | Value |
-|---|---|
-| **Requested by** | Kuruva Dinesh, QA Analyst — Automation |
-| **Source** | QA automation environment / CI runner for `KitschAutomation` |
-| **Destinations** | `www.mykitsch.com`, `mykitsch.com`, `cdn.shopify.com` |
-| **Protocol / port** | HTTPS, TCP 443, outbound only |
-| **Direction** | Egress only; no inbound access required |
-| **Authentication** | None — anonymous, unauthenticated browsing |
-| **Data written** | None; read-only, never completes a transaction |
-| **Data read** | Public storefront pages only, as any visitor sees them |
-| **Duration** | Ongoing — this becomes a scheduled pre-release check |
-| **Current behaviour** | Connections refused by the egress gateway before reaching the destination; identical for all external hosts, so it reads as default-deny rather than a rule about this domain |
-| **Justification** | Automated pre-release verification of live pages; replaces recurring manual QA |
-| **Verify after change** | `KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight` |
-
-`cdn.shopify.com` is included because the storefront serves its images,
-stylesheets and scripts from there; without it pages load without layout and
-visual checks cannot mean anything.
-
----
-
-## 4. If asked what was already tried
-
-Hold this back unless invited — it answers "did you just misconfigure it?",
-which is not the opening question.
-
-> The outbound gateway refuses the connection as it is opened, before anything
-> reaches the site. The same happens for unrelated public websites, so it is a
-> general default-deny policy rather than anything about our store.
+> Yes. The failure I originally reported came from the sandboxed environment
+> I author in, which blocks all outbound web access by policy — the same error
+> appeared for unrelated public sites, which is what gave it away. On a normal
+> machine there is no gateway in the path at all; mykitsch.com is a public
+> storefront reached the same way any browser reaches it.
 >
-> Before escalating I ruled out the usual causes: proxy settings with and
-> without explicit configuration, a different browser mode, and a setup that
-> disguises automated traffic in case the site was rejecting it. The failure is
-> identical in every case and occurs at the network layer, so nothing
-> configurable on our side changes it. Evidence in `docs/LIVE-RUN.md`.
+> `npm run preflight` distinguishes the cases explicitly: it prints whether
+> the site was unreachable, whether a product handle failed to resolve, or
+> whether a selector matched nothing. From a normal machine it reports
+> reachable, then lists the selectors needing mapping. Evidence in
+> `docs/LIVE-RUN.md`.
 
 ---
 
 ## Notes
 
-- **Keep it programme-level.** The ask is about the automation environment, not
-  any one test. Framing it around a single feature invites a one-off exception
-  instead of a standing fix, and the next request starts from zero.
-- **Name the decision.** "Who owns that config?" is faster to answer than a
-  general request for help.
-- **Keep the boundaries list.** A bounded ask approves faster, and every
-  exclusion in it is genuinely enforced in the code.
-- **Do not overstate.** We are not claiming anything is broken. We are saying
-  we cannot confirm anything is right — which is the honest claim, and the more
-  uncomfortable one to leave standing.
+- **Lead with the correction.** It is short, and burying it means the
+  allowlist ticket stays open.
+- **Do not overstate.** We are not claiming anything is broken on the store.
+  We are saying we cannot confirm anything is right — the honest claim, and
+  the more uncomfortable one to leave standing.
+- **Ask the CI question before the token question.** A credential on an
+  unmanaged personal machine is a decision someone should make deliberately,
+  and the better answer removes the need for it.
+- **Keep the exclusions list.** Every boundary claimed is enforced in code:
+  no writes, no purchases, no admin console, no customer data.

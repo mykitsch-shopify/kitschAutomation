@@ -125,14 +125,18 @@ failed`, which left triage to go and find it.
 
 **mykitsch.com was not touched.** Two independent reasons, either sufficient:
 
-1. It is unreachable from this environment. The egress proxy answers `403` to
-   `CONNECT`, confirmed against the proxy's own status endpoint. A later probe
-   with Playwright driving Chromium showed the same result for
-   `playwright.dev` and `example.com`, so this is a broad allowlist — package
-   registries and little else — rather than a rule aimed at this store. Either
-   way the site is unreachable, and the proxy documentation is explicit that a
-   403 should be reported rather than retried or routed around. Detail in
-   `docs/LIVE-RUN.md`.
+1. It is unreachable **from this environment**. The egress proxy answers `403`
+   to `CONNECT`, confirmed against the proxy's own status endpoint. A later
+   probe with Playwright driving Chromium showed the same result for
+   `playwright.dev` and `example.com`, so this is a broad default-deny —
+   package registries and little else — rather than a rule aimed at this
+   store, and the proxy documentation is explicit that a 403 should be
+   reported rather than retried or routed around.
+
+   Scope that claim carefully when quoting this report: it constrains the
+   sandbox this run happened in, not the machines the suite runs on. From an
+   ordinary computer, without a VPN or a corporate proxy, mykitsch.com is a
+   public site and needs no access grant. Detail in `docs/LIVE-RUN.md`.
 2. The standing rule in this repo is that the harness never points at
    production, including "just to reproduce". A suite that *can* reach prod
    eventually will.

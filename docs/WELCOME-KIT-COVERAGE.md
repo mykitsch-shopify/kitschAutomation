@@ -147,12 +147,17 @@ kit that 404s is a bigger problem than a kit that differs.
 ## 6. Status against the requirement
 
 **The automation is built, tested and passing against a fixture. It has not
-been run against mykitsch.com.** A live run was attempted with Playwright and
-blocked by this environment's egress policy, which denies general web browsing
-rather than this store specifically — evidence and the exact procedure are in
-[`LIVE-RUN.md`](LIVE-RUN.md). Note the second prerequisite recorded there: the
+been run against mykitsch.com.** The live run attempt recorded in
+[`LIVE-RUN.md`](LIVE-RUN.md) failed inside the sandboxed authoring
+environment, which denies general web browsing by policy. That is not a
+constraint on the machine this suite runs on: mykitsch.com is a public
+storefront and an ordinary computer reaches it without a VPN, an allowlist or
+any other grant.
+
+The prerequisite that does survive is the second one recorded there: the
 theme selectors need mapping in `config/kits.yaml`, because the live theme
-will not carry the fixture's `data-testid` attributes.
+will not carry the fixture's `data-testid` attributes. Run
+`npm run preflight` against the store to get the exact list.
 
 Until that run happens, **this document cannot tell you whether the summer and
 spring kits currently match winter.** It tells you the check exists, covers ten

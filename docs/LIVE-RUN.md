@@ -1,7 +1,20 @@
 # Running the suite against the live site
 
 **Attempted:** 13 August 2026, with Playwright driving Chromium.
-**Result:** blocked by this environment's network policy. Not run.
+**Result:** blocked by *this authoring environment's* network policy. Not run.
+
+> **Scope of that result — read this before forwarding anything below.**
+> The block described in §1 is a property of the sandboxed environment these
+> files were written in, which denies general outbound web access by policy.
+> It is **not** a property of the machine the suite is meant to run on. On an
+> ordinary computer on an ordinary internet connection — no VPN, no corporate
+> proxy — `www.mykitsch.com` is a public website and Playwright reaches it
+> like any browser does. Nothing needs to be granted, opened or allowlisted
+> for that.
+>
+> §1 is kept because it is the evidence for *why the numbers in this repo are
+> fixture numbers*. It is not an infrastructure request. §2.2 is the blocker
+> that survives on any machine.
 
 ---
 
@@ -79,30 +92,53 @@ genuine `403` **from the store** — a Cloudflare challenge page rather than a
 tunnel error — that is different evidence and worth revisiting; `npm run
 preflight` will show which of the two it is.
 
-### Correcting an earlier statement
+### Correcting two earlier statements
 
-Earlier notes in this repo described the block as an egress-policy denial
-*for mykitsch.com*. That was imprecise. The denial covers effectively every
-external host; mykitsch.com is caught by the same rule. The remedy is
-unchanged — an allowlist entry — but the scope of the ask is different, and
-worth stating accurately to whoever grants it.
+**First:** earlier notes described the block as an egress-policy denial *for
+mykitsch.com*. The denial covers effectively every external host;
+mykitsch.com is caught by the same rule, and nothing about it is specific to
+our store.
+
+**Second, and more consequential:** those notes went on to treat the denial as
+something the business needed to fix, and an access request was drafted on
+that basis. That was wrong, and it is worth being blunt about why. The denial
+belongs to the environment this repository was *authored* in. The environment
+the suite *runs* in is an analyst's own computer on an ordinary internet
+connection, with no VPN and no corporate proxy in the path. There is no
+gateway there to allowlist, because there is no gateway. The correct action
+on that machine is to run the suite; it will connect.
+
+The access request drafted against this misreading has been withdrawn — see
+`ACCESS-REQUEST.md`, which now states what is actually outstanding.
 
 ---
 
 ## 2. What a live run needs
 
-Two things, and the second is the one people forget.
+One thing, and it is the one people forget.
 
-### 2.1 Network egress
+### 2.1 Network — nothing required
 
-Allowlist the storefront host for the session or runner. Nothing else in the
-suite needs the internet: dependencies come from npm and the browser is
-already installed.
+`www.mykitsch.com` is a public storefront. Any machine that can open it in a
+browser can run this suite against it; Playwright makes the same requests
+from the same network position. No VPN, no allowlist, no proxy configuration,
+no credentials.
+
+The only caveat is the ordinary one for any automated browsing at volume:
+stay to a human-plausible request rate. The suite browses a handful of pages
+per run, which is nothing, and it never completes a purchase.
+
+If a run from a personal machine ever *does* fail at the network layer, the
+distinction that matters is in the error. `ERR_TUNNEL_CONNECTION_FAILED` or a
+403 answering `CONNECT` means something is intercepting egress. An HTTP 403
+served *by the store*, or a Cloudflare interstitial, is the opposite problem
+and a real one — that is bot mitigation, and it is worth raising rather than
+evading. `npm run preflight` names which of the two occurred.
 
 ### 2.2 Selectors that match the real theme
 
-This is the substantive blocker, and it applies **even where the network is
-open**. The suite's fixture uses `data-testid` attributes throughout; a live
+This is the substantive blocker, and with the network question retired it is
+now the *only* one. The suite's fixture uses `data-testid` attributes; a live
 Shopify theme almost certainly does not have them. Pointed at the real store
 as-is, the specs would fail on missing locators — reporting "no kit items
 matched" rather than any real defect.
@@ -195,12 +231,19 @@ Preflight against https://www.mykitsch.com
 Run it before the suite. A spec that cannot find the markup reports a defect
 that is not there, and every one of those costs a triage cycle.
 
-From this environment today it prints:
+From the sandboxed authoring environment it prints:
 
 ```
   UNREACHABLE    page.goto: net::ERR_TUNNEL_CONNECTION_FAILED
   A tunnel or connection error here is the network, not the store.
 ```
+
+From a normal machine it will not print that. Expect `reachable HTTP 200`
+followed by a per-selector match count — and expect several of those counts
+to be `0` on the first run, because the testids are fixture inventions. That
+list is the work item: map each unmatched name in `config/kits.yaml` under
+`selectors`, re-run preflight, repeat until the list is empty. Then the suite
+means something.
 
 ---
 

@@ -114,10 +114,12 @@ Safari.
 **WebKit and production, in this environment specifically.** Neither is a
 design decision:
 
-- `mykitsch.com` returns `403` from the egress proxy — an organization policy
-  denial, confirmed against the proxy status endpoint. Not routable around,
-  and the proxy documentation is explicit that it should be reported rather
-  than retried.
+- `mykitsch.com` returns `403` from this sandbox's egress proxy, which denies
+  general web browsing by policy — confirmed against the proxy status
+  endpoint, and reproduced identically for unrelated public hosts. It is a
+  property of *this* environment only; on an ordinary machine, with no VPN or
+  corporate proxy in the path, the storefront is reachable and needs no grant.
+  See `LIVE-RUN.md`.
 - WebKit and Firefox binaries cannot be downloaded here, so the executed run
   is Chromium only. Since ~80% of this store's traffic is mobile Safari, that
   is the single largest caveat on the sample run.
