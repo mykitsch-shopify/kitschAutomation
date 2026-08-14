@@ -74,18 +74,22 @@ QA Analyst — Automation
 
 ## 2. Slack
 
-> Hi [Name] — small one, needs a decision or a pointer.
+> Hi [Name] — our QA automation environment can't reach mykitsch.com. It has
+> no outside access at all, so everything we've built has only ever run
+> against a local copy of the site. Means we can't retire any of the manual QA
+> passes yet.
 >
-> Our QA automation environment has no access to mykitsch.com, so everything
-> we have built has only ever run against a local copy of the site. It proves
-> the tooling works but not that the store is right, which means we still
-> can't retire any of the manual QA passes this was meant to replace.
+> Can we allow it to reach `www.mykitsch.com`, `mykitsch.com` and
+> `cdn.shopify.com`? Read-only, no logins, can't change anything on the store.
 >
-> **Ask:** allow that environment to reach `www.mykitsch.com`,
-> `mykitsch.com` and `cdn.shopify.com`. Read-only, no logins, no ability to
-> change anything, no payments.
->
-> Who owns that config? Happy to raise a ticket if you point me at the queue.
+> Is that yours to approve, or should I raise it somewhere?
+
+Shorter, if the context is already understood:
+
+> Hi [Name] — can we give the QA automation environment access to
+> `www.mykitsch.com`, `mykitsch.com` and `cdn.shopify.com`? Read-only, no
+> logins. Right now it can't reach the site at all, so the tests only run
+> against a local copy. Yours to approve, or should I raise a ticket?
 
 ---
 
