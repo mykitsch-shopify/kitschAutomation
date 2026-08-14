@@ -3,13 +3,13 @@
 QA automation for the Kitsch storefront — **Playwright + TypeScript**, mobile-first,
 with locale parity as the flagship suite.
 
-> **The code lives on the [`develop`](https://github.com/kvdinesh13/KitschAutomation/tree/develop)
+> **The code lives on the [`develop`](https://github.com/mykitsch-shopify/kitschAutomation/tree/develop)
 > branch.** This branch carries the documentation only, so every path and file
 > reference below — `config/i18n.yaml`, `i18n/specs/`, `docs/` — is on `develop`.
 > Clone that branch to run anything:
 >
 > ```bash
-> git clone -b develop https://github.com/kvdinesh13/KitschAutomation.git
+> git clone -b develop https://github.com/mykitsch-shopify/kitschAutomation.git
 > ```
 
 The suite validates that all seven supported languages (en, fr, de, it, es, ko, ja)
@@ -54,10 +54,10 @@ checkout and meta content — replacing a recurring manual translation pass.
 Nothing else. No database, no Docker, no running store — the fixture storefront is
 a local Node HTTP server started automatically by Playwright.
 
-**Repository access.** This repository is **private**, so cloning needs an
-authenticated GitHub account with access to it. Ask the repo owner to add you
-as a collaborator first — without that, the clone below fails no matter how
-you authenticate.
+**Repository access.** This repository lives in the **`mykitsch-shopify`**
+organization and is private, so cloning needs a GitHub account that is a member
+of the org with access to it. Ask an org owner for access first — without it the
+clone below fails no matter how you authenticate.
 
 ---
 
@@ -85,7 +85,7 @@ or create a Personal Access Token at <https://github.com/settings/tokens>
 Three commands from a fresh clone:
 
 ```bash
-git clone -b develop https://github.com/kvdinesh13/KitschAutomation.git
+git clone -b develop https://github.com/mykitsch-shopify/kitschAutomation.git
 cd KitschAutomation
 
 npm ci                          # 1. install exact locked dependencies
@@ -137,7 +137,7 @@ Detection verified: both layers fail when the store is broken.
 
 The seven `minor` findings in the parity run are expected — French and Spanish
 copy legitimately runs 1.5–1.8× longer than English on headings. See
-[`docs/RUN-REPORT-2026-08-12.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/RUN-REPORT-2026-08-12.md) §2.
+[`docs/RUN-REPORT-2026-08-12.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/RUN-REPORT-2026-08-12.md) §2.
 
 ---
 
@@ -535,7 +535,7 @@ asked about is the same false all-clear as reporting a failed fetch as a clean l
 > **Where the token lives is a decision, not a default.** A store credential in
 > a `.env` file on a personal machine sits outside device management, rotation
 > and revocation. Prefer holding it as a CI secret and running §9.2 there; §9.1
-> needs nothing and can stay local. See [`docs/ACCESS-REQUEST.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/ACCESS-REQUEST.md) §3.
+> needs nothing and can stay local. See [`docs/ACCESS-REQUEST.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/ACCESS-REQUEST.md) §3.
 
 ---
 
@@ -577,8 +577,9 @@ HTTP 403 or a challenge. `docs/LIVE-RUN.md` has the full diagnosis.
 **`Authentication failed` / `Password authentication is not supported` on clone**
 The repository is private and GitHub does not accept account passwords for git.
 See §2.0 — `gh auth login`, or a Personal Access Token used as the password. If
-you get `Repository not found` *after* authenticating, your account has not been
-added as a collaborator yet; ask the repo owner.
+you get `Repository not found` *after* authenticating, your account is not in the
+`mykitsch-shopify` org or has not been granted access; ask an org owner. A
+classic PAT also needs SSO authorised for the org before it will work.
 
 **`npm ci` reports a missing `package-lock.json`**
 You are not in the repository root. `cd KitschAutomation` first — `node -p
@@ -614,19 +615,19 @@ the same as a clean review.
 
 | Document | What it is |
 |---|---|
-| [`docs/FRAMEWORK-AND-ROADMAP.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/FRAMEWORK-AND-ROADMAP.md) | The framework proposal: tool choices, architecture, phases, risks, open questions |
-| [`docs/TEST-PLAN-TRANSLATIONS.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/TEST-PLAN-TRANSLATIONS.md) | The Translations test plan this suite automates |
-| [`docs/TRACEABILITY.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/TRACEABILITY.md) | Plan section → automated check, including what is deliberately *not* automated |
-| [`docs/TEST-CASE-COVERAGE.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/TEST-CASE-COVERAGE.md) | The 27 written test cases cross-verified against the suite |
-| [`docs/WELCOME-KIT-COVERAGE.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/WELCOME-KIT-COVERAGE.md) | Welcome-kit free-item parity: the requirement, the ten dimensions, and all 57 written cases |
-| [`docs/ACCESS-REQUEST.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/ACCESS-REQUEST.md) | What is genuinely outstanding — selector mapping, a read-only token, where this should run. The earlier network request is withdrawn |
-| [`docs/ACCESS-REQUEST-EMAIL.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/ACCESS-REQUEST-EMAIL.md) | The problem statement for a manager, in email and Slack form |
-| [`docs/LIVE-RUN.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/LIVE-RUN.md) | Running against the live storefront: why the sandbox attempt failed, the selector mapping it needs, and the exact commands |
-| [`docs/RUN-REPORT-2026-08-12.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/RUN-REPORT-2026-08-12.md) | An executed run with its results and its caveats |
+| [`docs/FRAMEWORK-AND-ROADMAP.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/FRAMEWORK-AND-ROADMAP.md) | The framework proposal: tool choices, architecture, phases, risks, open questions |
+| [`docs/TEST-PLAN-TRANSLATIONS.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/TEST-PLAN-TRANSLATIONS.md) | The Translations test plan this suite automates |
+| [`docs/TRACEABILITY.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/TRACEABILITY.md) | Plan section → automated check, including what is deliberately *not* automated |
+| [`docs/TEST-CASE-COVERAGE.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/TEST-CASE-COVERAGE.md) | The 27 written test cases cross-verified against the suite |
+| [`docs/WELCOME-KIT-COVERAGE.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/WELCOME-KIT-COVERAGE.md) | Welcome-kit free-item parity: the requirement, the ten dimensions, and all 57 written cases |
+| [`docs/ACCESS-REQUEST.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/ACCESS-REQUEST.md) | What is genuinely outstanding — selector mapping, a read-only token, where this should run. The earlier network request is withdrawn |
+| [`docs/ACCESS-REQUEST-EMAIL.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/ACCESS-REQUEST-EMAIL.md) | The problem statement for a manager, in email and Slack form |
+| [`docs/LIVE-RUN.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/LIVE-RUN.md) | Running against the live storefront: why the sandbox attempt failed, the selector mapping it needs, and the exact commands |
+| [`docs/RUN-REPORT-2026-08-12.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/RUN-REPORT-2026-08-12.md) | An executed run with its results and its caveats |
 
 ### Known limitations
 
-Read [`docs/TRACEABILITY.md`](https://github.com/kvdinesh13/KitschAutomation/blob/develop/docs/TRACEABILITY.md) before trusting a green run. In
+Read [`docs/TRACEABILITY.md`](https://github.com/mykitsch-shopify/kitschAutomation/blob/develop/docs/TRACEABILITY.md) before trusting a green run. In
 short: which font ultimately drew a glyph is a property of the customer's device and
 is not asserted; order-confirmation against a real store needs a test order; and
 Firefox and the real-device grid are wired but have not yet been executed.
