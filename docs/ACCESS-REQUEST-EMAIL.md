@@ -1,65 +1,89 @@
 # Draft — access request to leadership
 
-Two versions of the same ask: an email for the record, and a short Slack
-message for speed. Fill the bracketed names before sending.
+Four registers of the same ask. Send the one that matches the audience.
 
-The supporting detail lives in [`ACCESS-REQUEST.md`](ACCESS-REQUEST.md) and
-[`LIVE-RUN.md`](LIVE-RUN.md) — link them rather than pasting them in.
+1. **Email to leadership** — business framing, no jargon. Start here.
+2. **Slack** — same ask, five lines.
+3. **IT / DevOps ticket** — the actual rule, for whoever implements it.
+4. **If they ask "what did you already try?"** — the technical answer, held back
+   until it is wanted.
+
+Fill the bracketed items before sending. `[X]` marks a number I do not have.
 
 ---
 
-## Version 1 — Email
+## 1. Email to leadership
 
 **To:** [Senior Director of Technology]
 **Cc:** [Manager], Sufian
-**Subject:** 15 minutes of admin time to unblock Welcome Kit + translation QA verification
+**Subject:** Request: network access for QA automation — blocking verification of the live Welcome Kits
 
 Hi [Name],
 
-**The ask:** please allow outbound HTTPS from our QA automation environment to
-three hosts — `www.mykitsch.com`, `mykitsch.com`, `cdn.shopify.com`. Read-only
-browsing, no credentials involved. It is a configuration change on the
-automation environment, not a change to the store.
+I need a small access change to finish something that is currently sitting
+half-done, and it needs your sign-off or a pointer to whoever owns it.
 
-**Why it matters now.** The summer and spring Welcome Kits are live. We have
-been asked to confirm they handle free items exactly like the Winter Welcome
-Kit Combos — whether the free kit auto-adds at $0, stays out of the subtotal,
-survives to the order summary, and is removed when the qualifying product is
-removed. The automation that answers this is written, tested and ready. It
-cannot reach the storefront, so **we currently have no automated confirmation
-either way.** Every run so far has been against a local mock, which proves the
-tool works and proves nothing about the store.
+**The situation.** We built automation to check that our seasonal Welcome Kits
+behave the same way as the Winter kit — specifically that the free items in
+them are given away correctly rather than accidentally charged for, dropped,
+or left in a customer's basket when they should not be. It is finished and
+working.
 
-The same block also stops the translation suite from checking the seven live
-locales, which was the original Phase 2 commitment.
+The problem is that the environment it runs in has no access to our own
+website. It has been tested against a copy of the site, which tells us the
+tool works but tells us nothing about the real store.
 
-**What I have already tried,** so this is not a first resort: the session
-proxy with and without explicit configuration, a different browser mode, and a
-stealth/user-agent setup in case the store was rejecting automated traffic. It
-is none of those. Our egress gateway answers `403 Forbidden` to the connection
-request itself, before anything reaches Shopify — and it does the same for
-unrelated public sites, so it is a general policy rather than anything about
-mykitsch.com. Full evidence in the linked doc.
+**The impact.** The Summer and Spring kits are live and selling now. We cannot
+confirm, automatically, that their free-gift handling matches the Winter kit.
+That leaves two risks on the table:
 
-**What I am not asking for:** no write access to any store, no payment
-credentials, no customer or order data, no production Shopify admin, and no
-general internet access. Three named hosts is enough. The suite browses
-product pages, adds to cart and reads the order summary; it never completes a
-purchase.
+- **A free item that quietly charges.** A customer is promised something free
+  and is billed for it. That is a refund, a support ticket, and a review.
+- **A free item given away when it should not be.** Straight margin loss,
+  invisible until someone reconciles it.
 
-**One dependency alongside it.** Once we can reach the site, the checks need
-to recognise the theme's markup. The durable fix is a small set of
-`data-testid` attributes on the Welcome Kit and cart templates — a one-line
-theme change that buys permanent stability, and the standing request in the
-framework proposal. If that is not quick, 30 minutes with someone from the
-storefront team to map the existing classes will do for now.
+Neither is hypothetical — they are the exact failure modes the check was
+written to catch. Right now the only way to rule them out is by hand, which is
+the manual work this automation was meant to retire ([X] hours per launch).
 
-**After that,** verification is a ten-second command, and the output is either
-"all three seasonal kits match winter" or a per-dimension list of exactly what
-differs — in a form I can send straight to marketing.
+The same access gap also stops us checking our seven international storefronts
+for missing or broken translations, which was the main commitment for this
+phase.
 
-Happy to walk through it live, or to run it with someone watching once access
-is in place.
+**The ask.** Allow our QA automation environment to reach three web addresses:
+
+```
+www.mykitsch.com
+mykitsch.com
+cdn.shopify.com
+```
+
+This is read-only — the same access a person with a browser has. It is a
+firewall/allowlist change on our side, not a change to the store, and it needs
+no passwords or logins.
+
+**What it is not.** To be clear about the boundaries, this does not involve:
+
+- any ability to change the store, its products, or its prices
+- any payment details, and no test that ever completes a purchase
+- any customer or order data
+- admin access to Shopify
+- general internet access — three addresses is enough
+
+**One thing to pair with it.** For the checks to read our product pages
+reliably, the storefront team needs to add a few invisible labels to the
+Welcome Kit and cart templates — a small, one-off theme change that makes the
+automation stable against future design updates. Without it the checks work
+but break every time the site is restyled. Could I get 30 minutes with someone
+from that team in the same window?
+
+**What happens once both are in place.** Verification becomes a one-command,
+ten-second job that we can run before every launch. It returns either "all
+three seasonal kits match Winter" or an exact list of what differs and why it
+matters — which I can hand straight to marketing.
+
+Happy to demo it in five minutes, or run it live with you watching once access
+is on.
 
 Thanks,
 Kuruva
@@ -67,40 +91,80 @@ QA Analyst — Automation
 
 ---
 
-## Version 2 — Slack
+## 2. Slack
 
-> Hi [Name] — small ask that unblocks something with a deadline attached.
+> Hi [Name] — quick one, needs a decision or a pointer.
 >
-> Our QA automation environment can't reach mykitsch.com. Our egress gateway
-> refuses the connection (403) before it ever gets to Shopify — it does the
-> same for any external site, so it's a general policy, not anything about our
-> store. I've ruled out the usual suspects (proxy config, browser mode, bot
-> detection).
+> Our QA automation environment can't reach mykitsch.com — it has no outside
+> access at all. So the checks we built for the Summer and Spring Welcome Kits
+> have only ever run against a copy of the site. The kits are live and selling,
+> and we can't currently confirm their free items are handled the same way as
+> the Winter kit — i.e. that nothing free is being charged for, or given away
+> when it shouldn't be.
 >
-> **Ask:** allow outbound HTTPS to `www.mykitsch.com`, `mykitsch.com` and
-> `cdn.shopify.com` from the automation environment. Read-only, no
-> credentials, no writes.
+> **Ask:** allow our QA environment to reach `www.mykitsch.com`,
+> `mykitsch.com` and `cdn.shopify.com`. Read-only, no logins, no ability to
+> change anything, no payments.
 >
-> **Why now:** the summer and spring Welcome Kits are live and we have no
-> automated confirmation that their free-item handling matches the winter kit.
-> The check is built and tested — it just can't see the site. Same block stops
-> the 7-locale translation checks.
+> Who owns that config? Happy to raise a ticket if you point me at the queue.
+
+---
+
+## 3. IT / DevOps ticket
+
+**Title:** Egress allowlist — QA automation environment to Kitsch storefront
+
+| Field | Value |
+|---|---|
+| **Requested by** | Kuruva Dinesh, QA Analyst — Automation |
+| **Source** | QA automation environment / CI runner for `KitschAutomation` |
+| **Destinations** | `www.mykitsch.com`, `mykitsch.com`, `cdn.shopify.com` |
+| **Protocol / port** | HTTPS, TCP 443, outbound only |
+| **Direction** | Egress only. No inbound access required |
+| **Authentication** | None. Anonymous, unauthenticated browsing |
+| **Data written** | None. Read-only; the suite never submits a form that completes a transaction |
+| **Data read** | Public storefront pages only — the same content any visitor sees |
+| **Duration** | Ongoing (this becomes a scheduled pre-launch check) |
+| **Current behaviour** | Connection refused by the egress gateway before reaching the destination; same result for all external hosts, so this reads as default-deny rather than a rule about this domain |
+| **Business justification** | Automated pre-launch verification of live product pages; replaces a recurring manual QA pass |
+| **Verification after change** | `KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight` — reports success or the precise failure |
+
+`cdn.shopify.com` is included because the storefront serves its images,
+stylesheets and scripts from there. Without it the pages load without layout,
+and the visual checks cannot mean anything.
+
+---
+
+## 4. If they ask what was already tried
+
+Keep this back unless invited — it is the answer to "did you just not
+configure it right?", not an opener.
+
+> The environment's outbound gateway refuses the connection at the point of
+> opening it, before anything reaches Shopify. The same happens for unrelated
+> public websites, so it is a general default-deny policy rather than anything
+> about our store or about Shopify blocking us.
 >
-> Detail here: `docs/ACCESS-REQUEST.md`. Who owns that config?
+> I ruled out the likely alternatives before escalating: the proxy settings
+> with and without explicit configuration, a different browser mode, and a
+> setup that disguises automated traffic in case the store was rejecting it.
+> The failure is identical in every case and happens at the network layer, so
+> nothing configurable on our side changes it.
+>
+> Evidence is in `docs/LIVE-RUN.md` if useful.
 
 ---
 
 ## Notes for sending
 
-- **Lead with the ask, not the diagnosis.** The technical detail is
-  interesting to us and not to them; it belongs in the linked doc.
-- **Name the decision.** "Who owns that config?" gets a faster answer than a
-  general request for help, because it converts the ask into a routing
-  question.
-- **Keep the "not asking for" list.** A bounded request approves faster than
-  an open one, and every exclusion in it is genuinely enforced in the code.
-- **Do not overstate.** We do not know that the kits are broken. We know we
-  cannot confirm they are correct. Those are different claims and the second
-  one is the honest one.
-- **Mention the `data-testid` ask in the same thread.** It needs a different
-  team, and raising it later reads as a second interruption.
+- **Lead with the business risk, not the diagnosis.** "A free item that quietly
+  charges" lands; "403 on CONNECT" does not.
+- **Name the decision.** Asking "who owns that config?" converts the request
+  into a routing question, which is faster to answer than a favour.
+- **Keep the "what it is not" list.** A bounded request approves faster, and
+  every exclusion is genuinely enforced in the code.
+- **Do not overstate.** We do not know the kits are wrong. We know we cannot
+  confirm they are right. The drafts say the second thing — which is the honest
+  claim and, if anything, the more urgent one.
+- **Pair the theme-labels ask with it.** It needs a different team; raising it
+  a week later reads as a second interruption.
