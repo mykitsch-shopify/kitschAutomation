@@ -45,10 +45,10 @@ checkout and meta content — replacing a recurring manual translation pass.
 Nothing else. No database, no Docker, no running store — the fixture storefront is
 a local Node HTTP server started automatically by Playwright.
 
-**Repository access.** This repository is **private**, so cloning needs an
-authenticated GitHub account with access to it. Ask the repo owner to add you
-as a collaborator first — without that, the clone below fails no matter how
-you authenticate.
+**Repository access.** This repository lives in the **`mykitsch-shopify`**
+organization and is private, so cloning needs a GitHub account that is a member
+of the org with access to it. Ask an org owner for access first — without it the
+clone below fails no matter how you authenticate.
 
 ---
 
@@ -76,7 +76,7 @@ or create a Personal Access Token at <https://github.com/settings/tokens>
 Three commands from a fresh clone:
 
 ```bash
-git clone -b develop https://github.com/kvdinesh13/KitschAutomation.git
+git clone -b develop https://github.com/mykitsch-shopify/kitschAutomation.git
 cd KitschAutomation
 
 npm ci                          # 1. install exact locked dependencies
@@ -568,8 +568,9 @@ HTTP 403 or a challenge. `docs/LIVE-RUN.md` has the full diagnosis.
 **`Authentication failed` / `Password authentication is not supported` on clone**
 The repository is private and GitHub does not accept account passwords for git.
 See §2.0 — `gh auth login`, or a Personal Access Token used as the password. If
-you get `Repository not found` *after* authenticating, your account has not been
-added as a collaborator yet; ask the repo owner.
+you get `Repository not found` *after* authenticating, your account is not in the
+`mykitsch-shopify` org or has not been granted access; ask an org owner. A
+classic PAT also needs SSO authorised for the org before it will work.
 
 **`npm ci` reports a missing `package-lock.json`**
 You are not in the repository root. `cd KitschAutomation` first — `node -p
