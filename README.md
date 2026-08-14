@@ -45,9 +45,33 @@ checkout and meta content — replacing a recurring manual translation pass.
 Nothing else. No database, no Docker, no running store — the fixture storefront is
 a local Node HTTP server started automatically by Playwright.
 
+**Repository access.** This repository is **private**, so cloning needs an
+authenticated GitHub account with access to it. Ask the repo owner to add you
+as a collaborator first — without that, the clone below fails no matter how
+you authenticate.
+
 ---
 
 ## 2. Setup
+
+### 2.0 Authenticate once
+
+Skip only if `git clone` of a private repo already works on this machine.
+GitHub does not accept account passwords for git operations, so typing one at
+the prompt always fails. Use either:
+
+```bash
+# GitHub CLI — easiest, opens a browser
+gh auth login          # GitHub.com -> HTTPS -> Login with a web browser
+```
+
+or create a Personal Access Token at <https://github.com/settings/tokens>
+(classic, `repo` scope) and paste the **token as the password** when git asks.
+
+> If a `Username for 'https://github.com':` prompt appears, that is git asking
+> for credentials, not a shell. Press **Ctrl+C** before typing anything else.
+
+### 2.1 Clone and install
 
 Three commands from a fresh clone:
 
@@ -59,6 +83,13 @@ npm ci                          # 1. install exact locked dependencies
 npx playwright install chromium # 2. download the browser binary
 npm run verify                  # 3. run the whole gate — proves the setup works
 ```
+
+> **Windows CMD users:** `#` is not a comment character there — paste the
+> commands without the trailing comments, one per line. Run them from
+> `C:\...\KitschAutomation>`, not from your home directory; `npm ci` in the
+> wrong folder reports a missing `package-lock.json`. And where later sections
+> use `export VAR=value`, CMD needs `set VAR=value` and PowerShell needs
+> `$env:VAR = "value"`.
 
 Every command below runs from the repository root — the directory holding
 `package.json`. npm searches upward for one, so running from a subdirectory
@@ -533,6 +564,16 @@ restricted egress policy is the usual cause. On an ordinary machine this should
 not happen: the storefront is public and needs no grant. Note this is *not* the
 store refusing automated traffic, which presents as a loaded page returning
 HTTP 403 or a challenge. `docs/LIVE-RUN.md` has the full diagnosis.
+
+**`Authentication failed` / `Password authentication is not supported` on clone**
+The repository is private and GitHub does not accept account passwords for git.
+See §2.0 — `gh auth login`, or a Personal Access Token used as the password. If
+you get `Repository not found` *after* authenticating, your account has not been
+added as a collaborator yet; ask the repo owner.
+
+**`npm ci` reports a missing `package-lock.json`**
+You are not in the repository root. `cd KitschAutomation` first — `node -p
+"require('./package.json').name"` should print `kitsch-automation`.
 
 **`No translation source given` (exit 2)**
 `npm run i18n:parity` needs to be told what to read. Pass
