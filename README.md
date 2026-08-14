@@ -507,6 +507,7 @@ the same as a clean review.
 | [`docs/TEST-CASE-COVERAGE.md`](docs/TEST-CASE-COVERAGE.md) | The 27 written test cases cross-verified against the suite |
 | [`docs/WELCOME-KIT-COVERAGE.md`](docs/WELCOME-KIT-COVERAGE.md) | Welcome-kit free-item parity: the requirement, the ten dimensions, and all 57 written cases |
 | [`docs/ACCESS-REQUEST.md`](docs/ACCESS-REQUEST.md) | What is blocked, what to grant, and who grants it — written to be forwarded |
+| [`docs/ACCESS-REQUEST-EMAIL.md`](docs/ACCESS-REQUEST-EMAIL.md) | Draft email and Slack message asking leadership to unblock it |
 | [`docs/LIVE-RUN.md`](docs/LIVE-RUN.md) | Running against the live storefront: the blocked attempt, the selector mapping it needs, and the exact commands |
 | [`docs/RUN-REPORT-2026-08-12.md`](docs/RUN-REPORT-2026-08-12.md) | An executed run with its results and its caveats |
 
