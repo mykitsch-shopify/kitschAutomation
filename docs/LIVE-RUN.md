@@ -120,6 +120,16 @@ Two mitigations are already in place:
    Every storefront has to tell the customer the price somehow, so this
    travels to a real theme in a way an invented attribute never would.
 
+3. **The comparison refuses to run blind.** Each dimension declares the
+   observation it depends on — kit items, cart lines, order-summary lines, or
+   gift inputs — and the reference kit must have actually made that
+   observation. Without it an unmatched selector reads as agreement: if
+   `cart_line` matches nothing, four dimensions fall to their defaults on both
+   kits, the comparison finds no differences, and the run goes green having
+   examined no cart. That was measured, not theorised — with the cart selector
+   pointed at a non-existent class the suite reported **7 passed** before the
+   guard, and fails naming the selector after it.
+
 The durable fix remains the standing ask in `FRAMEWORK-AND-ROADMAP.md` §8: a
 `data-testid` set from the storefront team. Theme classes are regenerated on
 deploy and merchandising reorders break positional selectors weekly, so the

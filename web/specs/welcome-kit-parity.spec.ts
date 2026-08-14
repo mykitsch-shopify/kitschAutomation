@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import { diffKits, isFreePrice, loadKitConfig, normalizeLabels } from '../lib/kit-parity.js';
-import type { KitProfile, KitSpec } from '../lib/kit-parity.js';
+import type { KitDimension, KitProfile, KitSpec, SelectorName } from '../lib/kit-parity.js';
 
 /**
  * Welcome-kit free-item parity.
@@ -48,8 +48,50 @@ const classify = (prices: readonly string[]): { readonly freePrices: readonly st
   paidTotal: prices.filter((price) => !free(price)).reduce((total, price) => total + money(price), 0),
 });
 
+/**
+ * What the profiler actually managed to see.
+ *
+ * Without this, an unmatched selector is indistinguishable from a real
+ * finding. If `cart_line` matches nothing on a live theme, every cart
+ * dimension falls to its default — not auto-added, not in the subtotal, not
+ * separately removable — and both kits agree on all of them. The comparison
+ * then reports no differences and the run goes green having examined no cart
+ * at all. That is the worst outcome available to this suite, so the reference
+ * kit has to prove it observed each thing the comparison claims to compare.
+ */
+type Observed = {
+  readonly kitItems: number;
+  readonly cartLines: number;
+  readonly summaryLines: number;
+  readonly giftInputs: number;
+};
+
+/** Which observation each dimension depends on, and the selector behind it. */
+const REQUIRES: Readonly<Record<KitDimension, keyof Observed>> = {
+  free_item_count: 'kitItems',
+  free_item_price_label: 'kitItems',
+  free_item_badge: 'kitItems',
+  auto_added_to_cart: 'cartLines',
+  counted_in_subtotal: 'cartLines',
+  independently_removable: 'cartLines',
+  removed_with_qualifying_product: 'cartLines',
+  free_at_checkout: 'summaryLines',
+  free_gift_option_count: 'giftInputs',
+  free_gift_single_select: 'giftInputs',
+};
+
+const SELECTOR_FOR: Readonly<Record<keyof Observed, SelectorName>> = {
+  kitItems: 'kit_item',
+  cartLines: 'cart_line',
+  summaryLines: 'summary_line',
+  giftInputs: 'free_gift_input',
+};
+
 /** Reads one kit's free-item treatment as a customer would experience it. */
-const profileKit = async (page: Page, kit: KitSpec): Promise<KitProfile> => {
+const profileKit = async (
+  page: Page,
+  kit: KitSpec,
+): Promise<{ readonly profile: KitProfile; readonly observed: Observed }> => {
   const response = await page.goto(`/products/${kit.handle}`);
   expect(
     response?.status(),
@@ -57,8 +99,9 @@ const profileKit = async (page: Page, kit: KitSpec): Promise<KitProfile> => {
   ).toBe(200);
 
   const items = page.locator(config.selectors.kit_item);
+  const kitItemCount = await items.count();
   expect(
-    await items.count(),
+    kitItemCount,
     `no kit items matched "${config.selectors.kit_item}" on ${kit.name}. If the theme markup differs, map it in config/kits.yaml under "selectors" — a spec that finds nothing must not pass.`,
   ).toBeGreaterThan(0);
 
@@ -110,7 +153,7 @@ const profileKit = async (page: Page, kit: KitSpec): Promise<KitProfile> => {
     .locator(config.selectors.cart_line_price)
     .allInnerTexts();
 
-  return {
+  const profile: KitProfile = {
     free_item_count: onPdp.freePrices.length,
     free_item_price_label: normalizeLabels(onPdp.freePrices),
     free_item_badge: normalizeLabels(badges),
@@ -122,7 +165,24 @@ const profileKit = async (page: Page, kit: KitSpec): Promise<KitProfile> => {
     free_gift_option_count: giftOptionCount,
     free_gift_single_select: inputTypes.length > 0 && inputTypes.every((type) => type === 'radio'),
   };
+
+  return {
+    profile,
+    observed: {
+      // Captured on the PDP: by now the page is the cart, where this locator
+      // would report zero and turn the guard below into a false alarm.
+      kitItems: kitItemCount,
+      cartLines: cartPrices.length,
+      summaryLines: summaryPrices.length,
+      giftInputs: giftOptionCount,
+    },
+  };
 };
+
+/** Observations the configured comparison depends on, deduplicated. */
+const REQUIRED_OBSERVATIONS = [
+  ...new Set(config.compare.map((dimension) => REQUIRES[dimension])),
+];
 
 test.describe('welcome kit parity @kits @launch', () => {
   for (const candidate of config.candidates) {
@@ -132,19 +192,23 @@ test.describe('welcome kit parity @kits @launch', () => {
       const reference = await profileKit(page, config.reference);
       const actual = await profileKit(page, candidate);
 
-      // The reference must itself have free items and a gift selector, or
-      // every comparison below is between two kits with nothing to compare —
-      // a green run that checked nothing.
+      // Every observation the comparison depends on must have been made on
+      // the reference. An unmatched selector otherwise looks like agreement.
+      const blind = REQUIRED_OBSERVATIONS.filter((name) => reference.observed[name] === 0).map(
+        (name) =>
+          `${name} (selector "${config.selectors[SELECTOR_FOR[name]]}" matched nothing on the ${config.reference.name})`,
+      );
       expect(
-        reference.free_item_count,
+        blind,
+        `the comparison depends on observations that were never made, so agreement here would mean nothing. Map these in config/kits.yaml "selectors", or run: npm run preflight`,
+      ).toEqual([]);
+
+      expect(
+        reference.profile.free_item_count,
         `the ${config.reference.name} has no free items, so there is nothing to match against — check the handle in config/kits.yaml`,
       ).toBeGreaterThan(0);
-      expect(
-        reference.free_gift_option_count,
-        `the ${config.reference.name} shows no free-gift options, so §7 cannot be compared`,
-      ).toBeGreaterThan(0);
 
-      const differences = diffKits(reference, actual, config.compare);
+      const differences = diffKits(reference.profile, actual.profile, config.compare);
 
       expect(
         differences.map(
