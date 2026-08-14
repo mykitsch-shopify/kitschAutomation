@@ -52,13 +52,18 @@ a local Node HTTP server started automatically by Playwright.
 Three commands from a fresh clone:
 
 ```bash
-git clone https://github.com/kvdinesh13/KitschAutomation.git
+git clone -b develop https://github.com/kvdinesh13/KitschAutomation.git
 cd KitschAutomation
 
 npm ci                          # 1. install exact locked dependencies
 npx playwright install chromium # 2. download the browser binary
 npm run verify                  # 3. run the whole gate — proves the setup works
 ```
+
+Every command below runs from the repository root — the directory holding
+`package.json`. npm searches upward for one, so running from a subdirectory
+can appear to work and then resolve config paths wrongly. `node -p
+"require('./package.json').name"` should print `kitsch-automation`.
 
 **What each step does**
 
@@ -427,7 +432,49 @@ Never hand-edit `catalog-clean.json` / `catalog-seeded.json`.
 
 ## 9. Running against a real store
 
-The suite is fixture-backed by default so it works offline. To point it at a store:
+The suite is fixture-backed by default so it works offline. There are two ways
+to point it at a store, and they need very different things.
+
+### 9.1 Render layer — no credentials at all
+
+The storefront is a public website. Any machine that can open it in a browser
+can run these checks against it: no VPN, no allowlist, no token, no login.
+
+```bash
+export KITSCH_BASE_URL=https://www.mykitsch.com
+
+npm run preflight     # ALWAYS first — see below
+npm run test:kits     # welcome-kit free-item parity
+npm run test:i18n     # locale parity, render layer
+```
+
+**Run `preflight` before the suite, every time you point at a new target.** It
+separates three failures that look identical in a test report — an unreachable
+network, a product handle that no longer resolves, and a selector that does not
+match the theme:
+
+```
+Preflight against https://www.mykitsch.com
+
+  reachable      HTTP 200
+
+  Winter Welcome Kit Combos  (HTTP 200)
+    pdp_title         1 match(es)
+    kit_item          0 match(es)
+    ...
+    → unmatched: kit_item — map these in config/kits.yaml "selectors"
+```
+
+Expect zeros on the first live run. The fixture uses `data-testid` attributes
+that the real theme does not carry, so mapping them in `config/kits.yaml` under
+`selectors` is the first job — an edit, not a code change. A spec that cannot
+find markup reports a defect that is not there, and each one costs a triage
+cycle.
+
+### 9.2 Content layer — needs a read-only Admin token
+
+This is the exhaustive check: every translatable string across all seven
+locales, including on pages nobody thinks to open.
 
 ```bash
 export SHOPIFY_SHOP_DOMAIN=kitsch-dev.myshopify.com
@@ -435,7 +482,6 @@ export SHOPIFY_ADMIN_TOKEN=...              # scoped read_translations, read-onl
 export KITSCH_BASE_URL=https://kitsch-dev.myshopify.com
 
 npm run i18n:parity -- --gate               # no --catalog: reads the live store
-npm run test:i18n
 ```
 
 With neither `--catalog` nor credentials, the run **exits 2 with a usage error**
@@ -443,7 +489,13 @@ rather than falling back to fixture data. A green `gate: PASS` over a catalogue 
 asked about is the same false all-clear as reporting a failed fetch as a clean locale.
 
 > **Production is read-only, always.** Nothing in this repo writes to a live store.
-> Seeding belongs on the dev store.
+> Seeding belongs on the dev store. A lint rule (`kitsch/no-write-operation`)
+> fails the build if a GraphQL mutation ever appears in a collector.
+
+> **Where the token lives is a decision, not a default.** A store credential in
+> a `.env` file on a personal machine sits outside device management, rotation
+> and revocation. Prefer holding it as a CI secret and running §9.2 there; §9.1
+> needs nothing and can stay local. See [`docs/ACCESS-REQUEST.md`](docs/ACCESS-REQUEST.md) §3.
 
 ---
 
@@ -464,12 +516,23 @@ one**. Both directions are needed, or neither means anything.
 
 ## 11. Troubleshooting
 
-**`Executable doesn't exist at .../chrome-headless-shell`**
-The installed browser does not match the pinned Playwright version. Either
-`npx playwright install chromium`, or point at an existing binary:
+**`NO BROWSER` from preflight, or `Executable doesn't exist at .../chrome-headless-shell`**
+The installed browser does not match the pinned Playwright version. Normally
+`npx playwright install chromium` fixes it. Where browser downloads are blocked
+it cannot, so point at a build you already have:
 ```bash
-export KITSCH_CHROMIUM_PATH=/path/to/chrome
+ls ~/.cache/ms-playwright/            # or $PLAYWRIGHT_BROWSERS_PATH
+export KITSCH_CHROMIUM_PATH=/path/to/chromium-XXXX/chrome-linux/chrome
 ```
+Honoured by `preflight` and by every chromium project in `playwright.config.ts`.
+Deliberately *not* applied to `desktop-edge`, which pins a real Edge channel.
+
+**`UNREACHABLE  net::ERR_TUNNEL_CONNECTION_FAILED`**
+Something is intercepting outbound traffic — a sandbox or CI runner with a
+restricted egress policy is the usual cause. On an ordinary machine this should
+not happen: the storefront is public and needs no grant. Note this is *not* the
+store refusing automated traffic, which presents as a loaded page returning
+HTTP 403 or a challenge. `docs/LIVE-RUN.md` has the full diagnosis.
 
 **`No translation source given` (exit 2)**
 `npm run i18n:parity` needs to be told what to read. Pass
