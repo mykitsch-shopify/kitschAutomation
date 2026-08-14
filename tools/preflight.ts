@@ -29,11 +29,33 @@ const write = (line: string): void => {
 
 const PAGE_SELECTORS = ['pdp_title', 'pdp_price', 'pdp_compare_at', 'kit_item', 'add_to_cart'] as const;
 
-const browser = await chromium.launch({
-  ...(process.env.KITSCH_CHROMIUM_PATH === undefined
-    ? {}
-    : { executablePath: process.env.KITSCH_CHROMIUM_PATH }),
-});
+// A launch failure is not one of the three questions above, and Playwright's
+// own message for it advises `npx playwright install` — which is the wrong
+// move anywhere browser downloads are blocked, and buries the fix that works.
+// Catching it keeps the first thing this tool ever prints an actionable line
+// rather than an uncaught exception with a banner in it.
+const browser = await chromium
+  .launch({
+    ...(process.env.KITSCH_CHROMIUM_PATH === undefined
+      ? {}
+      : { executablePath: process.env.KITSCH_CHROMIUM_PATH }),
+  })
+  .catch((error: Error) => {
+    write(`Preflight against ${baseURL}`);
+    write('');
+    write(`  NO BROWSER     ${error.message.split('\n')[0] ?? ''}`);
+    write('');
+    write('  Chromium did not launch, so nothing was tested. Usually one of:');
+    write('');
+    write('    1. It is not installed yet   ->  npx playwright install chromium');
+    write('    2. An installed build does not match the version Playwright');
+    write('       expects, and downloading a new one is blocked. Point at the');
+    write('       build you have:');
+    write('');
+    write('         KITSCH_CHROMIUM_PATH=/path/to/chrome npm run preflight');
+    write('');
+    process.exit(2);
+  });
 const page = await browser.newPage();
 
 write(`Preflight against ${baseURL}`);
@@ -55,7 +77,15 @@ try {
   write('  A tunnel or connection error here is the network, not the store.');
   write('  Nothing reached the site, so no amount of browser configuration —');
   write('  stealth plugins, user agents, headful mode — changes the result.');
-  write('  Allowlist the host for this machine and run again.');
+  write('');
+  write('  On an ordinary machine this should not happen: the storefront is a');
+  write('  public site and needs no VPN, allowlist or credential. Seeing it');
+  write('  means something is intercepting outbound traffic — a sandbox or CI');
+  write('  runner with a restricted egress policy is the usual cause. Run the');
+  write('  same command somewhere with normal internet access.');
+  write('');
+  write('  Note this is NOT the store refusing automated traffic. That looks');
+  write('  different: the page loads and returns an HTTP 403 or a challenge.');
 }
 
 // ── 2 & 3. Handles and selectors ──────────────────────────────────────────
