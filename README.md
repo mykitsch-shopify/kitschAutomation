@@ -12,7 +12,7 @@ checkout and meta content — replacing a recurring manual translation pass.
 | **Runs offline** | Ships a local seven-locale storefront fixture; no credentials needed to run everything |
 | **Two layers** | Content (no browser, exhaustive) + render (Playwright, only what a DOM can show) |
 | **One contract** | `config/i18n.yaml` and `config/kits.yaml` — adding a language or a kit is a config edit, not a code change |
-| **Self-checking** | 19 planted defects prove the checks still fire; a check that never fires is the danger |
+| **Self-checking** | 19 + 5 planted defects prove the checks still fire; a check that never fires is the danger |
 
 ---
 
@@ -77,7 +77,7 @@ Three commands from a fresh clone:
 
 ```bash
 git clone -b develop https://github.com/mykitsch-shopify/kitschAutomation.git
-cd KitschAutomation
+cd kitschAutomation
 
 npm ci                          # 1. install exact locked dependencies
 npx playwright install chromium # 2. download the browser binary
@@ -86,7 +86,7 @@ npm run verify                  # 3. run the whole gate — proves the setup wor
 
 > **Windows CMD users:** `#` is not a comment character there — paste the
 > commands without the trailing comments, one per line. Run them from
-> `C:\...\KitschAutomation>`, not from your home directory; `npm ci` in the
+> `C:\...\kitschAutomation>`, not from your home directory; `npm ci` in the
 > wrong folder reports a missing `package-lock.json`. And where later sections
 > use `export VAR=value`, CMD needs `set VAR=value` and PowerShell needs
 > `$env:VAR = "value"`.
@@ -116,14 +116,15 @@ npx playwright install msedge           # for desktop-edge (a real Edge channel,
 ```
 critical 0 | major 0 | minor 0 | harness 0
 review: PASS
-# tests 110
-# pass 110
+# tests 142
+# pass 142
 critical 0 | major 0 | minor 7 | harness 0
 gate: PASS
   350 passed (1.9m)
   7 passed (6.3s)
   19/19 planted defects detected
 Detection verified: both layers fail when the store is broken.
+  planted 5 | caught 5 | clean-run findings 0
 ```
 
 The seven `minor` findings in the parity run are expected — French and Spanish
@@ -169,9 +170,13 @@ KitschAutomation/
 │   │   ├── build-catalog.ts   Generates the clean + seeded catalogues
 │   │   └── catalog-*.json     Generated — do not hand-edit
 │   ├── storefront/server.ts   Local 7-locale storefront the render specs browse
+│   ├── compare-at/            Storefront fixture for the compare-at audit
+│   │   ├── server.ts          Serves a PDP per handle from the real sheets
+│   │   └── seeded.ts          The 5 planted defects the seeded profile plants
 │   └── launch-set.ts          Fixture SKUs, resolved at runtime
 │
 ├── web/                     ── web specs
+│   ├── lib/compare-at.ts      Compare-at removal: CSV reading, sheet audit, judging
 │   ├── lib/kit-parity.ts      Welcome-kit free-item comparison (pure, unit-tested)
 │   └── specs/                 welcome-kit-parity, search-visibility
 ├── mobile/maestro/          ── Phase 4 app smoke flow
@@ -214,13 +219,15 @@ one less way to happen. Roughly 3 minutes.
 | `npm run typecheck` | `tsc --noEmit`, strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` | Fast feedback while editing |
 | `npm run lint` | ESLint: TypeScript, Playwright spec standards, Kitsch rules | Before committing |
 | `npm run review` | **Offline reviewer** — runs typecheck + lint, triages every finding by severity and route, writes `review-report/` | The static gate; add `-- --gate` to exit non-zero on failure |
-| `npm run test:unit` | 110 unit tests over the comparators, helpers, kit diffing and lint rules (`node --test`) | After touching anything in `i18n/lib/`, `web/lib/` or `tools/` |
+| `npm run test:unit` | 142 unit tests over the comparators, helpers, kit diffing and lint rules (`node --test`) | After touching anything in `i18n/lib/`, `web/lib/` or `tools/` |
 | `npm run parity:clean` | Content parity against the bundled clean catalogue, gated | Quick check that the engine reports no false positives |
 | `npm run i18n:parity` | Content parity, source chosen explicitly — see [§9](#9-running-against-a-real-store) | Against a real store, or a specific catalogue |
 | `npm run test:i18n` | Render-layer parity: 350 specs, 7 locales × 6 routes, at 390px | After touching specs or the storefront fixture |
 | `npm run test:mobile-web` | The `mobile-chrome` project (Pixel 7) — web specs plus locale specs | Wider mobile check |
 | `npm run test:kits` | Welcome-kit parity: the summer and spring kits must handle free items exactly like `winter-welcome-kit-combos`, across ten dimensions | After touching kits, or when marketing changes a kit |
 | `npm run test:detection` | **Negative control** — 19 planted defects must be caught, and the render specs must fail against a broken store | After touching any comparator. This is what keeps the gate honest |
+| `npm run audit:compare-at` | **Compare-at removal audit** — the struck-through price must be gone and the real price untouched; audits the two sheets first, then the storefront. See [`docs/COMPARE-AT-AUDIT.md`](docs/COMPARE-AT-AUDIT.md) | Before and after the compare-at import runs. `--sheets-only` needs no browser |
+| `npm run test:compare-at-detection` | **Negative control** for that audit — 5 planted defects, plus a clean run that must report nothing | After touching `web/lib/compare-at.ts` |
 | `npm run storefront` | Serves the fixture storefront on `:4173` so you can browse it by hand | Debugging a spec, or seeing what the fixture renders |
 | `npm run test:app` | Maestro app smoke flow | Phase 4; needs Maestro and a device |
 
@@ -611,6 +618,7 @@ the same as a clean review.
 | [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md) | Plan section → automated check, including what is deliberately *not* automated |
 | [`docs/TEST-CASE-COVERAGE.md`](docs/TEST-CASE-COVERAGE.md) | The 27 written test cases cross-verified against the suite |
 | [`docs/WELCOME-KIT-COVERAGE.md`](docs/WELCOME-KIT-COVERAGE.md) | Welcome-kit free-item parity: the requirement, the ten dimensions, and all 57 written cases |
+| [`docs/COMPARE-AT-AUDIT.md`](docs/COMPARE-AT-AUDIT.md) | Compare-at (struck-through price) removal: how to run it, what it checks, and the findings on the sheets as supplied |
 | [`docs/ACCESS-REQUEST.md`](docs/ACCESS-REQUEST.md) | What is genuinely outstanding — selector mapping, a read-only token, where this should run. The earlier network request is withdrawn |
 | [`docs/ACCESS-REQUEST-EMAIL.md`](docs/ACCESS-REQUEST-EMAIL.md) | The problem statement for a manager, in email and Slack form |
 | [`docs/LIVE-RUN.md`](docs/LIVE-RUN.md) | Running against the live storefront: why the sandbox attempt failed, the selector mapping it needs, and the exact commands |
