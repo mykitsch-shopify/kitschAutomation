@@ -12,7 +12,7 @@ checkout and meta content — replacing a recurring manual translation pass.
 | **Runs offline** | Ships a local seven-locale storefront fixture; no credentials needed to run everything |
 | **Two layers** | Content (no browser, exhaustive) + render (Playwright, only what a DOM can show) |
 | **One contract** | `config/i18n.yaml` and `config/kits.yaml` — adding a language or a kit is a config edit, not a code change |
-| **Self-checking** | 19 + 5 + 9 planted defects prove the checks still fire; a check that never fires is the danger |
+| **Self-checking** | 19 + 5 + 9 + 10 planted defects prove the checks still fire; a check that never fires is the danger |
 
 ---
 
@@ -178,6 +178,8 @@ KitschAutomation/
 ├── web/                     ── web specs
 │   ├── lib/compare-at.ts      Compare-at removal: CSV reading, sheet audit, judging
 │   ├── lib/top-products.ts    Daily top-10 check: config, judging, cart maths
+│   ├── lib/ad-landing.ts      Ad-traffic daily QA: non-stacking, redirects, BYOB,
+│   │                          OOS substitution, auto-ship, compare-at
 │   ├── lib/kit-parity.ts      Welcome-kit free-item comparison (pure, unit-tested)
 │   └── specs/                 welcome-kit-parity, search-visibility
 ├── mobile/maestro/          ── Phase 4 app smoke flow
@@ -232,6 +234,8 @@ one less way to happen. Roughly 3 minutes.
 | `npm run audit:top-products` | **Daily top-10 check** — availability, add-to-cart, title, description, images, videos, pricing, specs, variants, cart discount maths. See [`docs/TOP-PRODUCTS-DAILY.md`](docs/TOP-PRODUCTS-DAILY.md) | Daily in CI; by hand when investigating a top seller |
 | `npm run resolve:handles` | Maps the top-10 list's titles to storefront handles by asking the store's own search. Writes nothing without `--write` | When the top-10 list changes |
 | `npm run test:top-products-detection` | **Negative control** for the daily check — 9 planted defects, one per requirement | After touching `web/lib/top-products.ts` |
+| `npm run audit:ad-landing` | **Daily ad-traffic QA** — 29 welcome-kit/BYOB/traffic pages, discount non-stacking, redirect flows, OOS redirects, auto-ship, compare-at. See [`docs/AD-LANDING-DAILY.md`](docs/AD-LANDING-DAILY.md) | Daily in CI, first thing; by hand when ad spend looks wrong |
+| `npm run test:ad-landing-detection` | **Negative control** for it — 10 planted defects, one per check in the brief | After touching `web/lib/ad-landing.ts` |
 | `npm run storefront` | Serves the fixture storefront on `:4173` so you can browse it by hand | Debugging a spec, or seeing what the fixture renders |
 | `npm run test:app` | Maestro app smoke flow | Phase 4; needs Maestro and a device |
 
@@ -624,6 +628,7 @@ the same as a clean review.
 | [`docs/WELCOME-KIT-COVERAGE.md`](docs/WELCOME-KIT-COVERAGE.md) | Welcome-kit free-item parity: the requirement, the ten dimensions, and all 57 written cases |
 | [`docs/COMPARE-AT-AUDIT.md`](docs/COMPARE-AT-AUDIT.md) | Compare-at (struck-through price) removal: how to run it, what it checks, and the findings on the sheets as supplied |
 | [`docs/TOP-PRODUCTS-DAILY.md`](docs/TOP-PRODUCTS-DAILY.md) | Daily top-10 seller check: availability, add-to-cart, content, variants, cart discount maths — and why 8 of 10 handles need resolving first |
+| [`docs/AD-LANDING-DAILY.md`](docs/AD-LANDING-DAILY.md) | Daily QA of ad-traffic landing pages: welcome kits, BYOB flows, discount non-stacking, redirect flows, OOS redirects, auto-ship, compare-at |
 | [`docs/ACCESS-REQUEST.md`](docs/ACCESS-REQUEST.md) | What is genuinely outstanding — selector mapping, a read-only token, where this should run. The earlier network request is withdrawn |
 | [`docs/ACCESS-REQUEST-EMAIL.md`](docs/ACCESS-REQUEST-EMAIL.md) | The problem statement for a manager, in email and Slack form |
 | [`docs/LIVE-RUN.md`](docs/LIVE-RUN.md) | Running against the live storefront: why the sandbox attempt failed, the selector mapping it needs, and the exact commands |

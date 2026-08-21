@@ -1,0 +1,161 @@
+# Ad-traffic landing pages — daily QA contract.
+#
+# These are the pages paid traffic lands on, so a broken one spends money to
+# show a customer something wrong. Checked first thing each day.
+#
+# Handles were taken from the BYOB/Welcome-Kit mapping document supplied
+# 2026-08-21. That document is deliberately NOT in this repository — it carries
+# Shopify admin URLs, internal IDs and campaign metadata that the check does not
+# need. Only the handles and the codes are here.
+#
+# Status conflicts found in that document, recorded because they are decisions
+# somebody has to make rather than things this file can resolve:
+#
+#   winter-welcome-kit               listed both ACTIVE and ARCHIVED
+#   welcome-kit                      listed both ACTIVE and DRAFT
+#   build-your-own-bar-scent-bundle  listed both ACTIVE and UNLISTED
+#   build-your-own-hair-perfume-duo  listed both ACTIVE and UNLISTED
+#
+# The two BYOBs are in scope because the daily brief names them; the two bare
+# welcome kits are excluded because the brief names the *combos*, not them.
+
+# ── Group 1: Welcome Kits ────────────────────────────────────────────────
+welcome_kits:
+  spring:
+    - spring-welcome-kit
+    - spring-welcome-kit-rosemary
+    - spring-welcome-kit-castor-oil
+    - spring-welcome-kit-coconut-oil
+    - spring-welcome-kit-rice-water
+  summer:
+    # Castor-oil and coconut-oil summer kits exist but are UNLISTED, and the
+    # brief does not name them. Adding them would report 404s daily.
+    - summer-welcome-kit-rosemary
+    - summer-welcome-kit-rice-water
+    - summer-welcome-kit-rosemary-bar
+    - summer-welcome-kit-rice-water-bar
+    - summer-welcome-kit-with-shampoo-conditioner
+    - summer-welcome-kit-with-shampoo-conditioner-bars
+  winter:
+    - winter-welcome-kit-combos
+    - winter-welcome-kit-rosemary-biotin-volumizing-shampoo-conditioner-bar-combo
+    - winter-welcome-kit-castor-oil-nourishing-shampoo-conditioner-bar-combo
+    - winter-welcome-kit-coconut-oil-shampoo-conditioner-bar-combo-for-dry-damaged-hair
+    - winter-welcome-kit-rice-water-shampoo-conditioner-bar-combo-for-hair-growth
+  free_kit_bundles:
+    - shampoo-conditioner-combo-with-free-welcome-kit
+    - shampoo-conditioner-bundle-with-free-welcome-kit
+
+# ── Group 2: BYOB ────────────────────────────────────────────────────────
+# Every one of these is a builder flow: the page has to load, offer choices,
+# and price the bundle. A BYOB that renders but cannot be built is the failure
+# mode paid traffic pays for.
+byob:
+  - handle: build-your-own-hair-routine-bundle
+  - handle: build-your-own-hair-perfume-duo
+  - handle: build-your-own-free-bottle-free-beauty-travel-case
+  - handle: build-your-own-soap-dish-bundle
+    fixed_discount_code: 6reasons
+  - handle: build-your-own-shampoo-conditioner-caddy-bundle
+    fixed_discount_code: FREECADDY
+  - handle: build-your-own-shampoo-conditioner-free-caddy-bundle
+  - handle: haircare-to-go-bundle
+  - handle: build-your-own-bar-scent-bundle
+  - handle: build-your-own-free-wet-dry-brush
+
+# ── Group 3: other URLs carrying traffic ─────────────────────────────────
+traffic:
+  - handle: hair-by-chrissy-x-kitsch-ceramic-thermal-rollers-8pc-set
+  - handle: ceramic-thermal-roller-variety-pack
+  # UNRESOLVED — named in the brief, no handle in the mapping document and no
+  # match in the catalogue extract. Not checked; reported as unresolved rather
+  # than guessed, because a guessed handle checks a different page and passes.
+  - title: Kitsch x Hair by Chrissy Bundle
+  - title: Travel Case Bundle
+    note: 'build-your-own-travel-case-bundle exists but is DRAFT; likely a different page.'
+  - title: Kojic Acid Face and Body Bar + FREE Eco-Friendly Dermaplaner
+    note: 'The plain bar and the dermaplaner exist separately; this bundle does not appear.'
+  - title: Top 10 Best Sellers
+    note: 'A collection page, not a product. Needs its URL.'
+
+# ── Group 4: discount redirect flows ─────────────────────────────────────
+# /discount/CODE should set the code and land the customer on a page, not a
+# 404 or the bare homepage. Each names where it is expected to end up.
+discount_redirects:
+  - code: WELCOMEKIT
+    expect_handle: shampoo-conditioner-bundle-with-free-welcome-kit
+  - code: 6reasons
+    expect_handle: build-your-own-soap-dish-bundle
+  - code: FREECADDY
+    expect_handle: build-your-own-shampoo-conditioner-caddy-bundle
+
+# ── Group 5: out-of-stock redirect ───────────────────────────────────────
+# "Thermal roller out-of-stock redirect behavior (redirects to thermal
+# bundle/similar product when OOS)".
+#
+# Conditional by nature: while the product is in stock there is nothing to
+# redirect, and asserting a redirect would fail every day it is available. So
+# the rule is — if sold out, a redirect must happen and must land on the
+# configured target; if in stock, the page must serve normally.
+oos_redirects:
+  - handle: hair-by-chrissy-x-kitsch-ceramic-thermal-rollers-8pc-set
+    expect_handle: ceramic-thermal-roller-variety-pack
+  - handle: ceramic-thermal-roller-variety-pack
+    expect_handle: hair-by-chrissy-x-kitsch-ceramic-thermal-rollers-8pc-set
+
+# ── Non-stacking rule ────────────────────────────────────────────────────
+# From the brief: "Fixed-discount products (WELCOMEKIT, 6reasons, FREECADDY
+# codes) do not stack with other site-wide offers, confirm this holds daily."
+#
+# Checked as: apply the fixed code, then attempt a site-wide code. The
+# site-wide one must NOT also apply, and the total must not fall twice.
+#
+# site_wide_codes is empty until someone supplies a currently-live site-wide
+# code. Without one there is nothing to attempt stacking with, and the check
+# reports that it could not be verified rather than passing — a non-stacking
+# check with nothing to stack asserts nothing.
+non_stacking:
+  fixed_codes: [WELCOMEKIT, 6reasons, FREECADDY]
+  site_wide_codes: []
+  # - SAVE20
+
+# ── Auto-ship ────────────────────────────────────────────────────────────
+# "Auto-ship pricing matches current live site."
+#
+# Read literally that is circular — the live site cannot disagree with itself.
+# Taken as: where a subscribe-and-save option is offered, it must be priced
+# below the one-time price, and by the advertised percentage.
+#
+# expected_discount_percent is null until someone confirms the current rate.
+# With it set, the check asserts the arithmetic; without it, the check confirms
+# only that autoship is cheaper than one-time and says the rate was unverified.
+autoship:
+  expected_discount_percent: # e.g. 15
+  # Products where an autoship option is expected to exist at all. Empty means
+  # "record what is offered, do not require it" — a blanket requirement would
+  # fail every bundle that has no subscription.
+  required_on: []
+
+thresholds:
+  max_load_ms: 15000
+  # A BYOB builder offering fewer choices than this is not a working builder.
+  min_byob_options: 2
+
+selectors:
+  title: '[data-testid="pdp-title"], h1.product__title, .product-single__title'
+  price: '[data-testid="pdp-price"], .price-item--sale, .product__price--sale'
+  compare_at: '[data-testid="pdp-compare-at"], .price-item--regular, .product__price--compare'
+  sold_out: '[data-testid="sold-out"], .product-form__submit[disabled], .price--sold-out'
+  add_to_cart: '[data-testid="add-to-cart"], button[name="add"], .product-form__submit'
+  # BYOB builders vary; first match wins.
+  byob_option: '[data-testid="byob-option"], .bundle-builder__option, .byob-product-card'
+  byob_selected: '[data-testid="byob-selected"], .bundle-builder__slot--filled'
+  byob_price: '[data-testid="byob-price"], .bundle-builder__total, .bundle-price'
+  autoship_toggle: '[data-testid="autoship"], input[value*="subscription"], .subscription-option input'
+  autoship_price: '[data-testid="autoship-price"], .subscription-price, .selling-plan__price'
+  cart_line: '[data-testid="cart-line-item"], .cart-item, .cart__row'
+  cart_subtotal: '[data-testid="cart-subtotal"], .totals__subtotal-value, .cart__subtotal'
+  cart_total: '[data-testid="cart-total"], .totals__total-value, .cart__total'
+  cart_discount: '[data-testid="cart-discount"], .cart-discount, .discounts__discount'
+  discount_input: '[data-testid="discount-input"], input[name="discount"], #discount-code'
+  discount_apply: '[data-testid="discount-apply"], button[name="apply-discount"]'
