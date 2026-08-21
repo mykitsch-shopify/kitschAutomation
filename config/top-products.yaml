@@ -1,0 +1,141 @@
+# Top-10 selling products — daily check contract.
+#
+# Source: the top-10 list supplied by merchandising. Titles are the source of
+# truth here because that is what the list gives; handles are the URL slugs the
+# check actually needs, and the two are not derivable from each other.
+#
+# ── Why handles are not guessed ──────────────────────────────────────────
+# A wrong handle does not fail. It loads a different product and reports it
+# green, which is worse than no check at all. Of these ten titles, only two
+# resolve unambiguously against the catalogue we hold: "Shampoo Bar Bag"
+# matches four products equally well, and the two "Combo" bundles are not in
+# our catalogue extract at all.
+#
+# So `handle` starts unset for anything unconfirmed. The audit refuses to check
+# a product with no handle and says so; it never picks one for you. Fill them
+# with:
+#
+#   KITSCH_BASE_URL=https://www.mykitsch.com npm run resolve:handles
+#
+# which queries the storefront's own search, prints what it found, and writes
+# nothing until you pass --write.
+#
+# Every check also asserts the loaded page's title matches `title` below. That
+# is the backstop: if a handle is wrong or a product is renamed or replaced,
+# the run fails naming the mismatch instead of quietly testing a neighbour.
+
+products:
+  - title: Rice Water Shampoo & Conditioner Combo for Hair Growth
+    handle: # UNRESOLVED — a combo/bundle, absent from our catalogue extract
+  - title: Rice Water Shampoo Bar for Hair Growth
+    handle: # UNRESOLVED — candidates: rice-water-protein-shampoo-bar-bag,
+    #                     rice-water-protein-shampoo-bar-saver-bag.
+    #                     "Bar" vs "bar bag" is a different product; pick by hand.
+  - title: Self-Draining Soap Dish
+    handle: self-draining-soap-dish # unique match, high confidence
+  - title: Shea Butter Exfoliating Body Wash
+    handle: # UNRESOLVED — shea-butter-solid-body-wash is "moisturizing", not
+    #                     "exfoliating"; sugar-exfoliating-body-scrub-bar is a
+    #                     scrub. Neither is clearly this product.
+  - title: Kojic Acid Hyperpigmentation Face and Body Bar
+    handle: kojic-acid-face-and-body-bar # best match by a clear margin
+  - title: Bottle Free Beauty Travel Case
+    handle: # UNRESOLVED — nearest are "bottle-free-beauty-bar-bag-*", which are
+    #                     bar bags rather than a travel case.
+  - title: Rosemary Scalp & Hair Strengthening Oil With Biotin
+    handle: # UNRESOLVED — likely pre-wash-scalp-hair-oil-with-rosemary-and-biotin,
+    #                     but "pre-wash" is not in the supplied title. Confirm.
+  - title: Shampoo Bar Bag
+    handle: # UNRESOLVED — four equal matches (rosemary-biotin, rice-water-protein,
+    #                     castor-oil, star-wars). Genuinely ambiguous.
+  - title: Rice Water Conditioner Bar for Hair Growth
+    handle: # UNRESOLVED — rice-water-conditioner-for-hair-growth is the liquid;
+    #                     rice-water-protein-conditioner-bar-strengthening is a bar.
+  - title: Rosemary & Biotin Volumizing Shampoo & Conditioner Combo
+    handle: # UNRESOLVED — a combo; the singles exist separately.
+
+# ── What to check on each product ────────────────────────────────────────
+# Each maps to a requirement in the daily brief. Turning one off here removes
+# it from the report rather than silently passing it.
+checks:
+  # "Check stock availability" — the product is purchasable, not sold out.
+  - availability
+  # "and Add to Cart functionality" — the button works and a line appears.
+  - add_to_cart
+  # "Verify product title" — against `title` above. Also the wrong-handle guard.
+  - title
+  # "descriptions" — present and not a placeholder.
+  - description
+  # "images" — at least one, and the bytes actually load.
+  - images
+  # "videos" — recorded when present. Only required where expect_video is true,
+  # because most of these products have none and a blanket requirement would
+  # report nine false failures every morning.
+  - videos
+  # "pricing" — a parseable non-zero price, and no struck-through price unless
+  # the product is genuinely on offer.
+  - pricing
+  # "specifications" — the details/ingredients block is present and non-empty.
+  - specifications
+  # "Ensure variations (e.g. size, color) function correctly" — every option
+  # can be selected, and doing so updates price and availability without error.
+  - variations
+  # "Ensure discounts are stacked on product in cart correctly" — see below.
+  - discount_stacking
+
+thresholds:
+  # A description shorter than this is a placeholder, not copy.
+  min_description_chars: 80
+  # Below this a "specifications" block is a heading with nothing under it.
+  min_specification_chars: 40
+  min_images: 1
+  # Product pages should not take longer than this to become interactive.
+  max_load_ms: 15000
+
+# ── Discount stacking ────────────────────────────────────────────────────
+# This is the one requirement that cannot be verified from the storefront
+# alone, because "correctly" is a business rule, not a page property.
+#
+# What IS checked without any rules supplied: the cart's arithmetic. Subtotal
+# minus the discounts shown must equal the total, and an applied code must
+# change the total. A cart that displays a discount it does not deduct is the
+# common failure and is caught by that alone.
+#
+# What needs rules from merchandising to check: which codes may combine, and
+# what the result should be. Add them below and each becomes an assertion.
+# Until then the audit reports `discount_rules_absent` as a minor finding
+# rather than passing silently — a stacking check with no rules asserts
+# nothing about stacking.
+discounts:
+  codes: []
+  # - code: WELCOME10
+  #   kind: percentage
+  #   value: 10
+  # - code: FREESHIP
+  #   kind: shipping
+  expected_stacking: []
+  # - codes: [WELCOME10, FREESHIP]
+  #   applies: both        # both | first_only | neither
+  #   note: 'Confirmed with merchandising 2026-08-21.'
+
+# ── Selectors ────────────────────────────────────────────────────────────
+# testid first, then plausible theme classes; first match wins. Mapping this
+# onto the live theme is an edit here, not a code change. The audit reports an
+# unmatched selector as a harness finding, never as a product defect.
+selectors:
+  title: '[data-testid="pdp-title"], h1.product__title, .product-single__title'
+  price: '[data-testid="pdp-price"], .price-item--sale, .product__price--sale'
+  compare_at: '[data-testid="pdp-compare-at"], .price-item--regular, .product__price--compare'
+  description: '[data-testid="pdp-description"], .product__description, .product-single__description'
+  specifications: '[data-testid="pdp-specs"], .product__specs, .product-details__accordion'
+  image: '[data-testid="pdp-image"], .product__media img, .product-single__photo img'
+  video: '[data-testid="pdp-video"], .product__media video, video'
+  sold_out: '[data-testid="sold-out"], .product-form__submit[disabled], .price--sold-out'
+  add_to_cart: '[data-testid="add-to-cart"], button[name="add"], .product-form__submit'
+  variant_option: '[data-testid="variant-option"], .product-form__input input, select[name="id"] option'
+  cart_line: '[data-testid="cart-line-item"], .cart-item, .cart__row'
+  cart_subtotal: '[data-testid="cart-subtotal"], .totals__subtotal-value, .cart__subtotal'
+  cart_total: '[data-testid="cart-total"], .totals__total-value, .cart__total'
+  cart_discount: '[data-testid="cart-discount"], .cart-discount, .discounts__discount'
+  discount_input: '[data-testid="discount-input"], input[name="discount"], #discount-code'
+  discount_apply: '[data-testid="discount-apply"], button[name="apply-discount"]'

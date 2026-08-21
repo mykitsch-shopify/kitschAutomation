@@ -21,10 +21,14 @@
     "test:mobile-web": "playwright test --project=mobile-chrome",
     "test:detection": "tsx i18n/verify-detection.ts",
     "test:app": "maestro test mobile/maestro/",
-    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:detection && npm run test:compare-at-detection",
+    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection",
     "audit:compare-at": "tsx tools/compare-at-audit.ts",
     "compare-at:fixture": "tsx fixtures/compare-at/server.ts",
-    "test:compare-at-detection": "tsx tools/verify-compare-at.ts"
+    "test:compare-at-detection": "tsx tools/verify-compare-at.ts",
+    "audit:top-products": "tsx tools/top-products-audit.ts",
+    "top-products:fixture": "tsx fixtures/top-products/server.ts",
+    "test:top-products-detection": "tsx tools/verify-top-products.ts",
+    "resolve:handles": "tsx tools/resolve-handles.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

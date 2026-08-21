@@ -1,0 +1,113 @@
+name: daily-top-products
+
+# Daily check of the top-10 selling products: availability, add-to-cart, title,
+# description, images, videos, pricing, specifications, variant behaviour and
+# cart discount arithmetic.
+#
+# Runs in CI rather than on a laptop for two reasons: it has to happen whether
+# or not anyone remembers, and a result nobody else can reproduce is testimony
+# rather than evidence.
+on:
+  schedule:
+    # 06:15 UTC — before the working day in either US timezone, so a sold-out
+    # top seller is on someone's desk rather than discovered at noon.
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Storefront to check'
+        required: false
+        default: 'https://www.mykitsch.com'
+  pull_request:
+    paths:
+      - 'web/lib/top-products.ts'
+      - 'tools/top-products-audit.ts'
+      - 'tools/verify-top-products.ts'
+      - 'fixtures/top-products/**'
+      - 'config/top-products.yaml'
+
+concurrency:
+  group: daily-top-products-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  # On a PR: prove the check still catches things. Never touches the store.
+  detection:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:unit
+      - name: Detection control — a defect it cannot see is one it reports as clean
+        run: npm run test:top-products-detection
+
+  daily:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # The control runs first. A daily result from a check that has stopped
+      # working is worse than no daily result, so if this fails the run stops
+      # before reporting anything about the store.
+      - name: Detection control
+        run: npm run test:top-products-detection
+
+      - name: Daily check
+        id: audit
+        continue-on-error: true
+        env:
+          KITSCH_BASE_URL: ${{ github.event.inputs.base_url || 'https://www.mykitsch.com' }}
+        run: npm run audit:top-products
+
+      - name: Summary
+        if: always()
+        run: cat top-products-report/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: top-products-${{ github.run_id }}
+          path: top-products-report/
+          retention-days: 30
+
+      # The history file is the trend. Committing it is what makes "and update"
+      # real: each morning's counts land in the repo rather than expiring with
+      # the artifact.
+      - name: Record the run in the trend history
+        if: always()
+        run: |
+          git config user.name 'kitsch-automation'
+          git config user.email 'noreply@mykitsch.com'
+          mkdir -p docs/daily
+          cp top-products-report/report.md "docs/daily/top-products-$(date -u +%F).md"
+          git add docs/daily top-products-report/history.jsonl 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo 'nothing to record'
+          else
+            git commit -m "Daily top-10 check — $(date -u +%F)"
+            git push
+          fi
+
+      # Exit codes carry meaning: 1 is findings, 2 is "could not check". Both
+      # must fail the run, and the distinction is in the report.
+      - name: Fail if the check found something or could not run
+        if: steps.audit.outcome == 'failure'
+        run: |
+          echo 'See the summary above and the uploaded report.'
+          exit 1

@@ -1,0 +1,80 @@
+# Config the detection control points the audit at.
+#
+# Separate from config/top-products.yaml so the real list stays the real list:
+# pointing the control at production config would make the control pass or fail
+# for reasons unrelated to the code under test.
+#
+# Every handle here has a canonical_title, so the identity check is the exact
+# comparison rather than the loose fallback.
+
+products:
+  - title: Self-Draining Soap Dish
+    handle: self-draining-soap-dish
+    canonical_title: Self-Draining Soap Dish
+  - title: Kojic Acid Hyperpigmentation Face and Body Bar
+    handle: kojic-acid-face-and-body-bar
+    canonical_title: Kojic Acid Hyperpigmentation Face and Body Bar
+  - title: Seeded sold_out
+    handle: seed-sold-out
+    canonical_title: Seeded sold_out
+  - title: Seeded add_to_cart_failed
+    handle: seed-cart-broken
+    canonical_title: Seeded add_to_cart_failed
+  - title: Seeded price_zero
+    handle: seed-price-zero
+    canonical_title: Seeded price_zero
+  - title: Seeded description_missing
+    handle: seed-no-description
+    canonical_title: Seeded description_missing
+  - title: Seeded image_broken
+    handle: seed-broken-image
+    canonical_title: Seeded image_broken
+  - title: Seeded specifications_missing
+    handle: seed-no-specs
+    canonical_title: Seeded specifications_missing
+  - title: Seeded variant_broken
+    handle: seed-variant-broken
+    canonical_title: Seeded variant_broken
+  - title: Seeded title_mismatch
+    handle: seed-wrong-product
+    canonical_title: Seeded title_mismatch
+
+checks:
+  - availability
+  - add_to_cart
+  - title
+  - description
+  - images
+  - videos
+  - pricing
+  - specifications
+  - variations
+  - discount_stacking
+
+thresholds:
+  min_description_chars: 80
+  min_specification_chars: 40
+  min_images: 1
+  max_load_ms: 15000
+
+discounts:
+  codes: []
+  expected_stacking: []
+
+selectors:
+  title: '[data-testid="pdp-title"]'
+  price: '[data-testid="pdp-price"]'
+  compare_at: '[data-testid="pdp-compare-at"]'
+  description: '[data-testid="pdp-description"]'
+  specifications: '[data-testid="pdp-specs"]'
+  image: '[data-testid="pdp-image"]'
+  video: '[data-testid="pdp-video"]'
+  sold_out: '[data-testid="sold-out"]'
+  add_to_cart: '[data-testid="add-to-cart"]'
+  variant_option: '[data-testid="variant-option"]'
+  cart_line: '[data-testid="cart-line-item"]'
+  cart_subtotal: '[data-testid="cart-subtotal"]'
+  cart_total: '[data-testid="cart-total"]'
+  cart_discount: '[data-testid="cart-discount"]'
+  discount_input: '[data-testid="discount-input"]'
+  discount_apply: '[data-testid="discount-apply"]'

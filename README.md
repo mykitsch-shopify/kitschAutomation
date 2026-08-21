@@ -12,7 +12,7 @@ checkout and meta content — replacing a recurring manual translation pass.
 | **Runs offline** | Ships a local seven-locale storefront fixture; no credentials needed to run everything |
 | **Two layers** | Content (no browser, exhaustive) + render (Playwright, only what a DOM can show) |
 | **One contract** | `config/i18n.yaml` and `config/kits.yaml` — adding a language or a kit is a config edit, not a code change |
-| **Self-checking** | 19 + 5 planted defects prove the checks still fire; a check that never fires is the danger |
+| **Self-checking** | 19 + 5 + 9 planted defects prove the checks still fire; a check that never fires is the danger |
 
 ---
 
@@ -177,6 +177,7 @@ KitschAutomation/
 │
 ├── web/                     ── web specs
 │   ├── lib/compare-at.ts      Compare-at removal: CSV reading, sheet audit, judging
+│   ├── lib/top-products.ts    Daily top-10 check: config, judging, cart maths
 │   ├── lib/kit-parity.ts      Welcome-kit free-item comparison (pure, unit-tested)
 │   └── specs/                 welcome-kit-parity, search-visibility
 ├── mobile/maestro/          ── Phase 4 app smoke flow
@@ -228,6 +229,9 @@ one less way to happen. Roughly 3 minutes.
 | `npm run test:detection` | **Negative control** — 19 planted defects must be caught, and the render specs must fail against a broken store | After touching any comparator. This is what keeps the gate honest |
 | `npm run audit:compare-at` | **Compare-at removal audit** — the struck-through price must be gone and the real price untouched; audits the two sheets first, then the storefront. See [`docs/COMPARE-AT-AUDIT.md`](docs/COMPARE-AT-AUDIT.md) | Before and after the compare-at import runs. `--sheets-only` needs no browser |
 | `npm run test:compare-at-detection` | **Negative control** for that audit — 5 planted defects, plus a clean run that must report nothing | After touching `web/lib/compare-at.ts` |
+| `npm run audit:top-products` | **Daily top-10 check** — availability, add-to-cart, title, description, images, videos, pricing, specs, variants, cart discount maths. See [`docs/TOP-PRODUCTS-DAILY.md`](docs/TOP-PRODUCTS-DAILY.md) | Daily in CI; by hand when investigating a top seller |
+| `npm run resolve:handles` | Maps the top-10 list's titles to storefront handles by asking the store's own search. Writes nothing without `--write` | When the top-10 list changes |
+| `npm run test:top-products-detection` | **Negative control** for the daily check — 9 planted defects, one per requirement | After touching `web/lib/top-products.ts` |
 | `npm run storefront` | Serves the fixture storefront on `:4173` so you can browse it by hand | Debugging a spec, or seeing what the fixture renders |
 | `npm run test:app` | Maestro app smoke flow | Phase 4; needs Maestro and a device |
 
@@ -619,6 +623,7 @@ the same as a clean review.
 | [`docs/TEST-CASE-COVERAGE.md`](docs/TEST-CASE-COVERAGE.md) | The 27 written test cases cross-verified against the suite |
 | [`docs/WELCOME-KIT-COVERAGE.md`](docs/WELCOME-KIT-COVERAGE.md) | Welcome-kit free-item parity: the requirement, the ten dimensions, and all 57 written cases |
 | [`docs/COMPARE-AT-AUDIT.md`](docs/COMPARE-AT-AUDIT.md) | Compare-at (struck-through price) removal: how to run it, what it checks, and the findings on the sheets as supplied |
+| [`docs/TOP-PRODUCTS-DAILY.md`](docs/TOP-PRODUCTS-DAILY.md) | Daily top-10 seller check: availability, add-to-cart, content, variants, cart discount maths — and why 8 of 10 handles need resolving first |
 | [`docs/ACCESS-REQUEST.md`](docs/ACCESS-REQUEST.md) | What is genuinely outstanding — selector mapping, a read-only token, where this should run. The earlier network request is withdrawn |
 | [`docs/ACCESS-REQUEST-EMAIL.md`](docs/ACCESS-REQUEST-EMAIL.md) | The problem statement for a manager, in email and Slack form |
 | [`docs/LIVE-RUN.md`](docs/LIVE-RUN.md) | Running against the live storefront: why the sandbox attempt failed, the selector mapping it needs, and the exact commands |
