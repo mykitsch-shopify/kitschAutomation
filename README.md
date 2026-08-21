@@ -116,8 +116,8 @@ npx playwright install msedge           # for desktop-edge (a real Edge channel,
 ```
 critical 0 | major 0 | minor 0 | harness 0
 review: PASS
-# tests 142
-# pass 142
+# tests 218
+# pass 218
 critical 0 | major 0 | minor 7 | harness 0
 gate: PASS
   350 passed (1.9m)
@@ -137,6 +137,9 @@ copy legitimately runs 1.5–1.8× longer than English on headings. See
 
 ```
 KitschAutomation/
+│
+├── .vscode/                 ── VS Code launch configs + tasks (headless by default)
+├── .run/                    ── JetBrains shared run configurations
 │
 ├── config/
 │   ├── kits.yaml              Welcome-kit parity contract — reference kit,
@@ -185,15 +188,25 @@ KitschAutomation/
 ├── mobile/maestro/          ── Phase 4 app smoke flow
 ├── core/consistency.ts      ── async-node SLA helper
 │
-├── tools/                   ── the offline review layer
+├── tools/                   ── CLIs and the offline review layer
+│   ├── lib/browser.ts       ★ Shared browser launcher for every audit CLI —
+│   │                          --browser / --headed / --slow-mo / --viewport,
+│   │                          headless desktop by default
+│   ├── preflight.ts           Do our selectors match the live theme?
+│   ├── compare-at-audit.ts    Compare-at removal audit
+│   ├── top-products-audit.ts  Daily top-10 seller check
+│   ├── ad-landing-audit.ts    Daily ad-traffic landing page QA
+│   ├── resolve-handles.ts     Title -> handle, by asking the store's own search
+│   ├── verify-*.ts            Negative controls, one per audit
 │   ├── eslint-plugin-kitsch/  Four custom rules
 │   └── review/
 │       ├── run-review.ts      The offline reviewer
 │       ├── bugbot.ts          Triage: severity → route → SLA
 │       └── *.test.ts          Rule and triage tests
 │
-├── docs/                    ── framework proposal, test plan, traceability, run report
-├── .github/workflows/       ── translation-gate.yml, web-matrix.yml
+├── docs/                    ── framework proposal, test plan, traceability, run reports
+├── .github/workflows/       ── translation-gate, web-matrix, daily-top-products,
+│                               daily-ad-landing
 ├── eslint.config.js           Static gate configuration
 ├── playwright.config.ts       Traffic-weighted project matrix
 └── playwright.grid.config.ts  Real-device cloud grid (needs GRID_WS_ENDPOINT)
@@ -293,7 +306,68 @@ JSON and Markdown.
 
 ## 5. Running from an IDE
 
-### VS Code
+Everything below runs **headless on your local desktop browser** by default. That
+is deliberate: a run that opens a window fails on any machine without a display,
+and that failure reads as a broken check rather than a wrong setting. Headed mode
+is an explicit opt-in for the one job that needs eyes on it — watching a flow to
+work out why a selector missed.
+
+### 5.1 Browsers
+
+Playwright specs use the projects in `playwright.config.ts`:
+
+```bash
+npm run test:desktop            # desktop-chrome, headless
+npm run test:desktop:headed     # same, with a visible window
+npm run test:desktop:firefox    # desktop-firefox
+npm run test:desktop:safari     # desktop-safari (WebKit)
+npm run test:desktop:edge       # desktop-edge (real Edge channel)
+npm run test:desktop:all        # chrome + firefox + safari
+npm run test:ui                 # Playwright UI mode — time-travel debugging
+npm run test:debug              # step through with the Inspector
+```
+
+The audit CLIs (`audit:ad-landing`, `audit:top-products`, `audit:compare-at`)
+take the same choice as flags, handled by `tools/lib/browser.ts`:
+
+| Flag | Env | Default |
+|---|---|---|
+| `--browser chromium\|firefox\|webkit\|chrome\|edge` | `KITSCH_BROWSER` | `chromium` |
+| `--headed` | `KITSCH_HEADED=1` | headless |
+| `--slow-mo <ms>` | `KITSCH_SLOW_MO` | `0` |
+| `--viewport <WxH>` | `KITSCH_VIEWPORT` | `1440x900` |
+
+Every run prints what it actually drove, so a report is never ambiguous about it:
+
+```
+  browser      chromium headless 1440x900
+```
+
+`chrome` and `edge` drive the real installed applications rather than bundled
+Chromium — distinct rendering and distinct update cadence, which is why the QA
+scorecard names Edge separately. `KITSCH_CHROMIUM_PATH` applies to bundled
+Chromium only; pointing a channel at another binary would silently run a
+different browser than the one named in the report.
+
+Watching a flow, when a selector is missing and you need to see why:
+
+```bash
+KITSCH_BASE_URL=https://www.mykitsch.com \
+  npm run audit:ad-landing -- --headed --slow-mo 300
+```
+
+### 5.2 VS Code
+
+`.vscode/` ships run configurations, so nothing needs typing:
+
+- **Run and Debug** (`launch.json`) — 11 configurations covering each audit
+  headless, two headed variants, preflight, the detection controls, the unit
+  tests for the open file, and the offline review. Breakpoints work directly in
+  the `.ts` files. The fixture-backed ad-landing config starts its storefront
+  first via a background task.
+- **Tasks** (`tasks.json`, ⇧⌘B / Ctrl+Shift+B) — `verify`, `review`, unit tests,
+  preflight, each daily audit headless, one headed, the desktop spec runs, UI
+  mode, and all four detection controls in one go.
 
 `.vscode/extensions.json` recommends the two extensions that matter; VS Code will
 offer to install them on first open.
@@ -310,27 +384,38 @@ sidebar — the storefront fixture starts automatically.
 **To debug:** click the arrow with the ▾ and choose *Debug Test*. Breakpoints in
 both the spec and `i18n/lib/**` work; the browser opens and pauses.
 
-### JetBrains (WebStorm / IntelliJ)
+### 5.3 JetBrains (WebStorm / IntelliJ)
 
-Playwright is supported natively — run arrows appear beside each `test()`. For the
-npm scripts, open the **npm** tool window and double-click any script.
+`.run/` ships 11 shared run configurations — they appear in the run dropdown on
+first open, with the right environment already set:
 
-For the unit tests, create a **Node.js** run configuration:
+| Configuration | What it runs |
+|---|---|
+| verify (whole gate) | everything, offline |
+| review / unit tests | the static gate, the unit suite |
+| specs: desktop chrome (headless / headed / all) | Playwright desktop projects |
+| preflight (live) | do our selectors match the live theme? |
+| daily: ad-landing / top-products (live, headless) | the daily audits |
+| control: ad-landing / top-products detection | the negative controls |
+
+Playwright is also supported natively — run arrows appear beside each `test()`.
+
+For a one-off unit test, create a **Node.js** configuration:
 - Node parameters: `--import tsx --test`
-- JavaScript file: `i18n/lib/locale-parity.test.ts`
+- JavaScript file: the `*.test.ts` you want
 
-### Playwright UI mode (any editor)
+### 5.4 Playwright UI mode (any editor)
 
 The best debugging experience, and it needs no extension:
 
 ```bash
-npx playwright test --project=i18n-mobile --ui
+npm run test:ui                 # or: npx playwright test --project=i18n-mobile --ui
 ```
 
 A time-travel window with a DOM snapshot at every step, network log, and a watch
 mode that re-runs on save.
 
-### Traces
+### 5.5 Traces
 
 Traces are captured on first retry. After a failure:
 
@@ -572,6 +657,16 @@ export KITSCH_CHROMIUM_PATH=/path/to/chromium-XXXX/chrome-linux/chrome
 ```
 Honoured by `preflight` and by every chromium project in `playwright.config.ts`.
 Deliberately *not* applied to `desktop-edge`, which pins a real Edge channel.
+
+**`NO BROWSER` when using `--headed`**
+Headed mode needs a display. On a headless server, in CI, or over plain SSH there
+isn't one — drop `--headed` (headless is the default) or run under `xvfb-run`.
+The error names this case explicitly.
+
+**`Unknown browser "safari"`**
+WebKit is spelled `webkit`. Valid names: `chromium`, `firefox`, `webkit`,
+`chrome`, `edge`. It exits 2 rather than quietly falling back to Chromium, which
+would report a Chromium run as a Safari one.
 
 **`UNREACHABLE  net::ERR_TUNNEL_CONNECTION_FAILED`**
 Something is intercepting outbound traffic — a sandbox or CI runner with a

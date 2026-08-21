@@ -1,7 +1,8 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 
-import { chromium, type Browser, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
 
+import { launchFromArgs } from './lib/browser.js';
 import { toCents } from '../web/lib/compare-at.js';
 import {
   auditConfig,
@@ -31,6 +32,9 @@ import {
  * behaviour, and compare-at accuracy.
  *
  * Exit codes: 0 clean, 1 findings to act on, 2 could not run.
+ *
+ * Options: --base-url, --config, --out, --date, and the shared browser flags
+ * --browser / --headed / --slow-mo / --viewport (see tools/lib/browser.ts).
  */
 
 const flags = new Map<string, string>();
@@ -280,22 +284,9 @@ write('');
 
 const findings: Finding[] = [...auditConfig(config)];
 
-let browser: Browser;
-try {
-  browser = await chromium.launch({
-    ...(process.env.KITSCH_CHROMIUM_PATH === undefined
-      ? {}
-      : { executablePath: process.env.KITSCH_CHROMIUM_PATH }),
-  });
-} catch (error) {
-  process.stderr.write(
-    `\n  NO BROWSER     ${(error as Error).message.split('\n')[0] ?? ''}\n\n` +
-      '    1. npx playwright install chromium\n' +
-      '    2. or KITSCH_CHROMIUM_PATH=/path/to/chrome\n\n',
-  );
-  process.exit(2);
-}
-const page = await browser.newPage();
+const { browser, context } = await launchFromArgs(flags, bare, write, 'browser     ');
+write('');
+const page = await context.newPage();
 
 let reachedAny = false;
 

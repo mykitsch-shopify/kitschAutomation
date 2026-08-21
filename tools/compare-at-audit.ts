@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-import { chromium, type Browser, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
 
+import { launchFromArgs } from './lib/browser.js';
 import {
   auditSheets,
   buildExpectations,
@@ -44,6 +45,10 @@ Options:
   --limit <n>          check at most n products (a smoke run)
   --concurrency <n>    parallel page loads, default 4
   --out <dir>          report directory, default compare-at-report
+  --browser <name>     chromium (default), firefox, webkit, chrome, edge
+  --headed             show the browser; default is headless
+  --slow-mo <ms>       slow each action down, for watching a flow
+  --viewport <WxH>     desktop viewport, default 1440x900
 `;
 
 type Args = {
@@ -55,6 +60,9 @@ type Args = {
   readonly limit: number | undefined;
   readonly concurrency: number;
   readonly out: string;
+  /** Kept so the browser launcher can read --browser / --headed from the same parse. */
+  readonly flags: ReadonlyMap<string, string>;
+  readonly bare: ReadonlySet<string>;
 };
 
 const die = (message: string): never => {
@@ -109,6 +117,8 @@ const parseArgs = (argv: readonly string[]): Args => {
     limit: number('limit'),
     concurrency: number('concurrency') ?? 4,
     out: flags.get('out') ?? 'compare-at-report',
+    flags,
+    bare,
   };
 };
 
@@ -293,22 +303,7 @@ const stats: Record<string, number> = {
 if (args.sheetsOnly) {
   write('  --sheets-only: no storefront was checked.');
 } else {
-  let browser: Browser;
-  try {
-    browser = await chromium.launch({
-      ...(process.env.KITSCH_CHROMIUM_PATH === undefined
-        ? {}
-        : { executablePath: process.env.KITSCH_CHROMIUM_PATH }),
-    });
-  } catch (error) {
-    process.stderr.write(
-      `\n  NO BROWSER     ${(error as Error).message.split('\n')[0] ?? ''}\n\n` +
-        '  Chromium did not launch, so nothing was checked.\n' +
-        '    1. npx playwright install chromium\n' +
-        '    2. or point at an existing build: KITSCH_CHROMIUM_PATH=/path/to/chrome\n\n',
-    );
-    process.exit(2);
-  }
+  const { browser, context } = await launchFromArgs(args.flags, args.bare, write, 'browser       ');
 
   const selectors = (() => {
     const config = loadKitConfig();
@@ -322,7 +317,7 @@ if (args.sheetsOnly) {
 
   const pages = await Promise.all(
     Array.from({ length: Math.min(args.concurrency, Math.max(selected.length, 1)) }, async () =>
-      browser.newPage(),
+      context.newPage(),
     ),
   );
   let done = 0;

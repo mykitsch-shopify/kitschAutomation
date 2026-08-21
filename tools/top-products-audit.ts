@@ -1,7 +1,8 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 
-import { chromium, type Browser, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
 
+import { launchFromArgs } from './lib/browser.js';
 import { toCents } from '../web/lib/compare-at.js';
 import {
   auditConfig,
@@ -40,6 +41,10 @@ Options:
   --out <dir>        report directory, default top-products-report
   --date <YYYY-MM-DD>  label for the report; defaults to today (UTC)
   --no-cart          skip add-to-cart and the cart/discount checks
+  --browser <name>     chromium (default), firefox, webkit, chrome, edge
+  --headed             show the browser; default is headless
+  --slow-mo <ms>       slow each action down, for watching a flow
+  --viewport <WxH>     desktop viewport, default 1440x900
 `;
 
 const die = (message: string): never => {
@@ -276,23 +281,9 @@ write('');
 
 const findings: Finding[] = [...auditConfig(config)];
 
-let browser: Browser;
-try {
-  browser = await chromium.launch({
-    ...(process.env.KITSCH_CHROMIUM_PATH === undefined
-      ? {}
-      : { executablePath: process.env.KITSCH_CHROMIUM_PATH }),
-  });
-} catch (error) {
-  process.stderr.write(
-    `\n  NO BROWSER     ${(error as Error).message.split('\n')[0] ?? ''}\n\n` +
-      '    1. npx playwright install chromium\n' +
-      '    2. or point at an existing build: KITSCH_CHROMIUM_PATH=/path/to/chrome\n\n',
-  );
-  process.exit(2);
-}
-
-const page = await browser.newPage();
+const { browser, context } = await launchFromArgs(flags, bare, write, 'browser  ');
+write('');
+const page = await context.newPage();
 const observations: Observation[] = [];
 let reachedAny = false;
 

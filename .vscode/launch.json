@@ -1,0 +1,158 @@
+{
+  // Debug configurations for the audits and controls.
+  //
+  // Every one of these runs headless by default — a config that opened a
+  // browser window would fail on any machine without a display, and that
+  // failure reads as a broken check rather than a wrong setting. The two
+  // "(headed)" entries exist for the one job that needs eyes on it: working
+  // out why a selector missed.
+  //
+  // Breakpoints work in the .ts files directly; tsx handles the transpile.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Audit: ad-landing (fixture, headless)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/ad-landing-audit.ts",
+      "args": [
+        "--base-url",
+        "http://127.0.0.1:4195",
+        "--config",
+        "fixtures/ad-landing/config.yaml"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": { "NO_PROXY": "127.0.0.1,localhost" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "fixture: ad-landing"
+    },
+    {
+      "name": "Audit: ad-landing (live, headless)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/ad-landing-audit.ts",
+      "cwd": "${workspaceFolder}",
+      "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Audit: ad-landing (live, headed — watch a flow)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/ad-landing-audit.ts",
+      "args": ["--headed", "--slow-mo", "300"],
+      "cwd": "${workspaceFolder}",
+      "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Audit: top-products (live, headless)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/top-products-audit.ts",
+      "cwd": "${workspaceFolder}",
+      "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Audit: top-products (live, headed)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/top-products-audit.ts",
+      "args": ["--headed", "--slow-mo", "300"],
+      "cwd": "${workspaceFolder}",
+      "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Audit: compare-at (sheets only, no browser)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/compare-at-audit.ts",
+      "args": [
+        "--import",
+        "data/compare-at/removal-import.csv",
+        "--rollback",
+        "data/compare-at/rollback-values.csv",
+        "--sheets-only"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Preflight (live) — does the theme match our selectors?",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/preflight.ts",
+      "cwd": "${workspaceFolder}",
+      "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Control: ad-landing detection",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/verify-ad-landing.ts",
+      "cwd": "${workspaceFolder}",
+      "env": { "NO_PROXY": "127.0.0.1,localhost" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Control: top-products detection",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/verify-top-products.ts",
+      "cwd": "${workspaceFolder}",
+      "env": { "NO_PROXY": "127.0.0.1,localhost" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Unit tests (current file)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--import", "tsx", "--test", "${file}"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Offline review (tsc + eslint + rules)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx"],
+      "program": "${workspaceFolder}/tools/review/run-review.ts",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
