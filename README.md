@@ -249,6 +249,8 @@ one less way to happen. Roughly 3 minutes.
 | `npm run test:top-products-detection` | **Negative control** for the daily check — 9 planted defects, one per requirement | After touching `web/lib/top-products.ts` |
 | `npm run audit:ad-landing` | **Daily ad-traffic QA** — 29 welcome-kit/BYOB/traffic pages, discount non-stacking, redirect flows, OOS redirects, auto-ship, compare-at. See [`docs/AD-LANDING-DAILY.md`](docs/AD-LANDING-DAILY.md) | Daily in CI, first thing; by hand when ad spend looks wrong |
 | `npm run test:ad-landing-detection` | **Negative control** for it — 10 planted defects, one per check in the brief | After touching `web/lib/ad-landing.ts` |
+| `npm run audit:translation-backlog` | **Translation backlog check** — are the open Asana translation tasks still true? Writes no copy and changes nothing in Asana. See [`docs/TRANSLATION-BACKLOG.md`](docs/TRANSLATION-BACKLOG.md) | Before a backlog grooming pass |
+| `npm run test:translation-backlog-detection` | **Negative control** for it — every verdict against a known fixture state | After touching `web/lib/translation-backlog.ts` |
 | `npm run storefront` | Serves the fixture storefront on `:4173` so you can browse it by hand | Debugging a spec, or seeing what the fixture renders |
 | `npm run test:app` | Maestro app smoke flow | Phase 4; needs Maestro and a device |
 
@@ -724,6 +726,7 @@ the same as a clean review.
 | [`docs/COMPARE-AT-AUDIT.md`](docs/COMPARE-AT-AUDIT.md) | Compare-at (struck-through price) removal: how to run it, what it checks, and the findings on the sheets as supplied |
 | [`docs/TOP-PRODUCTS-DAILY.md`](docs/TOP-PRODUCTS-DAILY.md) | Daily top-10 seller check: availability, add-to-cart, content, variants, cart discount maths — and why 8 of 10 handles need resolving first |
 | [`docs/AD-LANDING-DAILY.md`](docs/AD-LANDING-DAILY.md) | Daily QA of ad-traffic landing pages: welcome kits, BYOB flows, discount non-stacking, redirect flows, OOS redirects, auto-ship, compare-at |
+| [`docs/TRANSLATION-BACKLOG.md`](docs/TRANSLATION-BACKLOG.md) | Verifying the ~93 open Asana translation tasks against the live store — which are already done, half done, or about products that no longer exist |
 | [`docs/ACCESS-REQUEST.md`](docs/ACCESS-REQUEST.md) | What is genuinely outstanding — selector mapping, a read-only token, where this should run. The earlier network request is withdrawn |
 | [`docs/ACCESS-REQUEST-EMAIL.md`](docs/ACCESS-REQUEST-EMAIL.md) | The problem statement for a manager, in email and Slack form |
 | [`docs/LIVE-RUN.md`](docs/LIVE-RUN.md) | Running against the live storefront: why the sandbox attempt failed, the selector mapping it needs, and the exact commands |

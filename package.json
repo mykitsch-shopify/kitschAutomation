@@ -12,6 +12,7 @@
     "audit:ad-landing": "tsx tools/ad-landing-audit.ts",
     "audit:compare-at": "tsx tools/compare-at-audit.ts",
     "audit:top-products": "tsx tools/top-products-audit.ts",
+    "audit:translation-backlog": "tsx tools/translation-backlog-audit.ts",
     "compare-at:fixture": "tsx fixtures/compare-at/server.ts",
     "i18n:parity": "tsx i18n/run-parity.ts",
     "lint": "eslint .",
@@ -35,11 +36,13 @@
     "test:kits": "playwright test --project=mobile-chrome --grep @kits",
     "test:mobile-web": "playwright test --project=mobile-chrome",
     "test:top-products-detection": "tsx tools/verify-top-products.ts",
+    "test:translation-backlog-detection": "tsx tools/verify-translation-backlog.ts",
     "test:ui": "playwright test --ui",
     "test:unit": "node --import tsx --test \"i18n/lib/*.test.ts\" \"web/lib/*.test.ts\" \"tools/review/*.test.ts\" \"tools/lib/*.test.ts\"",
     "top-products:fixture": "tsx fixtures/top-products/server.ts",
+    "translation-backlog:fixture": "tsx fixtures/translation-backlog/server.ts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection && npm run test:ad-landing-detection"
+    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection && npm run test:ad-landing-detection && npm run test:translation-backlog-detection"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

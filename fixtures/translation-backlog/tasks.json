@@ -1,0 +1,18 @@
+{
+  "captured": "fixture",
+  "source": "Synthetic tasks for the detection control — one per verdict.",
+  "tasks": [
+    { "gid": "f1", "name": "Translate Product: Fully Translated",
+      "notes": "Product handle: fully-translated\n\nLocales needing translation:\n    es\n    fr\n" },
+    { "gid": "f2", "name": "Translate Product: Not Translated",
+      "notes": "Product handle: not-translated\n\nLocales needing translation:\n    es\n    fr\n" },
+    { "gid": "f3", "name": "Translate Product: Half Translated",
+      "notes": "Product handle: half-translated\n\nLocales needing translation:\n    es\n    fr\n" },
+    { "gid": "f4", "name": "Translate Product: Title Only",
+      "notes": "Product handle: title-only-translated\n\nLocales needing translation:\n    es\n    fr\n" },
+    { "gid": "f5", "name": "Translate Product: Gone",
+      "notes": "Product handle: gone-product\n\nLocales needing translation:\n    es\n    fr\n" },
+    { "gid": "f6", "name": "Translate the Updated Product Description",
+      "notes": "No product link at all — should be reported as needing a handle." }
+  ]
+}
