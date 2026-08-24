@@ -79,7 +79,7 @@ const resolutions: Resolution[] = [];
 let failed = 0;
 
 for (const product of config.products) {
-  let suggestions: readonly Suggestion[] = [];
+  let suggestions: readonly Suggestion[];
   try {
     suggestions = await search(product.title);
   } catch (error) {

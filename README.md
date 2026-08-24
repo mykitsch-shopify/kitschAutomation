@@ -12,7 +12,9 @@ checkout and meta content — replacing a recurring manual translation pass.
 | **Runs offline** | Ships a local seven-locale storefront fixture; no credentials needed to run everything |
 | **Two layers** | Content (no browser, exhaustive) + render (Playwright, only what a DOM can show) |
 | **One contract** | `config/i18n.yaml` and `config/kits.yaml` — adding a language or a kit is a config edit, not a code change |
-| **Self-checking** | 19 + 5 + 9 + 10 planted defects prove the checks still fire; a check that never fires is the danger |
+| **Self-checking** | 19 + 5 + 9 + 10 + 5 planted defects prove the checks still fire; a check that never fires is the danger |
+| **Gated** | `npm run precommit` locally (26s, offline), the same gates in CI on every push, `npm run gate:release` before a launch |
+| **Every market** | Accessibility scanned in all 7 locales — WCAG 2.2 AA plus the locale rules axe cannot express |
 
 ---
 
@@ -251,6 +253,10 @@ one less way to happen. Roughly 3 minutes.
 | `npm run test:ad-landing-detection` | **Negative control** for it — 10 planted defects, one per check in the brief | After touching `web/lib/ad-landing.ts` |
 | `npm run audit:translation-backlog` | **Translation backlog check** — are the open Asana translation tasks still true? Writes no copy and changes nothing in Asana. See [`docs/TRANSLATION-BACKLOG.md`](docs/TRANSLATION-BACKLOG.md) | Before a backlog grooming pass |
 | `npm run test:translation-backlog-detection` | **Negative control** for it — every verdict against a known fixture state | After touching `web/lib/translation-backlog.ts` |
+| `npm run precommit` | **The local gate** — typecheck, eslint + Kitsch rules, reviewer + bugbot, unit tests. Offline, ~26s | Runs automatically on `git commit` once `npm run hooks:install` has been run |
+| `npm run gate:release` | **Release gate** — 13 offline stages, then the live tier with `-- --live`. One answer: is it safe to ship? | Before a launch or a release |
+| `npm run audit:a11y` | **Accessibility across all 7 markets** — WCAG 2.2 AA via axe, plus wrong-language and untranslated-label rules. See [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) | Nightly; before a launch |
+| `npm run test:a11y-detection` | **Negative control** for it — 5 planted defects across 4 markets | After touching `web/lib/a11y.ts` |
 | `npm run storefront` | Serves the fixture storefront on `:4173` so you can browse it by hand | Debugging a spec, or seeing what the fixture renders |
 | `npm run test:app` | Maestro app smoke flow | Phase 4; needs Maestro and a device |
 
@@ -727,6 +733,8 @@ the same as a clean review.
 | [`docs/TOP-PRODUCTS-DAILY.md`](docs/TOP-PRODUCTS-DAILY.md) | Daily top-10 seller check: availability, add-to-cart, content, variants, cart discount maths — and why 8 of 10 handles need resolving first |
 | [`docs/AD-LANDING-DAILY.md`](docs/AD-LANDING-DAILY.md) | Daily QA of ad-traffic landing pages: welcome kits, BYOB flows, discount non-stacking, redirect flows, OOS redirects, auto-ship, compare-at |
 | [`docs/TRANSLATION-BACKLOG.md`](docs/TRANSLATION-BACKLOG.md) | Verifying the ~93 open Asana translation tasks against the live store — which are already done, half done, or about products that no longer exist |
+| [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) | Accessibility across markets: WCAG 2.2 AA, plus the wrong-language and untranslated-label failures a generic scan cannot see |
+| [`docs/ADDING-A-CHECK.md`](docs/ADDING-A-CHECK.md) | The seven steps for turning an Asana task into an automated check, and the rules that are not negotiable |
 | [`docs/ACCESS-REQUEST.md`](docs/ACCESS-REQUEST.md) | What is genuinely outstanding — selector mapping, a read-only token, where this should run. The earlier network request is withdrawn |
 | [`docs/ACCESS-REQUEST-EMAIL.md`](docs/ACCESS-REQUEST-EMAIL.md) | The problem statement for a manager, in email and Slack form |
 | [`docs/LIVE-RUN.md`](docs/LIVE-RUN.md) | Running against the live storefront: why the sandbox attempt failed, the selector mapping it needs, and the exact commands |

@@ -23,7 +23,10 @@ const ENGINES = {
   // update cadence, which is why the QA scorecard names Edge separately.
   chrome: chromium,
   edge: chromium,
-} as const satisfies Record<BrowserName, typeof chromium | typeof firefox | typeof webkit>;
+  // chrome and edge deliberately reuse the chromium engine and differ only by
+  // channel, so the value type repeats — constrain on one engine type rather
+  // than a union that names chromium three times.
+} as const satisfies Record<BrowserName, typeof chromium>;
 
 /** Channel for the browsers that are a real installed application. */
 const CHANNEL: Partial<Record<BrowserName, string>> = { chrome: 'chrome', edge: 'msedge' };

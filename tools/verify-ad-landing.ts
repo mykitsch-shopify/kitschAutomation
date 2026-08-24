@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
+import { assertPortFree, killTree, spawnFixture, waitForFixture } from './lib/fixture-process.js';
+
 import { SEEDED } from '../fixtures/ad-landing/seeded.js';
 
 /**
@@ -27,47 +29,13 @@ const wait = async (ms: number): Promise<void> =>
 
 const startFixture = async (profile: string): Promise<{ child: ChildProcess; base: string }> => {
   const base = `http://127.0.0.1:${String(portFor(profile))}`;
-
-  // Refuse to run if something already holds the port. A leftover fixture from
-  // an earlier run answers with the right profile name while serving stale
-  // code, so the profile check below cannot see it — and the whole control run
-  // then measures the old build and reports defects that were already fixed.
-  const existing = await fetch(`${base}/`)
-    .then(() => true)
-    .catch(() => false);
-  if (existing) {
-    throw new Error(
-      `${base} is already serving. A previous fixture did not exit, and its code may ` +
-        'be stale, so nothing measured against it would mean anything. Stop it first: ' +
-        "pkill -f 'fixtures/ad-landing/server.ts'",
-    );
-  }
-
-  const child = spawn('npx', ['tsx', 'fixtures/ad-landing/server.ts'], {
-    env: {
-      ...process.env,
-      KITSCH_AD_LANDING_PROFILE: profile,
-      KITSCH_AD_LANDING_PORT: String(portFor(profile)),
-    },
-    stdio: 'ignore',
+  await assertPortFree(base, '/');
+  const child = spawnFixture('fixtures/ad-landing/server.ts', {
+    KITSCH_AD_LANDING_PROFILE: profile,
+    KITSCH_AD_LANDING_PORT: String(portFor(profile)),
   });
-
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    await wait(250);
-    try {
-      const response = await fetch(`${base}/`);
-      if (!response.ok) continue;
-      const body = await response.text();
-      // Confirm which profile answered rather than trusting that something did.
-      if (body.includes(`(${profile})`)) return { child, base };
-      child.kill('SIGKILL');
-      throw new Error(`${base} is serving a different profile than "${profile}"`);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('different profile')) throw error;
-    }
-  }
-  child.kill('SIGKILL');
-  throw new Error(`fixture (${profile}) did not come up on ${base}`);
+  await waitForFixture(base, '/', `(${profile})`, child);
+  return { child, base };
 };
 
 type Report = {
@@ -104,8 +72,9 @@ const runAudit = async (profile: string): Promise<Report> => {
       });
     });
   } finally {
-    // SIGKILL: the tsx grandchild survives a SIGTERM sent to npx.
-    fixture.kill('SIGKILL');
+    // The whole process group: SIGKILL to npx leaves the tsx grandchild
+    // holding the port. See tools/lib/fixture-process.ts.
+    killTree(fixture);
     await wait(300);
   }
   return JSON.parse(readFileSync(`${REPORT}/${profile}/report.json`, 'utf8')) as Report;

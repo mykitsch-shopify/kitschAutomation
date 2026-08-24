@@ -1,0 +1,101 @@
+# Accessibility contract — across every market we sell in.
+#
+# Two layers, and the second is the reason this file exists.
+#
+# 1. Standard WCAG scanning (axe-core) on every route, in every locale.
+#
+# 2. Locale-specific accessibility, which axe cannot see. axe checks a page
+#    against WCAG; it has no idea which language the page is meant to be in. A
+#    German page that declares lang="en" passes every axe rule and is still
+#    broken for a screen-reader user, because the reader pronounces German text
+#    with English phonemes. Likewise alt text left in English on a Japanese
+#    page: sighted users never notice, and it is the only thing a blind customer
+#    in that market gets.
+#
+# Those two failures are invisible to a generic scan and are exactly what
+# "accessibility across countries and regions" means, so they are checked
+# explicitly below.
+
+# Locales to scan. Each names the `lang` attribute the page must declare and
+# the market it serves, so a report says which country is affected rather than
+# which URL prefix.
+locales:
+  - code: en
+    lang: en
+    market: US
+    source: true
+  - code: fr
+    lang: fr
+    market: FR
+  - code: de
+    lang: de
+    market: DE
+  - code: it
+    lang: it
+    market: IT
+  - code: es
+    lang: es
+    market: ES
+  - code: ja
+    lang: ja
+    market: JP
+  - code: ko
+    lang: ko
+    market: KR
+
+# Routes scanned in every locale. Kept to the paths that carry the journey —
+# scanning the whole catalogue daily would take hours and find the same theme
+# defects on every product.
+routes:
+  - path: /
+    name: Home
+  - path: /collections/all
+    name: Collection
+  - path: /products/self-draining-soap-dish
+    name: Product
+  - path: /cart
+    name: Cart
+
+# ── WCAG scanning ────────────────────────────────────────────────────────
+# WCAG 2.2 AA is the level most jurisdictions we sell into converge on: the
+# EU Accessibility Act (FR/DE/IT/ES), Section 508 and ADA practice (US), and
+# JIS X 8341 (JP) all align closely enough that AA is the honest bar.
+wcag:
+  tags: [wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa]
+
+# axe reports an impact per violation. This maps it onto the four severities
+# the rest of the suite uses, so an a11y finding routes like any other.
+severities:
+  critical: critical
+  serious: major
+  moderate: minor
+  minor: minor
+  # Locale-specific rules, which axe does not produce.
+  html_lang_mismatch: major
+  untranslated_alt: major
+  untranslated_aria_label: minor
+  locale_only_violation: major
+
+thresholds:
+  # A run may not introduce any critical or major. Minors are tracked and
+  # budgeted rather than blocking, because a theme carries a long tail of them
+  # and a gate nobody can ever pass is a gate people switch off.
+  max_critical: 0
+  max_major: 0
+  max_minor: 25
+  # Alt text this short is a code or a unit, not prose, and comparing it across
+  # locales produces noise rather than findings.
+  min_alt_chars_to_compare: 12
+
+# Rules that are known-failing and accepted, each with a reason and an owner.
+# An exemption with no reason is indistinguishable from a rule someone turned
+# off because it was inconvenient.
+exemptions:
+  - rule: color-contrast
+    route: /
+    locales: [all]
+    reason: >-
+      Brand palette sign-off pending with design. Tracked separately; listed
+      here so the number is visible rather than silently excluded.
+    owner: design
+    review_by: 2026-10-01

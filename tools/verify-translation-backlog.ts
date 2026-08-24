@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
+import { assertPortFree, killTree, spawnFixture, waitForFixture } from './lib/fixture-process.js';
+
 /**
  * Negative control for the translation-backlog audit.
  *
@@ -33,28 +35,12 @@ const wait = async (ms: number): Promise<void> =>
   });
 
 const startFixture = async (): Promise<ChildProcess> => {
-  const already = await fetch(`${BASE}/`)
-    .then(() => true)
-    .catch(() => false);
-  if (already) {
-    throw new Error(
-      `${BASE} is already serving. A leftover fixture may be running stale code, so ` +
-        "nothing measured against it would mean anything. Stop it: pkill -f 'translation-backlog/server.ts'",
-    );
-  }
-  const child = spawn('npx', ['tsx', 'fixtures/translation-backlog/server.ts'], {
-    env: { ...process.env, KITSCH_BACKLOG_PORT: String(PORT) },
-    stdio: 'ignore',
+  await assertPortFree(BASE, '/');
+  const child = spawnFixture('fixtures/translation-backlog/server.ts', {
+    KITSCH_BACKLOG_PORT: String(PORT),
   });
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    await wait(250);
-    const ok = await fetch(`${BASE}/`)
-      .then((response) => response.ok)
-      .catch(() => false);
-    if (ok) return child;
-  }
-  child.kill('SIGKILL');
-  throw new Error(`fixture did not come up on ${BASE}`);
+  await waitForFixture(BASE, '/', 'translation-backlog fixture', child);
+  return child;
 };
 
 type Report = {
@@ -88,7 +74,8 @@ try {
     });
   });
 } finally {
-  fixture.kill('SIGKILL');
+  // The whole process group; see tools/lib/fixture-process.ts.
+  killTree(fixture);
   await wait(300);
 }
 

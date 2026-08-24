@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
+import { assertPortFree, killTree, spawnFixture, waitForFixture } from './lib/fixture-process.js';
+
 import { SEEDED, SEEDED_CART } from '../fixtures/top-products/seeded.js';
 
 /**
@@ -30,33 +32,13 @@ const wait = async (ms: number): Promise<void> =>
 
 const startFixture = async (profile: string): Promise<{ child: ChildProcess; base: string }> => {
   const base = `http://127.0.0.1:${String(portFor(profile))}`;
-  const child = spawn('npx', ['tsx', 'fixtures/top-products/server.ts'], {
-    env: {
-      ...process.env,
-      KITSCH_TOP_PRODUCTS_PROFILE: profile,
-      KITSCH_TOP_PRODUCTS_PORT: String(portFor(profile)),
-    },
-    stdio: 'ignore',
+  await assertPortFree(base, '/');
+  const child = spawnFixture('fixtures/top-products/server.ts', {
+    KITSCH_TOP_PRODUCTS_PROFILE: profile,
+    KITSCH_TOP_PRODUCTS_PORT: String(portFor(profile)),
   });
-
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    await wait(250);
-    try {
-      const response = await fetch(`${base}/`);
-      if (!response.ok) continue;
-      const body = await response.text();
-      // Confirm which profile answered. Trusting "something responded" is how
-      // a stale fixture silently invalidates a whole control run.
-      if (body.includes(`(${profile})`)) return { child, base };
-      child.kill('SIGKILL');
-      throw new Error(`${base} is serving a different profile than "${profile}": ${body.trim()}`);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('different profile')) throw error;
-      // not listening yet
-    }
-  }
-  child.kill('SIGKILL');
-  throw new Error(`fixture (${profile}) did not come up on ${base}`);
+  await waitForFixture(base, '/', `(${profile})`, child);
+  return { child, base };
 };
 
 type Report = {
@@ -93,8 +75,9 @@ const runAudit = async (profile: string): Promise<Report> => {
       });
     });
   } finally {
-    // SIGKILL: the tsx grandchild survives a SIGTERM sent to npx.
-    fixture.kill('SIGKILL');
+    // The whole process group: SIGKILL to npx leaves the tsx grandchild
+    // holding the port. See tools/lib/fixture-process.ts.
+    killTree(fixture);
     await wait(300);
   }
   return JSON.parse(readFileSync(`${REPORT}/${profile}/report.json`, 'utf8')) as Report;
