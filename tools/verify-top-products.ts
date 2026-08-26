@@ -1,7 +1,8 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { assertPortFree, killTree, spawnFixture, waitForFixture } from './lib/fixture-process.js';
+import { spawnDetached } from './lib/run.js';
 
 import { SEEDED, SEEDED_CART } from '../fixtures/top-products/seeded.js';
 
@@ -54,7 +55,7 @@ const runAudit = async (profile: string): Promise<Report> => {
   try {
     await fetch(`${base}/cart/reset`, { method: 'POST' }).catch(() => undefined);
     await new Promise<void>((resolve) => {
-      const child = spawn(
+      const child = spawnDetached(
         'npx',
         [
           'tsx',

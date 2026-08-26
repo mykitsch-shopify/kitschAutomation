@@ -1,7 +1,8 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { assertPortFree, killTree, spawnFixture, waitForFixture } from './lib/fixture-process.js';
+import { spawnDetached } from './lib/run.js';
 
 import { SEEDED } from '../fixtures/compare-at/seeded.js';
 
@@ -61,7 +62,7 @@ const runAudit = async (profile: string): Promise<Report> => {
   const { child: fixture, base } = await startFixture(profile);
   try {
     await new Promise<void>((resolve) => {
-      const child = spawn(
+      const child = spawnDetached(
         'npx',
         [
           'tsx',

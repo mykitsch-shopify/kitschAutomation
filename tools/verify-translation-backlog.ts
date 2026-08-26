@@ -1,7 +1,8 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { assertPortFree, killTree, spawnFixture, waitForFixture } from './lib/fixture-process.js';
+import { spawnDetached } from './lib/run.js';
 
 /**
  * Negative control for the translation-backlog audit.
@@ -55,7 +56,7 @@ const write = (line: string): void => {
 const fixture = await startFixture();
 try {
   await new Promise<void>((resolve) => {
-    const child = spawn(
+    const child = spawnDetached(
       'npx',
       [
         'tsx',

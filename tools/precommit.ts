@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { runSync } from './lib/run.js';
 
 /**
  * Local pre-commit gate.
@@ -65,48 +65,83 @@ write('Pre-commit gate — offline checks only');
 write('');
 
 const failures: { readonly gate: Gate; readonly output: string }[] = [];
+/**
+ * Gates that never started. Kept apart from `failures` on purpose: a gate that
+ * could not run has said nothing about the code, and printing it as FAIL tells
+ * a contributor their work is broken when it has not been examined.
+ */
+const notRun: { readonly gate: Gate; readonly reason: string }[] = [];
 const started = Date.now();
 
 for (const gate of GATES) {
   const label = gate.name.padEnd(20);
   process.stdout.write(`  ${label} ... `);
-  const result = spawnSync(gate.command, [...gate.args], {
-    encoding: 'utf8',
-    // Inherit nothing: the output is captured so a passing gate prints one line
-    // rather than a page of noise, and a failing one prints its detail in full.
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+  // The output is captured so a passing gate prints one line rather than a page
+  // of noise, and a failing one prints its detail in full.
+  const result = runSync(gate.command, gate.args);
 
-  if (result.status === 0) {
+  if (result.notRun !== undefined) {
+    write('COULD NOT RUN');
+    notRun.push({ gate, reason: result.notRun });
+  } else if (result.status === 0) {
     write('pass');
   } else {
     write('FAIL');
-    failures.push({ gate, output });
+    failures.push({ gate, output: result.output });
   }
 }
 
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
 write('');
 
-if (failures.length === 0) {
+if (failures.length === 0 && notRun.length === 0) {
   write(`  pre-commit: PASS in ${seconds}s`);
   write('');
   process.exit(0);
+}
+
+// The gates that did not run come first. If npm itself could not be launched
+// then every "FAIL" below is suspect too, and a person reading top-down should
+// learn that before they start reading a stack trace as if it were about them.
+if (notRun.length > 0) {
+  write('── could not run ─────────────────────────────────────────────');
+  for (const { gate, reason } of notRun) {
+    write(`  ${gate.name}: ${reason}`);
+  }
+  write('');
+  write('  These gates did not run, so this commit is unchecked — not clean and');
+  write('  not broken. Nothing here is a statement about your code.');
+  write('');
 }
 
 for (const { gate, output } of failures) {
   write(`── ${gate.name} ──────────────────────────────────────────────`);
   write(`  why this gate exists: ${gate.why}`);
   write('');
-  write(output.trim());
+  // A gate that failed silently still has to say something, or the report reads
+  // as a blank accusation.
+  write(output.trim() === '' ? '  (the gate failed but printed nothing)' : output.trim());
   write('');
 }
 
-write(`  pre-commit: FAILED — ${String(failures.length)} of ${String(GATES.length)} gate(s) in ${seconds}s`);
-write('');
-write('  Fix the above, or commit with --no-verify if you have a reason and will');
-write('  say what it was. CI runs the same gates, so bypassing only moves the');
-write('  failure to somewhere with an audience.');
-write('');
+if (failures.length > 0) {
+  write(`  pre-commit: FAILED — ${String(failures.length)} of ${String(GATES.length)} gate(s) in ${seconds}s`);
+  write('');
+  write('  Fix the above, or commit with --no-verify if you have a reason and will');
+  write('  say what it was. CI runs the same gates, so bypassing only moves the');
+  write('  failure to somewhere with an audience.');
+  write('');
+}
+
+if (notRun.length > 0) {
+  write(
+    `  pre-commit: COULD NOT RUN — ${String(notRun.length)} of ${String(GATES.length)} gate(s) never started (${seconds}s)`,
+  );
+  write('');
+  write('  This is not a failing gate. It is an unanswered question, and it exits 2');
+  write('  rather than 1 so nothing downstream mistakes it for a verdict.');
+  write('');
+  process.exit(2);
+}
+
 process.exit(1);

@@ -1,4 +1,6 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
+
+import { runSync, spawnDetached } from './run.js';
 
 /**
  * Starting and reliably stopping fixture servers for the detection controls.
@@ -28,7 +30,7 @@ export const spawnFixture = (
   script: string,
   env: Readonly<Record<string, string>>,
 ): ChildProcess =>
-  spawn('npx', ['tsx', script], {
+  spawnDetached('npx', ['tsx', script], {
     env: { ...process.env, ...env },
     stdio: 'ignore',
     // The whole point: a new process group, so the signal reaches the grandchild.
@@ -41,10 +43,21 @@ export const spawnFixture = (
  * Negating the pid targets the process group. Falls back to signalling the
  * child alone if the group has already gone, which throws ESRCH rather than
  * failing silently.
+ *
+ * Windows has no process groups, so `process.kill(-pid)` there is not a
+ * weaker version of this — it is meaningless, and the tsx grandchild holding
+ * the fixture port survives every control run. `taskkill /T` walks the real
+ * child tree, which is the only equivalent Windows offers.
  */
 export const killTree = (child: ChildProcess): void => {
   const { pid } = child;
   if (pid === undefined) return;
+
+  if (process.platform === 'win32') {
+    runSync('taskkill', ['/pid', String(pid), '/T', '/F']);
+    return;
+  }
+
   try {
     process.kill(-pid, 'SIGKILL');
   } catch {

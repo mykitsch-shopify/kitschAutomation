@@ -677,6 +677,16 @@ one**. Both directions are needed, or neither means anything.
 
 ## 11. Troubleshooting
 
+**`COULD NOT RUN` on every gate from `npm run precommit`**
+Nothing ran. The gates did not fail — they never started, which is why the
+output says so in those words and exits **2** rather than 1. The usual cause is
+that dependencies are not installed: run `npm ci` in the repository root and try
+again. Read the `── could not run ──` block at the top of the output; it names
+the reason per gate. This state is deliberately not called a failure: the commit
+is unchecked, not broken, and nothing in that output is a statement about your
+code. If the reason reads `could not be started on this platform`, that is a bug
+in the harness rather than in your setup — please report it.
+
 **`NO BROWSER` from preflight, or `Executable doesn't exist at .../chrome-headless-shell`**
 The installed browser does not match the pinned Playwright version. Normally
 `npx playwright install chromium` fixes it. Where browser downloads are blocked

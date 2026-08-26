@@ -1,7 +1,7 @@
-import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 import { parseProperties, readEnvironmentSidecar, serialiseProperties } from './lib/allure.js';
+import { runInherit } from './lib/run.js';
 
 /**
  * Assembles the Allure report from everything the suite produced.
@@ -160,11 +160,17 @@ const args = [
   ...(bare.has('open') ? ['--open'] : []),
 ];
 
-const generated = spawnSync('npx', args, { stdio: 'inherit', shell: process.platform === 'win32' });
+const generated = runInherit('npx', args);
+
+if (generated.notRun !== undefined) {
+  write('');
+  write(`  allure generate could not be started: ${generated.notRun}`);
+  process.exit(2);
+}
 
 if (generated.status !== 0) {
   write('');
-  write(`  allure generate failed (exit ${String(generated.status ?? 'signal')}).`);
+  write(`  allure generate failed (exit ${String(generated.status)}).`);
   process.exit(2);
 }
 

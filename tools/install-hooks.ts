@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { runSync } from './lib/run.js';
 
 /**
  * Points git at the tracked hooks directory.
@@ -7,14 +7,11 @@ import { spawnSync } from 'node:child_process';
  * silently goes stale the moment someone edits the tracked one, and nobody
  * notices because the stale copy still passes.
  */
-const result = spawnSync('git', ['config', 'core.hooksPath', '.githooks'], {
-  encoding: 'utf8',
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
+const result = runSync('git', ['config', 'core.hooksPath', '.githooks']);
 
-if (result.status !== 0) {
+if (result.notRun !== undefined || result.status !== 0) {
   process.stderr.write(
-    `Could not set core.hooksPath: ${(result.stderr ?? '').trim()}\n` +
+    `Could not set core.hooksPath: ${(result.notRun ?? result.output).trim()}\n` +
       'Run this from inside the repository.\n',
   );
   process.exit(1);

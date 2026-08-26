@@ -1,5 +1,6 @@
-import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+
+import { runInherit } from './lib/run.js';
 
 /**
  * The whole daily run, against one target, into one Allure report.
@@ -187,22 +188,28 @@ for (const stage of STAGES) {
 
   write('');
   write(`  ── ${stage.label} ${'─'.repeat(Math.max(0, 56 - stage.label.length))}`);
-  const run = spawnSync('npx', [...stage.command], {
-    stdio: 'inherit',
-    env: { ...process.env, ...stage.env },
-    shell: process.platform === 'win32',
-  });
-  outcomes.push({ stage, code: run.status ?? 2 });
+  const run = runInherit('npx', stage.command, stage.env === undefined ? {} : { env: stage.env });
+  if (run.notRun !== undefined) {
+    // Scored 2 — could not check — not 1. The stage said nothing about the
+    // store, and a "findings" reading here would be an invented result.
+    write(`  COULD NOT RUN ${run.notRun}`);
+    outcomes.push({ stage, code: 2 });
+    continue;
+  }
+  outcomes.push({ stage, code: run.status });
 }
 
 // ── report ───────────────────────────────────────────────────────────────
 write('');
 write(`  ── Report ${'─'.repeat(48)}`);
-const report = spawnSync(
-  'npx',
-  ['tsx', 'tools/allure-report.ts', '--results', resultsDir, '--date', date],
-  { stdio: 'inherit', shell: process.platform === 'win32' },
-);
+const report = runInherit('npx', [
+  'tsx',
+  'tools/allure-report.ts',
+  '--results',
+  resultsDir,
+  '--date',
+  date,
+]);
 
 // ── summary ──────────────────────────────────────────────────────────────
 write('');
@@ -230,6 +237,10 @@ const worst = ran.reduce<number>(
 );
 
 write('');
+if (report.notRun !== undefined) {
+  write(`  The report could not be built: ${report.notRun}`);
+  process.exit(2);
+}
 if (report.status !== 0) {
   write('  The report did not build. See above.');
   process.exit(2);

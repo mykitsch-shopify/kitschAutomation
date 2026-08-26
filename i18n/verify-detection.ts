@@ -1,7 +1,6 @@
-import { spawnSync } from 'node:child_process';
-
 import { createFixtureTranslationCollector } from '../collectors/fixture-translations.js';
 import { SEEDED_DEFECTS } from '../fixtures/catalog/defects.js';
+import { runSync } from '../tools/lib/run.js';
 import { loadI18nConfig, targetLocales } from './lib/config.js';
 import { auditSource, compareCatalog } from './lib/locale-parity.js';
 import type { Finding } from './lib/locale-parity.js';
@@ -72,13 +71,11 @@ const verifyRenderLayer = (): boolean => {
   write('Render layer — specs must fail against the seeded storefront');
   write('');
 
-  const result = spawnSync(
+  const result = runSync(
     'npx',
     ['playwright', 'test', '--project=i18n-mobile', '--reporter=line'],
     {
-      encoding: 'utf8',
       env: {
-        ...process.env,
         KITSCH_FIXTURE_PROFILE: 'seeded',
         KITSCH_FIXTURE_PORT: SEEDED_PORT,
         KITSCH_BASE_URL: `http://127.0.0.1:${SEEDED_PORT}`,
@@ -88,9 +85,17 @@ const verifyRenderLayer = (): boolean => {
     },
   );
 
-  const output = `${result.stdout}${result.stderr}`;
+  const output = result.output;
   const failedMatch = /(\d+) failed/u.exec(output);
   const failed = failedMatch?.[1] ?? '0';
+
+  if (result.notRun !== undefined) {
+    // The suite never started. Reporting that as "the specs did not fail" would
+    // condemn the render layer on evidence nobody collected.
+    write(`  COULD NOT RUN — ${result.notRun}`);
+    write('');
+    return false;
+  }
 
   if (result.status === 0) {
     write('  FAIL — the locale suite passed against a knowingly broken storefront.');

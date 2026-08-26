@@ -1,6 +1,6 @@
-import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
+import { runSync } from '../lib/run.js';
 import { passed, severityFor, summarize, triage } from './bugbot.js';
 import type { ReviewFinding, ReviewSource } from './bugbot.js';
 
@@ -43,8 +43,23 @@ const sourceOf = (ruleId: string): ReviewSource => {
 };
 
 const runTypeScript = (): readonly ReviewFinding[] => {
-  const result = spawnSync('npx', ['tsc', '--noEmit', '--pretty', 'false'], { encoding: 'utf8' });
-  const output = `${result.stdout}${result.stderr}`;
+  const result = runSync('npx', ['tsc', '--noEmit', '--pretty', 'false']);
+  const output = result.output;
+
+  if (result.notRun !== undefined) {
+    // tsc never started. Zero parsed errors here would read as "types are
+    // clean", which is a false all-clear about code nothing has looked at.
+    return [
+      {
+        source: 'typescript',
+        rule: 'typescript/did-not-run',
+        file: 'tsconfig.json',
+        line: 0,
+        message: result.notRun,
+        severity: 'harness',
+      },
+    ];
+  }
 
   // tsc reports "file(line,col): error TSxxxx: message".
   return output
@@ -62,12 +77,13 @@ const runTypeScript = (): readonly ReviewFinding[] => {
 };
 
 const runEslint = (): readonly ReviewFinding[] => {
-  const result = spawnSync('npx', ['eslint', '.', '--format', 'json'], {
-    encoding: 'utf8',
-    maxBuffer: 32 * 1024 * 1024,
-  });
+  const result = runSync('npx', ['eslint', '.', '--format', 'json']);
 
-  const json = result.stdout.trim();
+  // `output` is stdout and stderr combined, so the JSON does not necessarily
+  // start at character zero: a deprecation warning on stderr would corrupt the
+  // parse and turn a working reviewer into a crash. Start at the first `[`.
+  const start = result.output.indexOf('[');
+  const json = start === -1 ? '' : result.output.slice(start).trim();
   if (json === '') {
     // ESLint could not run at all. That is harness debt, and reporting it as
     // "no findings" would be a false all-clear.
@@ -77,7 +93,9 @@ const runEslint = (): readonly ReviewFinding[] => {
         rule: 'eslint/did-not-run',
         file: 'eslint.config.js',
         line: 0,
-        message: `ESLint produced no output: ${result.stderr.split('\n')[0] ?? 'unknown error'}`,
+        message:
+          result.notRun ??
+          `ESLint produced no output: ${result.output.split('\n')[0] ?? 'unknown error'}`,
         severity: 'harness',
       },
     ];

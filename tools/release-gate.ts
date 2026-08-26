@@ -1,5 +1,6 @@
-import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
+
+import { runSync } from './lib/run.js';
 
 /**
  * Release gate — the regression suite a launch is signed off against.
@@ -204,14 +205,24 @@ let stopped = false;
 for (const stage of stages) {
   if (stopped) break;
   process.stdout.write(`  ${stage.tier.padEnd(7)} ${stage.name.padEnd(30)} ... `);
-  const run = spawnSync('npm', ['run', '--silent', stage.script, ...(stage.args ? ['--', ...stage.args] : [])], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const code = run.status ?? 1;
+  const run = runSync('npm', [
+    'run',
+    '--silent',
+    stage.script,
+    ...(stage.args ? ['--', ...stage.args] : []),
+  ]);
+  // A stage that never started is "could not check", the same as exit 2. It is
+  // emphatically not a defect: calling it one would blame the store for a
+  // missing launcher.
+  const code = run.notRun === undefined ? run.status : 2;
   const status = code === 0 ? 'pass' : code === 2 ? 'incomplete' : 'fail';
   write(status === 'pass' ? 'pass' : status === 'incomplete' ? 'INCOMPLETE' : 'FAIL');
-  results.push({ stage, status, code, output: `${run.stdout ?? ''}${run.stderr ?? ''}` });
+  results.push({
+    stage,
+    status,
+    code,
+    output: run.notRun === undefined ? run.output : `${run.notRun}\n${run.output}`,
+  });
 
   // A live tier run on a harness that is not green is not evidence. Stop here
   // rather than produce numbers whose provenance nobody can defend.
