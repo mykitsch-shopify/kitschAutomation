@@ -26,7 +26,7 @@
     "preflight": "tsx tools/preflight.ts",
     "prepare": "tsx tools/install-hooks.ts || true",
     "report": "tsx tools/allure-report.ts",
-    "report:clean": "node -e \"fs.rmSync('allure-results',{recursive:true,force:true});fs.rmSync('allure-report',{recursive:true,force:true})\"",
+    "report:clean": "node -e \"const fs=require('node:fs');for(const d of ['allure-results','allure-report'])fs.rmSync(d,{recursive:true,force:true})\"",
     "report:open": "allure open allure-report",
     "resolve:handles": "tsx tools/resolve-handles.ts",
     "review": "tsx tools/review/run-review.ts",
