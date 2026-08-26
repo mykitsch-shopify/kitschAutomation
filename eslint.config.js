@@ -20,7 +20,19 @@ import kitsch from './tools/eslint-plugin-kitsch/index.js';
 const SPECS = ['web/specs/**/*.spec.ts', 'i18n/specs/**/*.spec.ts'];
 
 export default tseslint.config(
-  { ignores: ['node_modules/', 'test-results/', 'playwright-report/', 'blob-report/', 'i18n-report/', 'review-report/', 'fixtures/catalog/*.json'] },
+  // `*-report/` rather than a list of names: every audit writes one, and the
+  // Allure report ships a JS bundle. Naming them individually meant a new
+  // report directory silently entered the lint run — the Allure one added
+  // 1,800 errors from a minified vendor bundle before this became a glob.
+  {
+    ignores: [
+      'node_modules/',
+      'test-results/',
+      '*-report/',
+      'allure-results/',
+      'fixtures/catalog/*.json',
+    ],
+  },
 
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

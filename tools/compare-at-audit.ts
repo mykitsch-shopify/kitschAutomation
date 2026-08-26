@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 import { type Page } from '@playwright/test';
 
+import { allureDir, buildMatrix, writeAllureCases, writeEnvironment } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import {
   auditSheets,
@@ -368,6 +369,60 @@ if (args.sheetsOnly) {
 }
 
 writeReport(args, findings, stats);
+
+// ── allure ───────────────────────────────────────────────────────────────
+// Two checks per product page, plus the sheet-level findings as their own
+// group. A sheet disagreement is not a defect on any one product page and
+// filing it against one would point the fix at the wrong place.
+const allureOut = allureDir(args.flags, args.bare);
+if (allureOut !== undefined) {
+  const STORE_CHECK: Partial<Record<string, string>> = {
+    compare_at_still_rendered: 'struck-through price removed',
+    price_mismatch: 'selling price matches the sheet',
+    price_not_observed: 'struck-through price removed',
+    product_unreachable: 'struck-through price removed',
+  };
+  const storeKinds = new Set(Object.keys(STORE_CHECK));
+
+  writeAllureCases(
+    {
+      suite: 'Compare-at price removal',
+      description:
+        'Checks that the struck-through prices the import was meant to clear are actually ' +
+        'gone from the live page, and that the selling price was left alone.',
+      target: args.sheetsOnly ? '(sheets only — no storefront checked)' : args.baseURL,
+      resultsDir: allureOut,
+    },
+    [
+      ...buildMatrix({
+        items: selected.map((entry) => entry.handle),
+        checks: ['struck-through price removed', 'selling price matches the sheet'],
+        findings: findings.filter((finding) => storeKinds.has(finding.kind)),
+        itemOf: (finding) => finding.handle,
+        checkOf: (finding) => STORE_CHECK[finding.kind] ?? finding.kind,
+        severityOf: (finding) => finding.severity,
+        detailOf: (finding) => `${finding.kind}: ${finding.detail}`,
+      }),
+      // Sheet findings carry no product page, so they are emitted directly
+      // rather than through a matrix: there is no "all clear" case to pair
+      // them with.
+      ...findings
+        .filter((finding) => !storeKinds.has(finding.kind))
+        .map((finding) => ({
+          name: finding.kind,
+          item: 'import + rollback sheets',
+          status: finding.severity === 'harness' ? ('broken' as const) : ('failed' as const),
+          severity: finding.severity,
+          detail: `${finding.handle}: ${finding.detail}`,
+        })),
+    ],
+  );
+  writeEnvironment(allureOut, {
+    ...(args.sheetsOnly ? {} : { Target: args.baseURL }),
+    'Ran — compare-at': `${String(selected.length)} product pages`,
+  });
+  write(`  allure: ${allureOut}`);
+}
 
 const counts = tally(findings);
 const actionable = clientFindings(findings);

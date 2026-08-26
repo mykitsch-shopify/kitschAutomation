@@ -73,12 +73,28 @@ export default defineConfig({
   retries: isCI ? 1 : 0,
   workers: isCI ? 4 : 2,
 
-  reporter: isCI
-    ? [['blob'], ['github'], ['junit', { outputFile: 'test-results/junit.xml' }]]
-    : [
-        ['html', { open: 'never' }],
-        ['list'],
-      ],
+  // Allure is opt-in via KITSCH_ALLURE, and writes into the same directory the
+  // audit CLIs write to. Six of the eight things this repo runs are audits
+  // rather than specs, so a report built from the Playwright reporter alone
+  // would be missing every daily check — which is the half a reader outside
+  // the team came for. See docs/REPORTING.md.
+  reporter: [
+    ...(isCI
+      ? ([['blob'], ['github'], ['junit', { outputFile: 'test-results/junit.xml' }]] as const)
+      : ([['html', { open: 'never' }], ['list']] as const)),
+    ...(process.env.KITSCH_ALLURE === undefined || process.env.KITSCH_ALLURE === ''
+      ? []
+      : [
+          [
+            'allure-playwright',
+            {
+              resultsDir: process.env.KITSCH_ALLURE,
+              detail: false,
+              environmentInfo: { Target: baseURL },
+            },
+          ] as const,
+        ]),
+  ],
 
   use: {
     baseURL,

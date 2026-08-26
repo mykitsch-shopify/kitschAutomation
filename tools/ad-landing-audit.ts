@@ -2,6 +2,13 @@ import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 
 import { type Page } from '@playwright/test';
 
+import {
+  allureDir,
+  buildMatrix,
+  writeAllureCases,
+  writeEnvironment,
+  type AllureCase,
+} from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import { toCents } from '../web/lib/compare-at.js';
 import {
@@ -428,6 +435,84 @@ appendFileSync(
   `${JSON.stringify({ date, target: baseURL, counts })}\n`,
   'utf8',
 );
+
+// ── allure ───────────────────────────────────────────────────────────────
+// Built as five matrices rather than one. The item kinds do not share a check
+// list — a discount redirect has no BYOB builder and a BYOB page has no
+// redirect target — so a single items x checks grid would fill the report with
+// hundreds of green cases for checks that were never applicable, and a reader
+// counting green would be counting nothing.
+const allure = allureDir(flags, bare);
+if (allure !== undefined) {
+  const group = (items: readonly string[], checks: readonly string[]): readonly AllureCase[] =>
+    buildMatrix({
+      items,
+      checks,
+      findings,
+      itemOf: (finding) => finding.target,
+      checkOf: (finding) => finding.check,
+      severityOf: (finding) => finding.severity,
+      detailOf: (finding) => `${finding.kind}: ${finding.detail}`,
+    });
+
+  const stackPairs = config.fixedCodes.flatMap((fixedCode) =>
+    config.pages.some((entry) => entry.fixedDiscountCode === fixedCode)
+      ? config.siteWideCodes.map((siteWideCode) => `${fixedCode} + ${siteWideCode}`)
+      : [],
+  );
+
+  const cases: AllureCase[] = [
+    ...group(
+      config.pages.map((spec) => spec.handle),
+      ['compare_at'],
+    ),
+    // Auto-ship is only a requirement where the brief says it is. Asking it of
+    // every page would report a pass for pages that never offered auto-ship.
+    ...group(config.autoshipRequiredOn, ['autoship_pricing']),
+    ...group(
+      config.byob.map((spec) => spec.handle),
+      ['byob_flow'],
+    ),
+    ...group(
+      config.discountRedirects.map((spec) => `/discount/${spec.code}`),
+      ['discount_redirect'],
+    ),
+    ...group(
+      config.oosRedirects.map((spec) => spec.handle),
+      ['oos_redirect'],
+    ),
+    ...group(stackPairs, ['discount_non_stacking']),
+  ];
+
+  // Deduplicate: a page can appear in more than one group (a BYOB page is also
+  // a page), and buildMatrix re-emits unmatched findings as orphans per call,
+  // so the same finding would otherwise be reported several times.
+  const seen = new Set<string>();
+  const unique = cases.filter((item) => {
+    const key = `${item.item}|${item.name}|${item.status}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  writeAllureCases(
+    {
+      suite: 'Daily — ad-traffic landing pages',
+      description:
+        'Every page paid traffic lands on, checked first thing each day: welcome kits, ' +
+        'BYOB builders, discount links, out-of-stock redirects, struck-through prices, ' +
+        'auto-ship pricing, and the rule that fixed-discount codes never stack.',
+      target: baseURL,
+      resultsDir: allure,
+    },
+    unique,
+  );
+  writeEnvironment(allure, {
+    Target: baseURL,
+    'Ran — ad landing pages': `${date} (${String(config.pages.length)} pages)`,
+  });
+  write(`  allure: ${allure}`);
+}
 
 write('');
 write(

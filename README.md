@@ -310,6 +310,28 @@ Both layers report the same four severities:
 Reports land in `i18n-report/` (parity) and `review-report/` (static review), as both
 JSON and Markdown.
 
+### The Allure report
+
+For anything going outside the team, build the Allure report instead of quoting
+terminal output:
+
+```bash
+# the whole daily run against a target, ending in one report
+npm run daily -- --base-url https://www.mykitsch.com
+
+# or build a report from whatever has already run
+npm run report -- --open
+```
+
+It covers the Playwright specs *and* all six audits in one place, grouped by
+consequence — critical / major / minor / **could not check**. Every check that
+ran appears, not only the ones that failed, because 9 failures out of 12 and 9
+out of 600 describe different stores.
+
+Read the target line on the front page before quoting any number from it: a run
+against the local fixture is titled `SELF-TEST … NOT the live store` and proves
+only that the suite works. Full detail in [docs/REPORTING.md](docs/REPORTING.md).
+
 ---
 
 ## 5. Running from an IDE
@@ -734,6 +756,7 @@ the same as a clean review.
 | [`docs/AD-LANDING-DAILY.md`](docs/AD-LANDING-DAILY.md) | Daily QA of ad-traffic landing pages: welcome kits, BYOB flows, discount non-stacking, redirect flows, OOS redirects, auto-ship, compare-at |
 | [`docs/TRANSLATION-BACKLOG.md`](docs/TRANSLATION-BACKLOG.md) | Verifying the ~93 open Asana translation tasks against the live store — which are already done, half done, or about products that no longer exist |
 | [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) | Accessibility across markets: WCAG 2.2 AA, plus the wrong-language and untranslated-label failures a generic scan cannot see |
+| [`docs/REPORTING.md`](docs/REPORTING.md) | The Allure report: how it is built, what the four buckets mean, and the one line to check before quoting a number from it |
 | [`docs/ADDING-A-CHECK.md`](docs/ADDING-A-CHECK.md) | The seven steps for turning an Asana task into an automated check, and the rules that are not negotiable |
 | [`docs/ACCESS-REQUEST.md`](docs/ACCESS-REQUEST.md) | What is genuinely outstanding — selector mapping, a read-only token, where this should run. The earlier network request is withdrawn |
 | [`docs/ACCESS-REQUEST-EMAIL.md`](docs/ACCESS-REQUEST-EMAIL.md) | The problem statement for a manager, in email and Slack form |

@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { AxeBuilder } from '@axe-core/playwright';
 import { type Page } from '@playwright/test';
 
+import { allureDir, buildMatrix, writeAllureCases, writeEnvironment } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import {
   byMarket,
@@ -254,6 +255,77 @@ writeFileSync(
   `${JSON.stringify({ target: baseURL, counts, markets, findings, scans }, null, 2)}\n`,
   'utf8',
 );
+
+// ── allure ───────────────────────────────────────────────────────────────
+// One case per market/route pair per rule family, so the report answers the
+// question a market owner actually asks — "is my country clean?" — rather than
+// showing one global pass/fail that averages seven storefronts together.
+const allure = allureDir(flags, bare);
+if (allure !== undefined) {
+  const CHECK_OF: Readonly<Record<string, string>> = {
+    wcag_violation: 'WCAG 2.2 AA',
+    html_lang_mismatch: 'page language matches the market',
+    untranslated_alt: 'image alt text is translated',
+    untranslated_aria_label: 'screen-reader labels are translated',
+    locale_only_violation: 'no fault unique to this market',
+    not_scanned: 'WCAG 2.2 AA',
+  };
+
+  // A locale_only_violation is one finding about several markets at once: its
+  // `locale` is a comma-joined list and its `market` is already formatted for
+  // reading. Expanded here into one finding per affected market, so it lands
+  // in each market's own section of the report. Left whole, it produced an
+  // item called "FR (fr) (fr) — Home" belonging to no market at all.
+  // The market is always re-derived from the locale code rather than taken
+  // from the finding: compareAcrossLocales pre-formats its `market` as
+  // "FR (fr)" for the report prose, and reusing that verbatim produced an item
+  // called "FR (fr) (fr) — Home" belonging to no market at all.
+  const marketOf = (code: string): string =>
+    locales.find((entry) => entry.code === code)?.market ?? code;
+
+  const perMarket = findings.flatMap((finding) => {
+    const affected = finding.locale.split(',').filter((code) => code !== '');
+    return affected.length === 0
+      ? [finding]
+      : affected.map((code) => ({ ...finding, locale: code, market: marketOf(code) }));
+  });
+
+  writeAllureCases(
+    {
+      suite: 'Accessibility by market',
+      description:
+        'WCAG 2.2 AA across every market we sell in, plus the four faults a generic ' +
+        'scanner cannot see: wrong page language, untranslated alt text, untranslated ' +
+        'screen-reader labels, and a fault that exists in one market only.',
+      target: baseURL,
+      resultsDir: allure,
+    },
+    buildMatrix({
+      items: routes.flatMap((route) =>
+        locales.map((locale) => `${locale.market} (${locale.code}) — ${route.name}`),
+      ),
+      checks: [...new Set(Object.values(CHECK_OF))],
+      findings: perMarket,
+      itemOf: (finding) => {
+        // Findings carry the route path; the item key uses the human name from
+        // config so the report reads "Checkout", not "/checkout".
+        const route = routes.find((entry) => entry.path === finding.route);
+        return `${finding.market} (${finding.locale}) — ${route?.name ?? finding.route}`;
+      },
+      checkOf: (finding) => CHECK_OF[finding.kind] ?? finding.kind,
+      severityOf: (finding) => finding.severity,
+      detailOf: (finding) => `${finding.rule}: ${finding.detail} — ${finding.evidence}`,
+    }),
+  );
+  writeEnvironment(allure, {
+    Target: baseURL,
+    'Ran — accessibility': `${String(locales.length)} markets x ${String(routes.length)} routes`,
+    'Accessibility budget': `critical ${String(config.maxCritical)}, major ${String(
+      config.maxMajor,
+    )}, minor ${String(config.maxMinor)}`,
+  });
+  write(`  allure: ${allure}`);
+}
 
 write('');
 write(

@@ -116,7 +116,7 @@ jobs:
       - name: Run
         id: run
         continue-on-error: true
-        run: npm run audit:${{ matrix.check }}
+        run: npm run audit:${{ matrix.check }} -- --allure
 
       - name: Summary
         if: always()
@@ -131,6 +131,62 @@ jobs:
           name: nightly-${{ matrix.check }}-${{ github.run_id }}
           path: |
             *-report/
+          retention-days: 30
+
+      # Kept separate from the markdown reports above so the assembling job can
+      # download only these, without hauling every audit's screenshots with it.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-${{ matrix.check }}-${{ github.run_id }}
+          path: allure-results/
+          retention-days: 7
+
+  # ── nightly: one report out of the four matrix jobs ────────────────────
+  # The matrix runs each check on its own runner, so four partial result sets
+  # come back and have to be merged before they mean anything. A reader given
+  # four separate reports cannot tell "three clean, one broken" from "one
+  # report is missing" — and those are very different mornings.
+  nightly-report:
+    needs: nightly
+    # `always()` because the audits above use continue-on-error and a red
+    # nightly is exactly when the report is worth having.
+    if: always() && (github.event_name == 'schedule' || github.event.inputs.tier == 'nightly')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Collect results from every matrix job
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*-${{ github.run_id }}
+          path: collected
+          merge-multiple: true
+
+      - name: Build the report
+        id: report
+        # Exit 2 means "could not build" — surfaced below rather than swallowed.
+        continue-on-error: true
+        run: npm run report -- --results collected --out allure-report
+
+      - name: Say so if the report did not build
+        if: steps.report.outcome != 'success'
+        run: |
+          echo "### Allure report did NOT build" >> "$GITHUB_STEP_SUMMARY"
+          echo "The nightly ran but produced no readable report. Treat tonight as" >> "$GITHUB_STEP_SUMMARY"
+          echo "unchecked, not as clean. See the job log." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ github.run_id }}
+          path: allure-report/
           retention-days: 30
 
       # Exit 1 is findings, exit 2 is "could not check". Both fail; the report

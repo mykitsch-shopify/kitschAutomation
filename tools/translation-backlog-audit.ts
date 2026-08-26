@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 import { type Page } from '@playwright/test';
 
+import { allureDir, writeAllureCases, writeEnvironment } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import {
   isProductTask,
@@ -11,6 +12,7 @@ import {
   summarize,
   type BacklogTask,
   type LocaleObservation,
+  type LocaleVerdict,
   type TaskResult,
 } from '../web/lib/translation-backlog.js';
 
@@ -278,6 +280,80 @@ writeFileSync(
   `${JSON.stringify({ target: baseURL, counts, blind, results, unresolved }, null, 2)}\n`,
   'utf8',
 );
+
+// ── allure ───────────────────────────────────────────────────────────────
+// One case per task per language, because that is the unit of work: a task
+// covering six locales with five done is not five-sixths of a pass, it is five
+// passes and one failure, and the report should say which one.
+const allure = allureDir(flags, bare);
+if (allure !== undefined) {
+  const STATUS_OF: Readonly<Record<LocaleVerdict, 'passed' | 'failed' | 'broken'>> = {
+    translated: 'passed',
+    still_missing: 'failed',
+    // The task outlived its product. Not the store's defect and not a pass —
+    // somebody has to close the task.
+    product_gone: 'broken',
+    not_observed: 'broken',
+  };
+  const SEVERITY_OF: Readonly<Record<LocaleVerdict, 'major' | 'harness' | undefined>> = {
+    translated: undefined,
+    still_missing: 'major',
+    product_gone: 'harness',
+    not_observed: 'harness',
+  };
+
+  const cases = [
+    ...results.flatMap((result) =>
+      Object.entries(result.byLocale).map(([locale, verdict]) => {
+        const severity = SEVERITY_OF[verdict];
+        return {
+          name: `translated into ${locale}`,
+          item: result.task.name,
+          status: STATUS_OF[verdict],
+          ...(severity === undefined ? {} : { severity }),
+          ...(verdict === 'translated' ? {} : { detail: `${verdict}: ${result.note}` }),
+          parameters: [
+            { name: 'Asana task', value: result.task.gid },
+            { name: 'product', value: result.task.handle ?? '(none)' },
+            { name: 'verdict', value: result.verdict },
+          ],
+        };
+      }),
+    ),
+    // A task with no product link is not checkable at all. Reported rather
+    // than dropped: an untested task that never appears reads as a passing one.
+    ...unresolved.map((task) => ({
+      name: 'has a product link to check',
+      item: task.name,
+      status: 'broken' as const,
+      severity: 'harness' as const,
+      detail:
+        'the Asana task names no product URL or handle, so no page could be checked. ' +
+        'Adding the URL to the task is the whole fix.',
+      parameters: [{ name: 'Asana task', value: task.gid }],
+    })),
+  ];
+
+  writeAllureCases(
+    {
+      suite: 'Translations — Asana backlog',
+      description:
+        'For every open translation task, checks whether the product page is actually ' +
+        'translated in each language the task names — title and description separately, ' +
+        'because a translated title above English copy is not a finished task.',
+      target: baseURL,
+      resultsDir: allure,
+    },
+    cases,
+  );
+  writeEnvironment(allure, {
+    Target: baseURL,
+    'Ran — translation backlog': `${String(results.length)} tasks, ${String(
+      unresolved.length,
+    )} with no product link`,
+  });
+  write(`  allure: ${allure}`);
+}
 
 write('');
 write(

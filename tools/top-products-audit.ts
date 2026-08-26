@@ -2,9 +2,11 @@ import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 
 import { type Page } from '@playwright/test';
 
+import { allureDir, buildMatrix, writeAllureCases, writeEnvironment } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import { toCents } from '../web/lib/compare-at.js';
 import {
+  ALL_CHECKS,
   auditConfig,
   clientFindings,
   judgeCart,
@@ -393,6 +395,39 @@ appendFileSync(
   `${JSON.stringify({ date, target: baseURL, checked: resolved.length, counts })}\n`,
   'utf8',
 );
+
+// ── allure ───────────────────────────────────────────────────────────────
+// The matrix is every resolved product crossed with every check, so the report
+// shows what passed as well as what failed. Checks the config switched off are
+// skipped rather than passed: we did not verify them.
+const allure = allureDir(flags, bare);
+if (allure !== undefined) {
+  writeAllureCases(
+    {
+      suite: 'Daily — top 10 selling products',
+      description:
+        'The ten best-selling products, checked every morning for stock, add-to-cart, ' +
+        'pricing, copy, imagery, variants and cart discount arithmetic.',
+      target: baseURL,
+      resultsDir: allure,
+    },
+    buildMatrix({
+      items: resolved.map((product) => product.title),
+      checks: [...ALL_CHECKS],
+      findings,
+      itemOf: (finding) => finding.product,
+      checkOf: (finding) => finding.check,
+      severityOf: (finding) => finding.severity,
+      detailOf: (finding) => `${finding.kind}: ${finding.detail}`,
+      skipped: ALL_CHECKS.filter((check) => !config.checks.includes(check)),
+    }),
+  );
+  writeEnvironment(allure, {
+    Target: baseURL,
+    'Ran — top 10 products': `${date} (${String(resolved.length)} products)`,
+  });
+  write(`  allure: ${allure}`);
+}
 
 write('');
 write(
