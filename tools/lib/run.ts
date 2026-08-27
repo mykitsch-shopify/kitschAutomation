@@ -97,6 +97,10 @@ const readEnv = (
  * Looking along PATH ourselves depends on neither. It is also the only version
  * of this question that can be tested from any platform, which is the property
  * every Windows bug in this file's history has turned on.
+ *
+ * The returned path names the file that would run. Its extension is spelled
+ * however PATHEXT spells it, which on a case-insensitive volume need not match
+ * the directory entry — `npm.CMD` and `npm.cmd` are the same file there.
  */
 export const findOnWindowsPath = (
   command: string,
@@ -105,10 +109,22 @@ export const findOnWindowsPath = (
   // PATHEXT is conventionally uppercase (".CMD") while the file on disk is
   // lowercase ("npm.cmd"). Windows does not care, but a case-sensitive volume
   // does — and so does any machine running these tests. Try both spellings.
-  const declared = (readEnv(env, 'PATHEXT') ?? DEFAULT_PATHEXT).split(';').filter((ext) => ext !== '');
-  const extensions = [
-    ...new Set(['', ...declared.flatMap((ext) => [ext, ext.toLowerCase(), ext.toUpperCase()])]),
-  ];
+  const declared = readEnv(env, 'PATHEXT');
+  const extensions = /\.[^\\/.]+$/u.test(command)
+    ? // Already carries an extension, so cmd.exe takes it as written.
+      ['']
+    : // Otherwise cmd.exe appends each PATHEXT entry, and only those. A bare
+      // name is NOT a candidate: the nodejs directory ships an extensionless
+      // `npm` bash script beside `npm.cmd`, and only the latter is a thing
+      // Windows can run.
+      [
+        ...new Set(
+          (declared === undefined || declared === '' ? DEFAULT_PATHEXT : declared)
+            .split(';')
+            .filter((ext) => ext !== '')
+            .flatMap((ext) => [ext, ext.toLowerCase(), ext.toUpperCase()]),
+        ),
+      ];
   // A command with a directory in it is not searched for; it is just there or not.
   // Otherwise cmd.exe looks in the current directory first, then along PATH.
   const directories = /[\\/]/u.test(command)

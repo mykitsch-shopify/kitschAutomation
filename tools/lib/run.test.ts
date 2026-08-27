@@ -149,10 +149,35 @@ void test('buildLaunch: off Windows the command and arguments are passed through
 void test('findOnWindowsPath: finds npm.cmd by its PATHEXT extension, as cmd.exe would', () => {
   // The real lookup, against a real directory, runnable on any platform —
   // which is the only reason this is checkable at all before shipping.
+  //
+  // Compared case-insensitively, and that is the assertion rather than an
+  // indulgence: PATHEXT says ".CMD", the directory entry says ".cmd", and on a
+  // case-insensitive volume they are one file. What has to be true is which
+  // file this resolves to, not how the extension is spelled on the way there.
   const dir = mkdtempSync(join(tmpdir(), 'kitsch-run-'));
   writeFileSync(join(dir, 'npm.cmd'), '');
   const env = { PATH: `${dir};${join(dir, 'nowhere')}`, PATHEXT: '.EXE;.CMD' };
-  assert.equal(findOnWindowsPath('npm', env), join(dir, 'npm.cmd'));
+  assert.equal(findOnWindowsPath('npm', env)?.toLowerCase(), join(dir, 'npm.cmd').toLowerCase());
+  rmSync(dir, { recursive: true, force: true });
+});
+
+void test('findOnWindowsPath: prefers npm.cmd over the extensionless npm beside it', () => {
+  // The nodejs directory ships a bare `npm` bash script next to `npm.cmd`.
+  // Only one of the two is something cmd.exe can run, and it is not the one
+  // that sorts first.
+  const dir = mkdtempSync(join(tmpdir(), 'kitsch-run-'));
+  writeFileSync(join(dir, 'npm'), '#!/bin/sh\n');
+  writeFileSync(join(dir, 'npm.cmd'), '');
+  const found = findOnWindowsPath('npm', { PATH: dir, PATHEXT: '.EXE;.CMD' });
+  assert.equal(found?.toLowerCase(), join(dir, 'npm.cmd').toLowerCase());
+  rmSync(dir, { recursive: true, force: true });
+});
+
+void test('findOnWindowsPath: a command that already has an extension is taken as written', () => {
+  // How node.exe arrives here, via process.execPath.
+  const dir = mkdtempSync(join(tmpdir(), 'kitsch-run-'));
+  writeFileSync(join(dir, 'node.exe'), '');
+  assert.equal(findOnWindowsPath(join(dir, 'node.exe'), {}), join(dir, 'node.exe'));
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -183,6 +208,7 @@ void test('findOnWindowsPath: reads Path and PathExt whatever their capitalisati
   // reported as one that never ran. Exactly backwards, and only on Windows.
   const dir = mkdtempSync(join(tmpdir(), 'kitsch-run-'));
   writeFileSync(join(dir, 'npm.cmd'), '');
-  assert.equal(findOnWindowsPath('npm', { Path: dir, PathExt: '.CMD' }), join(dir, 'npm.cmd'));
+  const found = findOnWindowsPath('npm', { Path: dir, PathExt: '.CMD' });
+  assert.equal(found?.toLowerCase(), join(dir, 'npm.cmd').toLowerCase());
   rmSync(dir, { recursive: true, force: true });
 });
