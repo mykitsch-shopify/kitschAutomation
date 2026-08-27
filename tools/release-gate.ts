@@ -182,6 +182,27 @@ if (live && (process.env.KITSCH_BASE_URL ?? '') === '') {
 
 const stages = STAGES.filter((stage) => stage.tier === 'offline' || live);
 
+/**
+ * The offline tier is pinned to the fixture rather than left to inherit
+ * KITSCH_BASE_URL.
+ *
+ * Observed, not theorised: a `npm run gate:release` in a shell that still had
+ * KITSCH_BASE_URL exported from an earlier live run announced "Live checks
+ * skipped. This proves the harness is sound; it says nothing about the
+ * storefront", then spent an hour interrogating production and reported what
+ * it found there as a harness defect, under the heading "350 locale render
+ * checks unproven". Every word of that was wrong: the checks ran, they ran
+ * against the store, and the store is exactly what the tier promised not to
+ * touch.
+ *
+ * The two tiers exist to keep "is the harness sound?" apart from "is the store
+ * sound?". A tier that answers the second question while labelled the first is
+ * worse than no tier. So the target is stated here rather than inherited —
+ * `--live` still gets the real one, because those stages are meant to have it.
+ */
+const offlineTarget = `http://127.0.0.1:${process.env.KITSCH_FIXTURE_PORT ?? '4173'}`;
+const ambientTarget = process.env.KITSCH_BASE_URL;
+
 write('');
 write(`Release gate — ${live ? 'offline + live' : 'offline only'}`);
 write('');
@@ -190,6 +211,12 @@ if (!live) {
   write('  about the storefront. Pass --live with KITSCH_BASE_URL for that.');
   write('');
 }
+write(`  offline stages run against ${offlineTarget} (the fixture), always.`);
+if (ambientTarget !== undefined && ambientTarget !== offlineTarget) {
+  write(`  KITSCH_BASE_URL is set to ${ambientTarget}; the offline tier ignores it.`);
+  write(`  ${live ? 'The live tier uses it.' : 'Nothing below touches that store.'}`);
+}
+write('');
 
 type Result = {
   readonly stage: Stage;
@@ -205,12 +232,14 @@ let stopped = false;
 for (const stage of stages) {
   if (stopped) break;
   process.stdout.write(`  ${stage.tier.padEnd(7)} ${stage.name.padEnd(30)} ... `);
-  const run = runSync('npm', [
-    'run',
-    '--silent',
-    stage.script,
-    ...(stage.args ? ['--', ...stage.args] : []),
-  ]);
+  const run = runSync(
+    'npm',
+    ['run', '--silent', stage.script, ...(stage.args ? ['--', ...stage.args] : [])],
+    // Stages that manage their own fixtures pass an explicit --base-url or set
+    // their own KITSCH_BASE_URL, and those still win: this only replaces what
+    // a stage would otherwise inherit from the shell.
+    stage.tier === 'offline' ? { env: { KITSCH_BASE_URL: offlineTarget } } : {},
+  );
   // A stage that never started is "could not check", the same as exit 2. It is
   // emphatically not a defect: calling it one would blame the store for a
   // missing launcher.
