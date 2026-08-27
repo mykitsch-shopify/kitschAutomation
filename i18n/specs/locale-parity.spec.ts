@@ -120,13 +120,24 @@ test.describe('locale shell', () => {
               .count(),
           })),
         );
-        const missing = counts
+        // Reported as what actually happened, because "missing" and "there are
+        // seventy-four of them" need opposite fixes and the message used to
+        // call both of them missing. A live multi-market store emits a regional
+        // alternate per market (en-US, en-CA, en-GB…), and `hreflang^="en"`
+        // counts every one of them — so a large number here is a question
+        // about this assertion, not a discovery defect on the page.
+        const wrong = counts
           .filter((entry) => entry.count !== 1)
-          .map((entry) => `${entry.code} (found ${String(entry.count)})`);
+          .map((entry) =>
+            entry.count === 0
+              ? `${entry.code}: no alternate declared`
+              : `${entry.code}: ${String(entry.count)} alternates, expected exactly 1`,
+          );
 
-        expect(missing, `hreflang alternates missing on the ${locale.code} ${route.name}`).toEqual(
-          [],
-        );
+        expect(
+          wrong,
+          `hreflang alternates are not one-per-market on the ${locale.code} ${route.name}`,
+        ).toEqual([]);
       });
 
       test(`${locale.code} — ${route.name} leaks no template markers ${tags(route)}`, async ({
