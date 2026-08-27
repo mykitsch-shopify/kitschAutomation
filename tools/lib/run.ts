@@ -60,6 +60,30 @@ const DEFAULT_PATHEXT = '.COM;.EXE;.BAT;.CMD';
 const isFile = (path: string): boolean => statSync(path, { throwIfNoEntry: false })?.isFile() === true;
 
 /**
+ * Reads an environment variable without caring how it is capitalised.
+ *
+ * Windows environment variables are case-insensitive, and `process.env` there
+ * honours that — but only as itself. Spread it (`{ ...process.env, ...extra }`,
+ * which is how every caller here passes an override) and the result is an
+ * ordinary object holding whatever casing Windows actually used, which for PATH
+ * is normally `Path`. So `env.PATH` reads `undefined`, the search below finds
+ * nothing, and a command that ran and genuinely failed gets reported as one
+ * that never started. Backwards, and only on Windows, and only for the callers
+ * that pass an env — which is to say exactly the shape of bug this file keeps
+ * shipping.
+ */
+const readEnv = (
+  env: Readonly<Record<string, string | undefined>>,
+  name: string,
+): string | undefined => {
+  const direct = env[name];
+  if (direct !== undefined) return direct;
+  const wanted = name.toLowerCase();
+  const key = Object.keys(env).find((candidate) => candidate.toLowerCase() === wanted);
+  return key === undefined ? undefined : env[key];
+};
+
+/**
  * Finds what cmd.exe would run for `command`, or `undefined` if there is
  * nothing there to run. Windows semantics; safe to call anywhere.
  *
@@ -81,7 +105,7 @@ export const findOnWindowsPath = (
   // PATHEXT is conventionally uppercase (".CMD") while the file on disk is
   // lowercase ("npm.cmd"). Windows does not care, but a case-sensitive volume
   // does — and so does any machine running these tests. Try both spellings.
-  const declared = (env.PATHEXT ?? DEFAULT_PATHEXT).split(';').filter((ext) => ext !== '');
+  const declared = (readEnv(env, 'PATHEXT') ?? DEFAULT_PATHEXT).split(';').filter((ext) => ext !== '');
   const extensions = [
     ...new Set(['', ...declared.flatMap((ext) => [ext, ext.toLowerCase(), ext.toUpperCase()])]),
   ];
@@ -89,7 +113,7 @@ export const findOnWindowsPath = (
   // Otherwise cmd.exe looks in the current directory first, then along PATH.
   const directories = /[\\/]/u.test(command)
     ? ['']
-    : ['.', ...(env.PATH ?? '').split(';').filter((dir) => dir !== '')];
+    : ['.', ...(readEnv(env, 'PATH') ?? '').split(';').filter((dir) => dir !== '')];
 
   for (const directory of directories) {
     for (const extension of extensions) {

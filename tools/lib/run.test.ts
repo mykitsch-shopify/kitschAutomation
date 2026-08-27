@@ -175,3 +175,14 @@ void test('findOnWindowsPath: a directory is not something to run', () => {
 void test('findOnWindowsPath: an empty PATH finds nothing rather than throwing', () => {
   assert.equal(findOnWindowsPath('npm', {}), undefined);
 });
+
+void test('findOnWindowsPath: reads Path and PathExt whatever their capitalisation', () => {
+  // Windows environment variables are case-insensitive, but `{ ...process.env }`
+  // is an ordinary object holding the casing Windows actually used — normally
+  // `Path`. Miss that and every command looks missing, so a real failure gets
+  // reported as one that never ran. Exactly backwards, and only on Windows.
+  const dir = mkdtempSync(join(tmpdir(), 'kitsch-run-'));
+  writeFileSync(join(dir, 'npm.cmd'), '');
+  assert.equal(findOnWindowsPath('npm', { Path: dir, PathExt: '.CMD' }), join(dir, 'npm.cmd'));
+  rmSync(dir, { recursive: true, force: true });
+});
