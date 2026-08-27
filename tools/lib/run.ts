@@ -1,4 +1,6 @@
 import { spawn, spawnSync, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * Running `npm`, `npx` and `git` as child processes, on every platform we
@@ -24,12 +26,21 @@ import { spawn, spawnSync, type ChildProcess, type SpawnOptions } from 'node:chi
  * A third fault, found by running this on the Windows laptop rather than
  * reasoning about it: checking `result.error` is not enough there. Under
  * `shell: true` the process Node starts is cmd.exe, and cmd.exe starts
- * perfectly well — so a missing `npm` produces no spawn error at all. cmd.exe
- * reports it as an ordinary exit code instead, and the missing launcher went
- * straight back to reading as "this gate failed". Everything the Windows path
- * needs to get right is therefore reachable from a test on any platform now:
- * `buildLaunch` and `explainNotStart` take the platform as an argument, and
- * `run.test.ts` exercises the Windows branch of both from Linux.
+ * perfectly well — so a missing `npm` produces no spawn error at all, and the
+ * missing launcher went straight back to reading as "this gate failed".
+ *
+ * The first attempt at that fixed it by asserting cmd.exe returns 9009 for a
+ * command it cannot find. That was reasoned from a machine that cannot run
+ * Windows, it was wrong, and the same test failed a second time on the same
+ * laptop. So nothing here asserts anything about cmd.exe's exit codes now:
+ * `findOnWindowsPath` asks whether the command exists at all, which is a
+ * question with an answer we can check.
+ *
+ * Everything the Windows path turns on is reachable from a test on any
+ * platform for that reason — `buildLaunch`, `explainNotStart` and
+ * `findOnWindowsPath` all take what they need as arguments, and `run.test.ts`
+ * exercises their Windows behaviour from Linux. Three rounds of this bug were
+ * three rounds of shipping code nobody could execute.
  */
 
 export type RunResult = {
@@ -43,14 +54,52 @@ export type RunResult = {
   readonly notRun?: string;
 };
 
+/** Windows defaults, used when the environment does not say. */
+const DEFAULT_PATHEXT = '.COM;.EXE;.BAT;.CMD';
+
+const isFile = (path: string): boolean => statSync(path, { throwIfNoEntry: false })?.isFile() === true;
+
 /**
- * cmd.exe's exit code for a command it could not find.
+ * Finds what cmd.exe would run for `command`, or `undefined` if there is
+ * nothing there to run. Windows semantics; safe to call anywhere.
  *
- * This is the Windows equivalent of ENOENT, and it arrives as a status rather
- * than as a spawn error because the thing that started successfully was the
- * shell. Nothing we run exits 9009 of its own accord.
+ * This exists because neither thing you would reach for first works. Under
+ * `shell: true` the process Node starts is cmd.exe, which starts perfectly
+ * well, so there is no spawn error to read. And the exit code cmd.exe returns
+ * when it cannot find a command is not something this file should be asserting
+ * from a machine that cannot run it — the previous attempt asserted 9009,
+ * reasoned rather than measured, and it was wrong on the actual laptop.
+ *
+ * Looking along PATH ourselves depends on neither. It is also the only version
+ * of this question that can be tested from any platform, which is the property
+ * every Windows bug in this file's history has turned on.
  */
-const CMD_NOT_FOUND = 9009;
+export const findOnWindowsPath = (
+  command: string,
+  env: Readonly<Record<string, string | undefined>>,
+): string | undefined => {
+  // PATHEXT is conventionally uppercase (".CMD") while the file on disk is
+  // lowercase ("npm.cmd"). Windows does not care, but a case-sensitive volume
+  // does — and so does any machine running these tests. Try both spellings.
+  const declared = (env.PATHEXT ?? DEFAULT_PATHEXT).split(';').filter((ext) => ext !== '');
+  const extensions = [
+    ...new Set(['', ...declared.flatMap((ext) => [ext, ext.toLowerCase(), ext.toUpperCase()])]),
+  ];
+  // A command with a directory in it is not searched for; it is just there or not.
+  // Otherwise cmd.exe looks in the current directory first, then along PATH.
+  const directories = /[\\/]/u.test(command)
+    ? ['']
+    : ['.', ...(env.PATH ?? '').split(';').filter((dir) => dir !== '')];
+
+  for (const directory of directories) {
+    for (const extension of extensions) {
+      const name = `${command}${extension}`;
+      const candidate = directory === '' ? name : join(directory, name);
+      if (isFile(candidate)) return candidate;
+    }
+  }
+  return undefined;
+};
 
 /**
  * Quotes an argument for cmd.exe.
@@ -117,24 +166,39 @@ export type Outcome = {
  *
  * The Windows clause is the one worth reading. There, `shell: true` means the
  * process Node launched was cmd.exe — which starts fine even when the command
- * it was asked for does not exist — so `error` stays unset and the only signal
- * that nothing ran is cmd.exe's own 9009. Miss it and a missing `npm` is
- * reported as a gate that ran and failed, which is precisely the bug this
- * module was written to end.
+ * it was asked for does not exist — so `error` stays unset and a missing `npm`
+ * comes back looking like an ordinary failed gate. `onPath` is the evidence
+ * that settles it, and it comes from `findOnWindowsPath` rather than from any
+ * exit code.
+ *
+ * `onPath` is only consulted for a non-zero exit: if the command somehow ran
+ * and succeeded, it plainly existed, and no amount of PATH-searching should be
+ * able to talk us out of a result we watched happen.
  */
 export const explainNotStart = (
   command: string,
   outcome: Outcome,
   platform: NodeJS.Platform = process.platform,
+  onPath = true,
 ): string | undefined => {
   if (outcome.error !== undefined) return describe(command, outcome.error);
-  if (platform === 'win32' && outcome.status === CMD_NOT_FOUND) return notFound(command);
   // A null status with no error means the process was killed by a signal.
   if (outcome.status === null) {
     return `${command} was terminated by ${outcome.signal ?? 'a signal'} before it finished.`;
   }
+  if (platform === 'win32' && outcome.status !== 0 && !onPath) return notFound(command);
   return undefined;
 };
+
+/**
+ * Whether the command exists to be run. Only Windows needs asking.
+ *
+ * Asked against the environment the child will actually get, not this
+ * process's — a caller that overrides PATH would otherwise be answered about a
+ * PATH nobody is going to search.
+ */
+const onPathFor = (command: string, env: Readonly<Record<string, string | undefined>>): boolean =>
+  process.platform !== 'win32' || findOnWindowsPath(command, env) !== undefined;
 
 /**
  * Runs a command to completion and captures its output.
@@ -148,15 +212,16 @@ export const runSync = (
   options: { readonly env?: Readonly<Record<string, string>> } = {},
 ): RunResult => {
   const spec = buildLaunch(command, args);
+  const env = options.env === undefined ? process.env : { ...process.env, ...options.env };
   const result = spawnSync(spec.command, spec.args, {
     encoding: 'utf8',
     shell: spec.shell,
     stdio: ['ignore', 'pipe', 'pipe'],
-    ...(options.env === undefined ? {} : { env: { ...process.env, ...options.env } }),
+    ...(options.env === undefined ? {} : { env }),
   });
 
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  const notRun = explainNotStart(command, result);
+  const notRun = explainNotStart(command, result, process.platform, onPathFor(command, env));
 
   if (notRun !== undefined) return { status: 1, output, notRun };
   return { status: result.status ?? 1, output };
@@ -169,13 +234,14 @@ export const runInherit = (
   options: { readonly env?: Readonly<Record<string, string>> } = {},
 ): RunResult => {
   const spec = buildLaunch(command, args);
+  const env = options.env === undefined ? process.env : { ...process.env, ...options.env };
   const result = spawnSync(spec.command, spec.args, {
     shell: spec.shell,
     stdio: 'inherit',
-    ...(options.env === undefined ? {} : { env: { ...process.env, ...options.env } }),
+    ...(options.env === undefined ? {} : { env }),
   });
 
-  const notRun = explainNotStart(command, result);
+  const notRun = explainNotStart(command, result, process.platform, onPathFor(command, env));
 
   if (notRun !== undefined) return { status: 1, output: '', notRun };
   return { status: result.status ?? 1, output: '' };

@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 
-import { buildLaunch, explainNotStart, quoteForWindows, runSync } from './run.js';
+import { buildLaunch, explainNotStart, findOnWindowsPath, quoteForWindows, runSync } from './run.js';
 
 /**
  * These tests exist because the distinction they check was silently lost once
@@ -85,27 +88,32 @@ void test('quoteForWindows: a trailing backslash is doubled so it cannot escape 
 
 // ── the Windows path, exercised from wherever this happens to run ──────────
 
-void test('explainNotStart: on Windows, cmd.exe exit 9009 means the command was never found', () => {
-  // The regression that shipped. Under `shell: true` cmd.exe is what starts, so
-  // it starts successfully and `error` is never set; 9009 is the only evidence
-  // that npm is missing. Read it as an exit code and the whole fix is undone.
-  const reason = explainNotStart('npm', { status: 9009 }, 'win32');
+void test('explainNotStart: on Windows, a non-zero exit from a command not on PATH never ran', () => {
+  // The regression that shipped twice. Under `shell: true` cmd.exe is what
+  // starts, so it starts successfully and `error` is never set — and cmd.exe's
+  // exit code for "not recognized" is not something this repo gets to assume.
+  // Whether the command exists is the evidence that does not require guessing.
+  const reason = explainNotStart('npm', { status: 1 }, 'win32', false);
   assert.notEqual(reason, undefined);
   assert.match(reason ?? '', /could not be found/u);
   assert.match(reason ?? '', /npm ci/u);
 });
 
-void test('explainNotStart: on Windows, an ordinary non-zero exit is still a real failure', () => {
-  // The other half. If every Windows exit code became "could not check", the
-  // gate would stop being able to fail at all.
-  assert.equal(explainNotStart('npm', { status: 1 }, 'win32'), undefined);
-  assert.equal(explainNotStart('npm', { status: 0 }, 'win32'), undefined);
+void test('explainNotStart: on Windows, a command that is on PATH really did fail', () => {
+  // The other half. If every Windows non-zero exit became "could not check",
+  // the gate would stop being able to fail at all.
+  assert.equal(explainNotStart('npm', { status: 1 }, 'win32', true), undefined);
+  assert.equal(explainNotStart('npm', { status: 0 }, 'win32', true), undefined);
 });
 
-void test('explainNotStart: 9009 is not read as "not found" off Windows', () => {
-  // Nothing else uses cmd.exe's codes, and a POSIX program is entitled to exit
-  // 9009 and mean it.
-  assert.equal(explainNotStart('npm', { status: 9009 }, 'linux'), undefined);
+void test('explainNotStart: a success is a success, whatever the PATH search concluded', () => {
+  // If it ran and exited 0 it plainly existed, and no lookup should be able to
+  // talk us out of a result we watched happen.
+  assert.equal(explainNotStart('npm', { status: 0 }, 'win32', false), undefined);
+});
+
+void test('explainNotStart: off Windows, PATH is not second-guessed — ENOENT already says it', () => {
+  assert.equal(explainNotStart('npm', { status: 1 }, 'linux', false), undefined);
 });
 
 void test('explainNotStart: a spawn error still explains itself on either platform', () => {
@@ -136,4 +144,34 @@ void test('buildLaunch: off Windows the command and arguments are passed through
   assert.equal(spec.shell, false);
   assert.equal(spec.command, 'npm');
   assert.deepEqual(spec.args, args);
+});
+
+void test('findOnWindowsPath: finds npm.cmd by its PATHEXT extension, as cmd.exe would', () => {
+  // The real lookup, against a real directory, runnable on any platform —
+  // which is the only reason this is checkable at all before shipping.
+  const dir = mkdtempSync(join(tmpdir(), 'kitsch-run-'));
+  writeFileSync(join(dir, 'npm.cmd'), '');
+  const env = { PATH: `${dir};${join(dir, 'nowhere')}`, PATHEXT: '.EXE;.CMD' };
+  assert.equal(findOnWindowsPath('npm', env), join(dir, 'npm.cmd'));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+void test('findOnWindowsPath: reports a command that is simply not there', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'kitsch-run-'));
+  const env = { PATH: dir, PATHEXT: '.EXE;.CMD' };
+  assert.equal(findOnWindowsPath('npm', env), undefined);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+void test('findOnWindowsPath: a directory is not something to run', () => {
+  // Without this, a folder called "npm" on PATH would read as an installed npm
+  // and send us back to reporting a missing launcher as a failed gate.
+  const dir = mkdtempSync(join(tmpdir(), 'kitsch-run-'));
+  mkdirSync(join(dir, 'npm'));
+  assert.equal(findOnWindowsPath('npm', { PATH: dir, PATHEXT: '.EXE;.CMD' }), undefined);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+void test('findOnWindowsPath: an empty PATH finds nothing rather than throwing', () => {
+  assert.equal(findOnWindowsPath('npm', {}), undefined);
 });
