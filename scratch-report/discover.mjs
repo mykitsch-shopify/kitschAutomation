@@ -34,7 +34,19 @@ const browser = await chromium.launch(
   process.env.KITSCH_CHROMIUM_PATH ? { executablePath: process.env.KITSCH_CHROMIUM_PATH } : {},
 );
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+const response = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
+
+// This theme renders the buy button after load — A/B and anti-flicker scripts
+// hold it back. Looking at domcontentloaded reported "no add-to-cart" on every
+// PDP while the button was simply not there yet. Never `networkidle`: the store
+// beacons continuously and it would only ever time out.
+const settled = await page
+  .waitForSelector('button[name="add"], .product-form__submit, [data-testid="add-to-cart"]', {
+    timeout: 15000,
+    state: 'attached',
+  })
+  .then(() => true)
+  .catch(() => false);
 
 const out = (line) => process.stdout.write(`${line}\n`);
 
@@ -99,21 +111,30 @@ const found = await page.evaluate(() => {
     };
   };
 
-  const all = (selector) => Array.from(document.querySelectorAll(selector));
+  // Everything is searched inside the product's own section. Searching the
+  // document reported the same four prices on four different products and on
+  // the cart — they were an upsell widget that sits early in the DOM on every
+  // page. A price that is not this product's is worse than no price at all.
+  const h1 = document.querySelector('h1');
+  const scope =
+    h1?.closest('.main-product, [class*="product__info-wrapper"], main') ?? document.body;
+
+  const all = (selector) => Array.from(scope.querySelectorAll(selector));
   const money = /(?:[$£€]\s?\d|\d+[.,]\d{2})/u;
 
   return {
-    title: describe(document.querySelector('h1')),
+    scope: `${scope.tagName.toLowerCase()}${scope.classList.length > 0 ? `.${scope.classList[0]}` : ''}`,
+    title: describe(h1),
     addToCart: [
       ...all('form[action*="/cart/add"] button[type="submit"]'),
       ...all('button[name="add"]'),
       ...all('[data-testid*="add"]'),
+      ...all('.product-form__submit'),
     ]
+      .filter((el, index, list) => list.indexOf(el) === index)
       .slice(0, 3)
       .map(describe),
-    // Prices inside the product form only — a PDP prints many prices, and the
-    // ones in a recommendations carousel are not this product's.
-    prices: all('form[action*="/cart/add"] *, [class*="product__info"] *, [class*="price"]')
+    prices: all('*')
       .filter((el) => el.children.length === 0 && money.test(el.textContent ?? ''))
       .slice(0, 8)
       .map(describe),
@@ -123,6 +144,8 @@ const found = await page.evaluate(() => {
 
 out('');
 out('What this theme actually uses');
+out('');
+out(`  searched inside: ${found.scope}${settled ? '' : '   (buy button never appeared — see below)'}`);
 out('');
 out(`  pdp_title      ${found.title?.suggested ?? 'no <h1> found'}`);
 out(`                 text: ${found.title?.text ?? ''}`);
