@@ -13,8 +13,15 @@ import type { LocaleStrings, Sentinel } from '../lib/sentinels.js';
  * rather than re-deriving it — and rather than hardcoding a list of English
  * words, which would go stale the first time marketing changed a nav label.
  *
- * Points at the generated fixture catalogue by default; in CI against a real
- * store, point KITSCH_BASELINE at the artifact the content-layer run wrote.
+ * Points at the generated fixture catalogue by default. KITSCH_BASELINE
+ * overrides it with a catalogue in the same shape — `keys` and `locales`.
+ *
+ * Note what that does NOT include: `npm run i18n:parity` writes parity.json,
+ * which is findings and a verdict, not a catalogue. There is no supported way
+ * to emit a live-store catalogue today, so against a real storefront the
+ * content-comparison specs have no baseline to read and cannot say anything.
+ * Tracked with the rest of the live-store gap; until then, pointing this at a
+ * report file fails here rather than quietly comparing against nothing.
  *
  * The comparison logic itself lives in i18n/lib/sentinels.ts, where it is
  * unit-tested. This file is only the loader — and the loader's one real job,
@@ -23,7 +30,34 @@ import type { LocaleStrings, Sentinel } from '../lib/sentinels.js';
 
 const baselinePath = process.env.KITSCH_BASELINE ?? 'fixtures/catalog/catalog-clean.json';
 
-const catalog = JSON.parse(readFileSync(baselinePath, 'utf8')) as CatalogFile;
+/**
+ * Read at module load, so a failure here aborts collection and Playwright
+ * reports "No tests found" — which describes nothing that happened. Whatever
+ * went wrong has to explain itself here, because nothing downstream will.
+ */
+const readBaseline = (path: string): CatalogFile => {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')) as CatalogFile;
+  } catch (cause) {
+    const fromEnv = process.env.KITSCH_BASELINE !== undefined;
+    throw new Error(
+      `Cannot read the translation baseline "${path}".\n` +
+        (fromEnv
+          ? 'It came from KITSCH_BASELINE. That variable outlives the command that set ' +
+            'it, so a stale value from an earlier session will break every run in this ' +
+            'shell — clear it (Windows: `set KITSCH_BASELINE=`, POSIX: `unset ' +
+            'KITSCH_BASELINE`) to fall back to fixtures/catalog/catalog-clean.json.\n' +
+            'It must name a catalogue with "keys" and "locales" maps. A parity report ' +
+            '(i18n-report/**/parity.json) is not one: it holds findings, not copy.\n'
+          : 'Regenerate it with `npx tsx fixtures/catalog/build-catalog.ts`.\n') +
+        'Refusing to continue: without a baseline every translation assertion has ' +
+        'nothing to compare against.',
+      { cause },
+    );
+  }
+};
+
+const catalog = readBaseline(baselinePath);
 
 export type { Sentinel } from '../lib/sentinels.js';
 export { showsEnglish } from '../lib/sentinels.js';
