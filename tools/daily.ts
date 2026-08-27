@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 
 import { runInherit } from './lib/run.js';
 
@@ -165,6 +165,21 @@ write('');
 write(`  target   ${baseURL}`);
 write(`  browser  ${browser}`);
 write(`  results  ${resultsDir}`);
+
+/**
+ * Yesterday's results go before today's start.
+ *
+ * Allure reports on whatever is in the directory, so results left from an
+ * earlier run are silently folded into this one's report — a check that was
+ * skipped today appears as though it ran, and a defect fixed this morning is
+ * still on the front page. Safe to do here and nowhere else: this tool starts
+ * every stage that writes into the directory, so at this moment it holds
+ * nothing today's run has produced.
+ */
+if (existsSync(resultsDir)) {
+  rmSync(resultsDir, { recursive: true, force: true });
+  write(`  cleared  ${resultsDir} — this report covers today's run only`);
+}
 write('');
 
 type Outcome = { readonly stage: Stage; readonly code: number | 'skipped' | 'missing' };

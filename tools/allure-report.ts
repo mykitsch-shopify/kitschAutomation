@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 import { parseProperties, readEnvironmentSidecar, serialiseProperties } from './lib/allure.js';
 import { runInherit } from './lib/run.js';
@@ -149,6 +149,17 @@ write(`  reading   ${verdict}`);
 write('');
 
 // ── 4. render ────────────────────────────────────────────────────────────
+// The previous report goes first. It is derived data — everything in it comes
+// from resultsDir and is about to be rebuilt — so there is nothing to lose, and
+// leaving it risks a reader opening a page from last week's run that this one
+// did not overwrite. The results directory is emphatically NOT deleted here:
+// it is the input, and a daily run fills it from six audits and the specs
+// before this tool ever runs.
+if (existsSync(outDir)) {
+  rmSync(outDir, { recursive: true, force: true });
+  write(`  cleared    ${outDir} (previous report)`);
+}
+
 const args = [
   'allure',
   'generate',
