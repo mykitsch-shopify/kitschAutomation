@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { resolveLaunchHandle } from '@kitsch/fixtures/launch-set.js';
 
@@ -76,6 +76,37 @@ const leakedMarkers = (text: string): readonly string[] =>
       : [`"${marker}" (${meaning}) near: ${text.slice(Math.max(0, index - 30), index + 50).replace(/\n/gu, ' ')}`];
   });
 
+/**
+ * Navigates, and says so plainly when the page never arrived.
+ *
+ * A `page.goto` timeout surfaces in a report as a red test beside the real
+ * findings, and reads as "this page has a defect". It is the opposite: nothing
+ * was examined. Two live runs made the case — four failures each time, all
+ * navigation timeouts, and on different pages each run. Somebody reading that
+ * report would have gone looking for translation defects on four pages that
+ * were never opened.
+ *
+ * Playwright has no verdict between pass and fail, so this cannot be reported
+ * as "could not check" the way the audit CLIs do with exit 2. What it can do
+ * is refuse to be mistaken for a finding about the copy.
+ */
+const visit = async (
+  page: Page,
+  path: string,
+): Promise<Awaited<ReturnType<Page['goto']>>> => {
+  try {
+    return await page.goto(path);
+  } catch (cause) {
+    throw new Error(
+      `COULD NOT CHECK — ${path} did not load, so nothing on it was examined.\n` +
+        'This is not a statement about the page: no translation, marker or price ' +
+        'was read. Treat it as harness or network, not as a store defect.\n' +
+        `Cause: ${cause instanceof Error ? cause.message.split('\n')[0] : String(cause)}`,
+      { cause },
+    );
+  }
+};
+
 /** Contracted fragments for `keys` that are absent from `text`. */
 const missingCopy = (locale: string, keys: readonly string[], text: string): readonly string[] =>
   keys.flatMap((key) => {
@@ -93,7 +124,7 @@ test.describe('locale shell', () => {
       test(`${locale.code} — ${route.name} resolves and applies lang ${tags(route)}`, async ({
         page,
       }) => {
-        const response = await page.goto(localizedPath(locale.code, route.path));
+        const response = await visit(page, localizedPath(locale.code, route.path));
         expect(
           response?.status(),
           'localized route must resolve without a redirect chain to /en',
@@ -108,7 +139,7 @@ test.describe('locale shell', () => {
       test(`${locale.code} — ${route.name} declares hreflang alternates ${tags(route)}`, async ({
         page,
       }) => {
-        await page.goto(localizedPath(locale.code, route.path));
+        await visit(page, localizedPath(locale.code, route.path));
 
         // Every declared market needs an alternate, or the localized page is
         // invisible to search in that market — a discovery defect, not cosmetic.
@@ -143,7 +174,7 @@ test.describe('locale shell', () => {
       test(`${locale.code} — ${route.name} leaks no template markers ${tags(route)}`, async ({
         page,
       }) => {
-        await page.goto(localizedPath(locale.code, route.path));
+        await visit(page, localizedPath(locale.code, route.path));
         const text = await page.locator('body').innerText();
 
         // Asserted over extracted text rather than with `not.toContainText`,
@@ -158,7 +189,7 @@ test.describe('locale shell', () => {
       test(`${locale.code} — ${route.name} fits the mobile viewport ${tags(route)}`, async ({
         page,
       }) => {
-        await page.goto(localizedPath(locale.code, route.path));
+        await visit(page, localizedPath(locale.code, route.path));
         await expect(page.getByTestId('site-header')).toBeVisible();
 
         const overflowPx = await page.evaluate(
@@ -176,7 +207,7 @@ test.describe('locale shell', () => {
 test.describe('locale price formatting @i18n @launch', () => {
   for (const locale of targetLocales(config)) {
     test(`${locale.code} — PDP price uses ${locale.market} convention`, async ({ page }) => {
-      await page.goto(localizedPath(locale.code, `/products/${resolveLaunchHandle()}`));
+      await visit(page, localizedPath(locale.code, `/products/${resolveLaunchHandle()}`));
 
       const priceText = await page.getByTestId('pdp-price').innerText();
 
@@ -309,7 +340,7 @@ test.describe('localized content renders', () => {
       test(`${locale.code} — ${surface.name} shows the contracted copy @i18n @smoke`, async ({
         page,
       }) => {
-        await page.goto(localizedPath(locale.code, surface.route));
+        await visit(page, localizedPath(locale.code, surface.route));
         const text = await page.getByTestId(surface.container).innerText();
 
         // A surface where every key resolved to nothing would pass this test
@@ -340,7 +371,7 @@ test.describe('accented characters render', () => {
     test(`${locale.code} — ${locale.market} accented characters appear on the page @i18n @smoke`, async ({
       page,
     }) => {
-      await page.goto(localizedPath(locale.code, '/'));
+      await visit(page, localizedPath(locale.code, '/'));
       const text = await page.locator('body').innerText();
 
       const found = locale.diacritics.filter((character) => text.includes(character));
@@ -374,7 +405,7 @@ test.describe('no untranslated strings', () => {
       test(`${locale.code} — ${route.name} shows no English fallback copy ${tags(route)}`, async ({
         page,
       }) => {
-        await page.goto(localizedPath(locale.code, route.path));
+        await visit(page, localizedPath(locale.code, route.path));
         const text = await page.locator('body').innerText();
 
         const leaked = englishSentinels(locale.code).filter((sentinel) =>
@@ -400,7 +431,7 @@ test.describe('character integrity', () => {
       test(`${locale.code} — ${route.name} renders without encoding damage ${tags(route)}`, async ({
         page,
       }) => {
-        await page.goto(localizedPath(locale.code, route.path));
+        await visit(page, localizedPath(locale.code, route.path));
         const text = await page.locator('body').innerText();
 
         const defects = findEncodingDefects(text);
@@ -416,7 +447,7 @@ test.describe('character integrity', () => {
     test(`${locale.code} — page renders in the ${locale.market} writing system @i18n @smoke`, async ({
       page,
     }) => {
-      await page.goto(localizedPath(locale.code, '/'));
+      await visit(page, localizedPath(locale.code, '/'));
       const heading = await page.getByTestId('hero-heading').innerText();
 
       const script = locale.expectScript;
@@ -448,7 +479,7 @@ test.describe('character integrity', () => {
     test(`${locale.code} — theme declares a font covering the ${locale.market} script @i18n @smoke`, async ({
       page,
     }) => {
-      await page.goto(localizedPath(locale.code, '/'));
+      await visit(page, localizedPath(locale.code, '/'));
       const heading = page.getByTestId('hero-heading');
 
       const stack = await heading.evaluate((node) => getComputedStyle(node).fontFamily);
@@ -507,7 +538,7 @@ test.describe('dynamic content', () => {
       test(`${locale.code} — ${overlay.name} respects the selected language @i18n @smoke`, async ({
         page,
       }) => {
-        await page.goto(localizedPath(locale.code, '/'));
+        await visit(page, localizedPath(locale.code, '/'));
 
         const panel = page.getByTestId(overlay.panel);
         await expect(panel, 'overlay must start hidden, or the scan proves nothing').toBeHidden();
@@ -563,7 +594,7 @@ test.describe('meta translation @i18n @launch', () => {
       test(`${locale.code} — ${route.path} meta title and description are localized`, async ({
         page,
       }) => {
-        await page.goto(localizedPath(locale.code, route.path));
+        await visit(page, localizedPath(locale.code, route.path));
 
         const title = await page.title();
         const description =
@@ -608,7 +639,7 @@ test.describe('meta translation @i18n @launch', () => {
 test.describe('checkout translation @i18n @launch', () => {
   for (const locale of targetLocales(config)) {
     test(`${locale.code} — checkout form labels are localized`, async ({ page }) => {
-      await page.goto(localizedPath(locale.code, '/checkout'));
+      await visit(page, localizedPath(locale.code, '/checkout'));
 
       const labels = page.getByTestId('checkout-field-label');
       await expect(labels.first()).toBeVisible();
@@ -626,7 +657,7 @@ test.describe('checkout translation @i18n @launch', () => {
     });
 
     test(`${locale.code} — checkout validation errors are localized`, async ({ page }) => {
-      await page.goto(localizedPath(locale.code, '/checkout'));
+      await visit(page, localizedPath(locale.code, '/checkout'));
       await page.getByTestId('checkout-continue').click();
 
       const errors = page.getByTestId('checkout-error');
@@ -673,7 +704,7 @@ test.describe('order confirmation', () => {
     test(`${locale.code} — order confirmation is localized @i18n @launch @order`, async ({
       page,
     }) => {
-      await page.goto(localizedPath(locale.code, orderPath ?? '/checkout/confirmation'));
+      await visit(page, localizedPath(locale.code, orderPath ?? '/checkout/confirmation'));
 
       const heading = page.getByTestId('confirmation-heading');
       await expect(heading).toBeVisible();

@@ -62,8 +62,22 @@ export default defineConfig({
   testDir: '.',
   testMatch: ['web/specs/**/*.spec.ts', 'i18n/specs/**/*.spec.ts'],
 
-  timeout: 30_000,
-  expect: { timeout: 10_000 },
+  /**
+   * Budgets scale with the target, because a slow fixture and a slow storefront
+   * mean different things.
+   *
+   * The fixture is local, deterministic and serves static markup: if it has not
+   * answered in 30 seconds something is broken, and failing fast says so.
+   * mykitsch.com loads forty-odd third-party scripts — analytics, A/B, reviews,
+   * loyalty, consent — on a 390px viewport from wherever the run happens to be.
+   * Two live runs put checkout and content pages at 15–21 seconds routinely,
+   * against a 20-second navigation budget, and produced four failures each
+   * time on different pages: pure timing, reported as defects.
+   *
+   * The tight budget was not wrong, it was being asked the wrong question.
+   */
+  timeout: usingFixture ? 30_000 : 90_000,
+  expect: { timeout: usingFixture ? 10_000 : 20_000 },
 
   fullyParallel: true,
   forbidOnly: isCI,
@@ -102,8 +116,8 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    actionTimeout: 15_000,
-    navigationTimeout: 20_000,
+    actionTimeout: usingFixture ? 15_000 : 30_000,
+    navigationTimeout: usingFixture ? 20_000 : 60_000,
     extraHTTPHeaders: {
       // Identifies harness traffic in Shopify/Constructor logs so analytics
       // and rate-limit investigations can exclude it.
