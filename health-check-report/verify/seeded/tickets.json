@@ -1,0 +1,14 @@
+[
+  {
+    "issueId": "HC-2026-04-28-1",
+    "title": "[P2] Quick-view close button missing translation key",
+    "severity": "major",
+    "body": "Re-confirmed from Kitsch Top 20 PDP Health Check (reported 2026-04-28).\n\nStill present on:\n  - fixture — 4 page(s) checked\n\nEvidence:\n  - fixture: / — aria-label on button.quick-view__close: button.quick-view__close[aria-label] = \"Translation missing: en.products.product.quick_view.close\"\n  - fixture: /collections/best-sellers — aria-label on button.quick-view__close: button.quick-view__close[aria-label] = \"Translation missing: en.products.product.quick_view.close\"\n  - fixture: /products/coastal-cottage-hair-perfume-duo — aria-label on button.quick-view__close: button.quick-view__close[aria-label] = \"Translation missing: en.products.product.quick_view.close\"\n  - fixture: /cart — aria-label on button.quick-view__close: button.quick-view__close[aria-label] = \"Translation missing: en.products.product.quick_view.close\"\n\nRaised automatically by the daily health-check re-verification. The check\nreproduced this issue; it does not propose a fix."
+  },
+  {
+    "issueId": "HC-2026-04-28-2",
+    "title": "[P2] Quick-view sr-only div — product title not substituted",
+    "severity": "major",
+    "body": "Re-confirmed from Kitsch Top 20 PDP Health Check (reported 2026-04-28).\n\nStill present on:\n  - fixture — 4 page(s) checked\n\nEvidence:\n  - fixture: / — visible copy: Bestsellers × Quick view of {{ product_title }}\n  - fixture: /collections/best-sellers — visible copy: r Perfume Duo × Quick view of {{ product_title }}\n  - fixture: /products/coastal-cottage-hair-perfume-duo — visible copy: Add to cart × Quick view of {{ product_title }}\n  - fixture: /cart — visible copy: cart $0.00 × Quick view of {{ product_title }}\n\nRaised automatically by the daily health-check re-verification. The check\nreproduced this issue; it does not propose a fix."
+  }
+]

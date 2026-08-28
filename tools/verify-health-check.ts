@@ -62,6 +62,7 @@ issues:
     source: Kitsch Top 20 PDP Health Check
     reported: 2026-04-28
     paths: []
+    requires: '.quick-view'
     needle: en.products.product.quick_view.close
   - id: HC-2026-04-28-2
     title: Quick-view sr-only div — product title not substituted
@@ -69,6 +70,7 @@ issues:
     source: Kitsch Top 20 PDP Health Check
     reported: 2026-04-28
     paths: []
+    requires: '.quick-view'
     needle: '{{ product_title }}'
 features:
   issue_recheck: Report validation

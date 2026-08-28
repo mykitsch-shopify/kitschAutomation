@@ -42,6 +42,10 @@ issues:
     reported: 2026-04-28
     # Sitewide: no paths, so the sample above is used.
     paths: []
+    # Proves the quick-view was actually on the page. Without it, a page that
+    # never rendered the component reports "not reproduced", which reads as
+    # fixed and is evidence of nothing.
+    requires: '.quick-view, [data-quick-view], quick-view-modal'
     # The literal that identifies THIS defect. Matching on it is what keeps
     # "the reported issue is still there" apart from "the page has some other
     # marker now" — the second must never raise a ticket describing the first.
@@ -53,6 +57,7 @@ issues:
     source: Kitsch Top 20 PDP Health Check
     reported: 2026-04-28
     paths: []
+    requires: '.quick-view, [data-quick-view], quick-view-modal'
     needle: '{{ product_title }}'
 
 # ─────────────────────────────────────────────────────────────────────────

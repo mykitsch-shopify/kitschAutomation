@@ -119,10 +119,25 @@ const snapshot = async (
   context: BrowserContext,
   baseURL: string,
   path: string,
-): Promise<{ readonly text: string; readonly attributes: readonly ObservedAttribute[] }> => {
+  requires?: string,
+): Promise<{
+  readonly text: string;
+  readonly attributes: readonly ObservedAttribute[];
+  readonly anchored: boolean;
+}> => {
   const page = await context.newPage();
   try {
     await page.goto(`${baseURL}${path}`, { waitUntil: 'load', timeout: 60_000 });
+    // Wait for the component the issue is about, when one was named. This
+    // theme renders much of its interactive markup after load, so reading
+    // immediately finds nothing and calls it clean.
+    const anchored =
+      requires === undefined
+        ? true
+        : await page
+            .waitForSelector(requires, { state: 'attached', timeout: 15_000 })
+            .then(() => true)
+            .catch(() => false);
     const text = await page.locator('body').innerText();
     // Deliberately flat: no helper functions inside this callback.
     //
@@ -146,7 +161,7 @@ const snapshot = async (
       }
       return found;
     }, SPOKEN_ATTRIBUTES);
-    return { text, attributes };
+    return { text, attributes, anchored };
   } finally {
     await page.close();
   }
@@ -167,7 +182,14 @@ const observe = async (
 
   for (const path of paths) {
     try {
-      const page = await snapshot(context, environment.baseURL, path);
+      const page = await snapshot(context, environment.baseURL, path, issue.requires);
+      if (!page.anchored) {
+        // The component this issue is about was not on the page, so the page
+        // says nothing either way. Counting it as checked would turn "we did
+        // not look at the quick-view" into "the quick-view is fixed".
+        blocked.push(`${path}: ${issue.requires ?? 'component'} not present on the page`);
+        continue;
+      }
       checked.push(path);
       evidence.push(
         ...evidenceFrom(

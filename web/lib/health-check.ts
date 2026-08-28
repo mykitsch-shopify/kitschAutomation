@@ -60,6 +60,19 @@ export type ReportedIssue = {
    * separate from "the page has some other marker now".
    */
   readonly needle: string;
+  /**
+   * A selector proving the component the issue is about was actually on the
+   * page. Absent means the issue is about the page itself.
+   *
+   * This is the difference between "the defect is gone" and "we were not
+   * looking at the thing". The 2026-04-28 issues are both in a quick-view
+   * modal; if that component is not rendered on the pages sampled, no marker
+   * is found and the run reports "not reproduced" — which reads as fixed and
+   * is not evidence of anything. With an anchor, a page that never showed the
+   * component counts as unchecked instead, which is the honest answer and the
+   * one this whole repo exists to preserve.
+   */
+  readonly requires?: string;
   /** Which report said so, and when. Carried into the ticket. */
   readonly source: string;
   readonly reportedAt: string;
@@ -310,6 +323,9 @@ export const loadHealthCheckConfig = (path = 'config/health-check.yaml'): Health
       // The needle is what separates "this issue" from "some issue". Without
       // one, every marker on the page would confirm every claim.
       needle: asString(entry.needle, `${at}.needle`),
+      ...(entry.requires === undefined
+        ? {}
+        : { requires: asString(entry.requires, `${at}.requires`) }),
       source: asString(entry.source, `${at}.source`),
       reportedAt: asString(entry.reported, `${at}.reported`),
     };
