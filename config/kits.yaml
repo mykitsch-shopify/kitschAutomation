@@ -67,15 +67,33 @@ compare:
 # regenerated on deploy and merchandising reorders breaks positional
 # selectors weekly. Until then, these fallbacks are the bridge.
 # ─────────────────────────────────────────────────────────────────────────
+#
+# The mykitsch.com entries below were read off the live theme on 2026-08-28
+# (scratch-report/discover.mjs), not guessed. Two things learned doing it, both
+# of which shape how they are written:
+#
+#   1. Everything is scoped to `.main-product`. Unscoped, `pdp_compare_at`
+#      matched 13 elements on one kit PDP and 25 on another — it was reaching
+#      into the recommendation and upsell carousels, which repeat on every
+#      page. A selector that matches twenty-five things reports twenty-five
+#      defects that are not there.
+#   2. `#ProductInfo-template--279794…` is per-template and changes with the
+#      theme's section id, so it is deliberately not used.
+#
 selectors:
-  pdp_title: '[data-testid="pdp-title"], h1.product__title, .product-single__title'
-  pdp_price: '[data-testid="pdp-price"], .price-item--sale, .product__price--sale'
-  pdp_compare_at: '[data-testid="pdp-compare-at"], .price-item--regular, .product__price--compare'
+  pdp_title: '[data-testid="pdp-title"], .main-product h1.font-heading, h1.product__title, .product-single__title'
+  pdp_price: '[data-testid="pdp-price"], .main-product .price-item--sale, .price-item--sale, .product__price--sale'
+  pdp_compare_at: '[data-testid="pdp-compare-at"], .main-product s.comp-price__value, .main-product s.bundle-price__compare, .price-item--regular'
   kit_item: '[data-testid="kit-item"], .product__included-item, .bundle-item'
   kit_item_price: '[data-testid="kit-item-price"], .included-item__price, .bundle-item__price'
   kit_item_badge: '[data-testid="kit-item-badge"], .included-item__badge, .bundle-item__badge'
   free_gift_input: '[data-testid="free-gift-input"], fieldset[name*="gift"] input, input[name*="free-gift"]'
-  add_to_cart: '[data-testid="add-to-cart"], button[name="add"], .product-form__submit'
+  # `.product-form__submit` is this theme's buy button, confirmed on the cart
+  # page's upsell forms. On a PDP it is rendered after load, behind the A/B and
+  # anti-flicker scripts — which is why preflight now waits for it rather than
+  # counting at domcontentloaded and reporting a perfectly good selector as
+  # unmatched.
+  add_to_cart: '[data-testid="add-to-cart"], .main-product .product-form__submit, button[name="add"], .product-form__submit'
   cart_line: '[data-testid="cart-line-item"], .cart-item, .cart__row'
   cart_line_price: '[data-testid="line-price"], .cart-item__price, .cart__price'
   cart_line_remove: '[data-testid="cart-remove"], .cart-item__remove, a[href*="/cart/change"]'

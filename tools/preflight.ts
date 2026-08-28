@@ -29,6 +29,24 @@ const write = (line: string): void => {
 
 const PAGE_SELECTORS = ['pdp_title', 'pdp_price', 'pdp_compare_at', 'kit_item', 'add_to_cart'] as const;
 
+/**
+ * Selectors that identify one thing on the page.
+ *
+ * A product has one title, one price, one buy button. `kit_item` and its
+ * siblings legitimately match many, which is why they are not here.
+ *
+ * This exists because zero is not the only broken count. Against the live
+ * theme `pdp_compare_at` matched 13 on one PDP and 25 on another — it was
+ * reaching into recommendation and upsell cards, and preflight called it fine
+ * because the count was not zero. A spec that cannot find markup reports a
+ * defect that is not there; a spec that finds twenty-five reports twenty-five
+ * of them, and preflight exists to catch exactly that class of thing.
+ */
+const SINGULAR = new Set(['pdp_title', 'pdp_price', 'pdp_compare_at', 'add_to_cart']);
+
+/** Above this, a singular selector is matching things outside the product. */
+const TOO_MANY = 3;
+
 // A launch failure is not one of the three questions above, and Playwright's
 // own message for it advises `npx playwright install` — which is the wrong
 // move anywhere browser downloads are blocked, and buries the fix that works.
@@ -96,9 +114,25 @@ if (reachable) {
     // 0 means "did not respond at all", which reads the same as a 404 here:
     // either way the handle is not usable.
     const status = await page
-      .goto(url, { timeout: 25_000, waitUntil: 'domcontentloaded' })
+      .goto(url, { timeout: 25_000, waitUntil: 'load' })
       .then((response) => response?.status() ?? 0)
       .catch(() => 0);
+
+    // Give the buy button a chance to exist before counting anything.
+    //
+    // This theme renders it after load, behind A/B and anti-flicker scripts.
+    // Counting at domcontentloaded reported `add_to_cart 0 match(es)` on every
+    // kit, which reads as "wrong selector" and sends somebody to edit
+    // kits.yaml — when the selector may be perfect and the button simply not
+    // there yet. Waiting for the thing we are about to count removes the
+    // ambiguity; if it never appears, the count below is still taken and still
+    // reported, so a genuinely wrong selector is not hidden either.
+    //
+    // Not networkidle: this store beacons continuously and it would only ever
+    // time out.
+    await page
+      .waitForSelector(config.selectors.add_to_cart, { state: 'attached', timeout: 10_000 })
+      .catch(() => undefined);
 
     if (status !== 200) {
       problems += 1;
@@ -110,17 +144,28 @@ if (reachable) {
 
     write(`  ${kit.name}  (HTTP 200)`);
     const misses: string[] = [];
+    const overreach: string[] = [];
     for (const name of PAGE_SELECTORS) {
       const selector = config.selectors[name];
       const count = await page.locator(selector).count();
-      write(`    ${name.padEnd(15)} ${String(count).padStart(3)} match(es)`);
-      if (count === 0) {
-        misses.push(name);
-      }
+      const tooMany = SINGULAR.has(name) && count > TOO_MANY;
+      write(
+        `    ${name.padEnd(15)} ${String(count).padStart(3)} match(es)${tooMany ? '  ← expected one' : ''}`,
+      );
+      if (count === 0) misses.push(name);
+      if (tooMany) overreach.push(`${name} (${String(count)})`);
     }
     if (misses.length > 0) {
       problems += 1;
       write(`    → unmatched: ${misses.join(', ')} — map these in config/kits.yaml "selectors"`);
+    }
+    if (overreach.length > 0) {
+      problems += 1;
+      write(
+        `    → matches too much: ${overreach.join(', ')} — these identify one element, so a` +
+          ' selector finding this many is reaching into recommendation or upsell cards.',
+      );
+      write('      Scope it to the product section, e.g. prefix with ".main-product ".');
     }
   }
 }
