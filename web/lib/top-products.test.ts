@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { test } from 'node:test';
 
 import {
@@ -81,10 +83,23 @@ void test('config: an unset handle becomes undefined rather than an empty string
   // YAML gives null for `handle:` with no value. Treating that as "" would
   // produce a request to /products/ and a confusing 404 rather than a clear
   // "we have no URL for this product".
-  const loaded = loadTopProductsConfig();
-  const unresolved = loaded.products.filter((p) => p.handle === undefined);
-  assert.ok(unresolved.length > 0, 'expected the shipped config to have unresolved handles');
-  for (const product of unresolved) assert.equal(product.handle, undefined);
+  //
+  // Asserted against a written fixture rather than the shipped config. It used
+  // to require the real file to still contain an unresolved handle, so
+  // resolving the last one turned this parser test red — a test about parsing
+  // failing because somebody finished the merchandising data. The two are not
+  // related and should not be able to break each other.
+  const path = `${tmpdir()}/kitsch-top-products-${String(process.pid)}.yaml`;
+  writeFileSync(
+    path,
+    ['products:', '  - title: Resolved', '    handle: a-handle', '  - title: Unresolved', '    handle:', 'checks:', '  - availability'].join('\n'),
+    'utf8',
+  );
+  const loaded = loadTopProductsConfig(path);
+  rmSync(path, { force: true });
+
+  assert.equal(loaded.products[0]?.handle, 'a-handle');
+  assert.equal(loaded.products[1]?.handle, undefined);
 });
 
 void test('auditConfig: reports every product the list gives no handle for', () => {

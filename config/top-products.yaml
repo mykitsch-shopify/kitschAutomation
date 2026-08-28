@@ -25,34 +25,57 @@
 # the run fails naming the mismatch instead of quietly testing a neighbour.
 
 products:
+  # Handles below were resolved on 2026-08-28 from `npm run resolve:handles`
+  # against the live store, and cross-checked against the storefront titles in
+  # the 2026-04-28 Top 20 PDP health check.
+  #
+  # In four of these the resolver's top-ranked candidate was a NEIGHBOURING
+  # product while an exact title match sat below it — the Kojic Acid bundle
+  # ranked above the bar, the Bar Combo above the liquid Combo. Every handle
+  # here is the one whose storefront title matches exactly, not the one that
+  # scored highest, which is why `canonical_title` is filled in alongside: it
+  # is the backstop that fails the run if a handle ever points at a neighbour.
   - title: Rice Water Shampoo & Conditioner Combo for Hair Growth
-    handle: # UNRESOLVED — a combo/bundle, absent from our catalogue extract
+    handle: rice-water-shampoo-conditioner-combo-for-hair-growth
+    canonical_title: Rice Water Shampoo & Conditioner Combo for Hair Growth
   - title: Rice Water Shampoo Bar for Hair Growth
-    handle: # UNRESOLVED — candidates: rice-water-protein-shampoo-bar-bag,
-    #                     rice-water-protein-shampoo-bar-saver-bag.
-    #                     "Bar" vs "bar bag" is a different product; pick by hand.
+    handle: rice-water-protein-shampoo-bar-strengthening
+    canonical_title: Rice Water Shampoo Bar for Hair Growth
   - title: Self-Draining Soap Dish
-    handle: self-draining-soap-dish # unique match, high confidence
+    # `self-draining-soap-dish` 404s — it was a guess and it is why this product
+    # reported FAIL 404 rather than a defect. The store sells Black and
+    # Terracotta separately; the health check's top-20 names the Terracotta.
+    handle: self-draining-soap-dish-1
+    canonical_title: Terracotta Self-Draining Soap Dish
   - title: Shea Butter Exfoliating Body Wash
-    handle: # UNRESOLVED — shea-butter-solid-body-wash is "moisturizing", not
-    #                     "exfoliating"; sugar-exfoliating-body-scrub-bar is a
-    #                     scrub. Neither is clearly this product.
+    handle: shea-butter-solid-body-wash
+    canonical_title: Shea Butter Exfoliating Body Wash
   - title: Kojic Acid Hyperpigmentation Face and Body Bar
-    handle: kojic-acid-face-and-body-bar # best match by a clear margin
+    # Unchanged, and worth keeping: the resolver ranked the "+ FREE Dermaplaner"
+    # bundle above this at 0.83 to 0.67. The bundle is a different product.
+    handle: kojic-acid-face-and-body-bar
+    canonical_title: Kojic Acid Bar for Hyperpigmentation & Dark Spots
   - title: Bottle Free Beauty Travel Case
-    handle: # UNRESOLVED — nearest are "bottle-free-beauty-bar-bag-*", which are
-    #                     bar bags rather than a travel case.
+    # The handle is exact; the storefront renamed the product. Scored 0.40 for
+    # that reason alone, and the health check's top-20 confirms the new name.
+    handle: bottle-free-beauty-travel-case
+    canonical_title: 2-Compartment Travel Case - Terracotta
   - title: Rosemary Scalp & Hair Strengthening Oil With Biotin
-    handle: # UNRESOLVED — likely pre-wash-scalp-hair-oil-with-rosemary-and-biotin,
-    #                     but "pre-wash" is not in the supplied title. Confirm.
+    # LEAST CERTAIN of the ten. The store sells this oil in 10mL, 60mL and a
+    # 3-pack, all titled alike; the health check's top-20 does not say which.
+    # 60mL is the standalone. Confirm before quoting a number from this row.
+    handle: pre-wash-scalp-hair-oil-with-rosemary-and-biotin
+    canonical_title: Strengthening Rosemary & Biotin Scalp & Hair Oil - 2fl oz./60mL
   - title: Shampoo Bar Bag
-    handle: # UNRESOLVED — four equal matches (rosemary-biotin, rice-water-protein,
-    #                     castor-oil, star-wars). Genuinely ambiguous.
+    handle: bottle-free-beauty-bar-bag-blush
+    canonical_title: Shampoo Bar Bag
   - title: Rice Water Conditioner Bar for Hair Growth
-    handle: # UNRESOLVED — rice-water-conditioner-for-hair-growth is the liquid;
-    #                     rice-water-protein-conditioner-bar-strengthening is a bar.
+    handle: rice-water-protein-conditioner-bar-strengthening
+    canonical_title: Rice Water Conditioner Bar for Hair Growth
   - title: Rosemary & Biotin Volumizing Shampoo & Conditioner Combo
-    handle: # UNRESOLVED — a combo; the singles exist separately.
+    # The resolver put the Bar Combo first. This is the liquid.
+    handle: rosemary-biotin-volumizing-shampoo-conditioner-combo
+    canonical_title: Rosemary & Biotin Volumizing Shampoo & Conditioner Combo
 
 # ── What to check on each product ────────────────────────────────────────
 # Each maps to a requirement in the daily brief. Turning one off here removes
