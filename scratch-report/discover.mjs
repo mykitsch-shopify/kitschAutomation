@@ -115,9 +115,23 @@ const found = await page.evaluate(() => {
   // document reported the same four prices on four different products and on
   // the cart — they were an upsell widget that sits early in the DOM on every
   // page. A price that is not this product's is worse than no price at all.
+  // Widest product scope first, and tried in order.
+  //
+  // `closest()` with a comma list returns the NEAREST match, not the first
+  // listed — so asking for `.main-product, [class*="product__info-wrapper"]`
+  // got the wrapper, which sits inside .main-product and excludes the buy
+  // button and the bundle builder. On a BYOB page that made the report look
+  // like the product had no options when the search had simply been fenced
+  // out of the part of the page holding them.
   const h1 = document.querySelector('h1');
-  const scope =
-    h1?.closest('.main-product, [class*="product__info-wrapper"], main') ?? document.body;
+  let scope = document.body;
+  for (const candidate of ['.main-product', 'main', '[class*="product__info-wrapper"]']) {
+    const found = h1?.closest(candidate) ?? document.querySelector(candidate);
+    if (found !== null && found !== undefined) {
+      scope = found;
+      break;
+    }
+  }
 
   const all = (selector) => Array.from(scope.querySelectorAll(selector));
   const money = /(?:[$£€]\s?\d|\d+[.,]\d{2})/u;
@@ -139,6 +153,21 @@ const found = await page.evaluate(() => {
       .slice(0, 8)
       .map(describe),
     struck: [...all('s'), ...all('del'), ...all('[class*="compare"]')].slice(0, 6).map(describe),
+    // Bundle-builder / BYOB slots. Named separately because "0 option(s)" on
+    // every BYOB flow is the single largest block of findings in the
+    // ad-landing audit, and it is worth knowing whether that is a wrong
+    // selector or a genuinely empty builder before anyone acts on it.
+    options: [
+      ...all('[class*="bundle-builder"]'),
+      ...all('[class*="byob"]'),
+      ...all('[class*="builder__"]'),
+      ...all('[data-bundle]'),
+      ...all('fieldset input[type="radio"]'),
+      ...all('fieldset input[type="checkbox"]'),
+    ]
+      .filter((el, index, list) => list.indexOf(el) === index)
+      .slice(0, 8)
+      .map(describe),
   };
 });
 
@@ -159,6 +188,15 @@ for (const item of found.prices) out(`    ${item?.suggested ?? ''}   "${item?.te
 out('');
 out('  struck-through / compare-at candidates');
 for (const item of found.struck) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+out('');
+out('  bundle-builder / BYOB option candidates');
+if (found.options.length === 0) {
+  out('    none — the builder is genuinely absent from the DOM, not merely');
+  out('    unmatched by config/ad-landing.yaml. Either it renders only after an');
+  out('    interaction, or this page has no builder at all.');
+} else {
+  for (const item of found.options) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+}
 out('');
 
 await browser.close();
