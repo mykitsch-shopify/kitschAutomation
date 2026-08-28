@@ -1,0 +1,84 @@
+# Daily health-check re-verification.
+#
+# Every entry is a claim someone made in a QA report. The daily job is to find
+# out whether it is still true, and to raise a ticket only for the ones that
+# are. Adding tomorrow's report is an edit to this file, not a code change.
+#
+# The issues below are from the 2026-04-28 Top 20 PDP health check. Replace or
+# extend them as reports arrive; `source` and `reported` travel into the ticket
+# so a developer can always see which report a claim came from and how old it
+# is.
+
+# Where to re-check. The brief asks for Live and Fuego, and the comparison is
+# the point: present on one and absent on the other means a fix is built and
+# not shipped, which is a different conversation from either half alone.
+#
+# base_url may name an environment variable with ${...} so a staging password
+# or a preview host never lands in the repository.
+environments:
+  - name: live
+    base_url: ${KITSCH_BASE_URL}
+  - name: fuego
+    base_url: ${KITSCH_FUEGO_URL}
+    # Skipped rather than failed when the variable is unset: a run against Live
+    # alone is still worth having, and pretending Fuego was checked is not.
+    optional: true
+
+# Pages a sitewide claim is checked on. A theme-level defect is claimed to be
+# everywhere, so it is enough to disprove it on a sample — but a sample of one
+# is how "fixed on the homepage" becomes "fixed".
+sitewide_sample:
+  - /
+  - /collections/best-sellers
+  - /products/coastal-cottage-hair-perfume-duo
+  - /products/rice-water-shampoo-conditioner-bar-combo
+  - /cart
+
+issues:
+  - id: HC-2026-04-28-1
+    title: Quick-view close button missing translation key
+    priority: P2
+    source: Kitsch Top 20 PDP Health Check
+    reported: 2026-04-28
+    # Sitewide: no paths, so the sample above is used.
+    paths: []
+    # The literal that identifies THIS defect. Matching on it is what keeps
+    # "the reported issue is still there" apart from "the page has some other
+    # marker now" — the second must never raise a ticket describing the first.
+    needle: en.products.product.quick_view.close
+
+  - id: HC-2026-04-28-2
+    title: Quick-view sr-only div — product title not substituted
+    priority: P2
+    source: Kitsch Top 20 PDP Health Check
+    reported: 2026-04-28
+    paths: []
+    needle: '{{ product_title }}'
+
+# ─────────────────────────────────────────────────────────────────────────
+# Report presentation.
+#
+# Check names are written for whoever has to fix the thing. The people the
+# report is FOR mostly do not work on this repo, and "unbound_variable" tells
+# them nothing. These map each check onto a business area and a sentence, which
+# is what Allure's Features view and each test's page show.
+# ─────────────────────────────────────────────────────────────────────────
+features:
+  translation_missing: Accessibility & content
+  unbound_variable: Accessibility & content
+  issue_recheck: Report validation
+
+explanations:
+  translation_missing: >-
+    No locale key reached the customer unresolved. Shopify renders the literal
+    "Translation missing: <key>" when a translation is absent at request time;
+    in an aria-label it is read aloud by a screen reader and is invisible on
+    screen, so it can survive for months without a single complaint.
+  unbound_variable: >-
+    No template variable reached the customer unsubstituted. A "{{ product_title }}"
+    that Liquid never bound is announced literally by a screen reader and, in
+    visible copy, is seen by every shopper on the page.
+  issue_recheck: >-
+    An issue from a previous QA report was re-checked against this environment
+    today. Passing means it could not be reproduced; failing means it is still
+    present and a ticket has been drafted.

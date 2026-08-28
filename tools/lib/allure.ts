@@ -43,6 +43,23 @@ export type AllureCase = {
   /** Why it failed, or why it could not be checked. */
   readonly detail?: string;
   readonly parameters?: readonly { readonly name: string; readonly value: string }[];
+  /**
+   * The business area this check belongs to — "Pricing", "Promotions",
+   * "Accessibility". Drives Allure's Features view, which is where a reader
+   * who does not work here starts.
+   *
+   * Falls back to the suite's own feature, then to the suite name, so an audit
+   * that has not been given one still lands somewhere sensible.
+   */
+  readonly feature?: string;
+  /**
+   * What passing this check would prove, in a sentence, for someone who has
+   * never seen this repo. Shown on the test's page in the report.
+   *
+   * A check named "compare_at_still_rendered" is meaningless to the person the
+   * report is for, and they are the reason the report exists.
+   */
+  readonly why?: string;
 };
 
 export type SuiteMeta = {
@@ -53,7 +70,18 @@ export type SuiteMeta = {
   /** The storefront these results are about. */
   readonly target: string;
   readonly resultsDir: string;
+  /**
+   * The programme every suite belongs to. One value across the whole report,
+   * so Allure's Behaviors view opens on a single tree rather than eight
+   * unrelated roots.
+   */
+  readonly epic?: string;
+  /** Default business area for cases that do not name their own. */
+  readonly feature?: string;
 };
+
+/** The programme name, unless a suite says otherwise. */
+const DEFAULT_EPIC = 'Kitsch storefront QA';
 
 /**
  * Our severity to Allure's. Allure's scale is fixed and its top level is
@@ -143,12 +171,21 @@ export const writeAllureCases = (meta: SuiteMeta, cases: readonly AllureCase[]):
       // Stable across runs, so Allure can show this check's history rather
       // than treating every night as a brand new test.
       historyId: `${meta.suite}|${item.item}|${item.name}`,
-      description: meta.description,
+      // Suite purpose first, then what this specific check proves. A reader
+      // landing on one failed case should not have to find the suite to learn
+      // what was being asked.
+      description:
+        item.why === undefined ? meta.description : `${item.why}\n\n${meta.description}`,
       start: now,
       labels: [
         { name: LabelName.PARENT_SUITE, value: meta.suite },
         { name: LabelName.SUITE, value: item.item },
-        { name: LabelName.FEATURE, value: meta.suite },
+        // Behaviors view: Epic → Feature → Story reads as
+        // programme → business area → scenario. Feature used to repeat the
+        // suite name, which made that whole view a second copy of the suite
+        // tree and told a reader nothing they did not already have.
+        { name: LabelName.EPIC, value: meta.epic ?? DEFAULT_EPIC },
+        { name: LabelName.FEATURE, value: item.feature ?? meta.feature ?? meta.suite },
         { name: LabelName.STORY, value: item.name },
         { name: LabelName.LAYER, value: 'audit' },
         { name: LabelName.FRAMEWORK, value: 'kitsch-audit' },
@@ -197,9 +234,23 @@ export const buildMatrix = <TFinding>(options: {
   readonly detailOf: (finding: TFinding) => string;
   /** Checks disabled by config: reported as skipped, never as passed. */
   readonly skipped?: readonly string[];
+  /** Business area for a check, for the report's Features view. */
+  readonly featureOf?: (check: string) => string | undefined;
+  /** What passing this check proves, for a reader who has never seen it. */
+  readonly whyOf?: (check: string) => string | undefined;
 }): readonly AllureCase[] => {
   const skipped = new Set(options.skipped ?? []);
   const cases: AllureCase[] = [];
+
+  /** Attached to every case for a check, whatever its status. */
+  const labelling = (check: string): Pick<AllureCase, 'feature' | 'why'> => {
+    const feature = options.featureOf?.(check);
+    const why = options.whyOf?.(check);
+    return {
+      ...(feature === undefined ? {} : { feature }),
+      ...(why === undefined ? {} : { why }),
+    };
+  };
 
   // Findings whose item or check is outside the matrix — config problems,
   // unresolved handles, run-level failures. Dropping them would lose real
@@ -213,14 +264,14 @@ export const buildMatrix = <TFinding>(options: {
   for (const item of options.items) {
     for (const check of options.checks) {
       if (skipped.has(check)) {
-        cases.push({ name: check, item, status: 'skipped' });
+        cases.push({ name: check, item, status: 'skipped', ...labelling(check) });
         continue;
       }
       const hits = options.findings.filter(
         (finding) => options.itemOf(finding) === item && options.checkOf(finding) === check,
       );
       if (hits.length === 0) {
-        cases.push({ name: check, item, status: 'passed' });
+        cases.push({ name: check, item, status: 'passed', ...labelling(check) });
         continue;
       }
       // Worst severity wins the case; every detail is kept in the message so
@@ -235,6 +286,7 @@ export const buildMatrix = <TFinding>(options: {
         status: severity === 'harness' ? 'broken' : 'failed',
         severity,
         detail: hits.map((finding) => options.detailOf(finding)).join(' | '),
+        ...labelling(check),
       });
     }
   }
@@ -247,6 +299,7 @@ export const buildMatrix = <TFinding>(options: {
       status: severity === 'harness' ? 'broken' : 'failed',
       severity,
       detail: options.detailOf(finding),
+      ...labelling(options.checkOf(finding)),
     });
   }
 

@@ -128,6 +128,13 @@ const STAGES: readonly Stage[] = [
     blocking: true,
   },
   {
+    name: 'control: health-check',
+    script: 'test:health-check-detection',
+    tier: 'offline',
+    risk: 'an issue from a QA report would be reported as fixed without being re-checked',
+    blocking: true,
+  },
+  {
     name: 'control: accessibility',
     script: 'test:a11y-detection',
     tier: 'offline',

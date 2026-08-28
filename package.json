@@ -13,11 +13,13 @@
     "audit:a11y": "tsx tools/a11y-audit.ts",
     "audit:ad-landing": "tsx tools/ad-landing-audit.ts",
     "audit:compare-at": "tsx tools/compare-at-audit.ts",
+    "audit:health-check": "tsx tools/health-check-audit.ts",
     "audit:top-products": "tsx tools/top-products-audit.ts",
     "audit:translation-backlog": "tsx tools/translation-backlog-audit.ts",
     "compare-at:fixture": "tsx fixtures/compare-at/server.ts",
     "daily": "tsx tools/daily.ts",
     "gate:release": "tsx tools/release-gate.ts",
+    "health-check:fixture": "tsx fixtures/health-check/server.ts",
     "hooks:install": "tsx tools/install-hooks.ts",
     "i18n:parity": "tsx i18n/run-parity.ts",
     "lint": "eslint .",
@@ -43,6 +45,7 @@
     "test:desktop:headed": "playwright test --project=desktop-chrome --headed",
     "test:desktop:safari": "playwright test --project=desktop-safari",
     "test:detection": "tsx i18n/verify-detection.ts",
+    "test:health-check-detection": "tsx tools/verify-health-check.ts",
     "test:i18n": "playwright test --project=i18n-mobile",
     "test:kits": "playwright test --project=mobile-chrome --grep @kits",
     "test:mobile-web": "playwright test --project=mobile-chrome",
@@ -53,7 +56,7 @@
     "top-products:fixture": "tsx fixtures/top-products/server.ts",
     "translation-backlog:fixture": "tsx fixtures/translation-backlog/server.ts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection && npm run test:ad-landing-detection && npm run test:translation-backlog-detection && npm run test:a11y-detection"
+    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection && npm run test:ad-landing-detection && npm run test:translation-backlog-detection && npm run test:a11y-detection && npm run test:health-check-detection"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
