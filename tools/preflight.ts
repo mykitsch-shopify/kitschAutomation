@@ -92,18 +92,43 @@ try {
   const message = (error as Error).message.split('\n')[0] ?? '';
   write(`  UNREACHABLE    ${message}`);
   write('');
-  write('  A tunnel or connection error here is the network, not the store.');
-  write('  Nothing reached the site, so no amount of browser configuration —');
-  write('  stealth plugins, user agents, headful mode — changes the result.');
-  write('');
-  write('  On an ordinary machine this should not happen: the storefront is a');
-  write('  public site and needs no VPN, allowlist or credential. Seeing it');
-  write('  means something is intercepting outbound traffic — a sandbox or CI');
-  write('  runner with a restricted egress policy is the usual cause. Run the');
-  write('  same command somewhere with normal internet access.');
-  write('');
-  write('  Note this is NOT the store refusing automated traffic. That looks');
-  write('  different: the page loads and returns an HTTP 403 or a challenge.');
+
+  // Which advice is right turns entirely on where we were pointed.
+  //
+  // This used to print the egress-policy explanation unconditionally, so a
+  // refused connection to 127.0.0.1 — the default when KITSCH_BASE_URL is
+  // unset, and the fixture is simply not running — was answered with "the
+  // storefront is a public site and needs no VPN" and "run this somewhere with
+  // normal internet access". Both true of mykitsch.com, neither of anything.
+  // A confident diagnosis of the wrong problem costs more than no diagnosis.
+  const loopback = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])/u.test(baseURL);
+
+  if (loopback) {
+    write('  This is the LOCAL FIXTURE, not a storefront. Nothing is listening on');
+    write(`  ${baseURL}, which usually means one of two things:`);
+    write('');
+    write('    1. You meant to check the real store, and KITSCH_BASE_URL is unset.');
+    write('         Windows:  set "KITSCH_BASE_URL=https://www.mykitsch.com"');
+    write('         POSIX:    export KITSCH_BASE_URL=https://www.mykitsch.com');
+    write('');
+    write('    2. You meant the fixture, and it is not started:');
+    write('         npm run storefront');
+    write('');
+    write('  Nothing about the network or the store is implicated either way.');
+  } else {
+    write('  A tunnel or connection error here is the network, not the store.');
+    write('  Nothing reached the site, so no amount of browser configuration —');
+    write('  stealth plugins, user agents, headful mode — changes the result.');
+    write('');
+    write('  On an ordinary machine this should not happen: the storefront is a');
+    write('  public site and needs no VPN, allowlist or credential. Seeing it');
+    write('  means something is intercepting outbound traffic — a sandbox or CI');
+    write('  runner with a restricted egress policy is the usual cause. Run the');
+    write('  same command somewhere with normal internet access.');
+    write('');
+    write('  Note this is NOT the store refusing automated traffic. That looks');
+    write('  different: the page loads and returns an HTTP 403 or a challenge.');
+  }
 }
 
 // ── 2 & 3. Handles and selectors ──────────────────────────────────────────
