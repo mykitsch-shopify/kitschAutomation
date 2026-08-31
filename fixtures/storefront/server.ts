@@ -15,6 +15,7 @@ import {
   NO_DIVERGENCE,
   SEEDED_DIVERGENCE,
   kitByHandle,
+  cartLines,
   kitCart,
   kitOrderSummary,
   kitPdp,
@@ -484,8 +485,41 @@ const parseRoute = (url: string): Route => {
   return { locale, path: `/${rest.join('/')}`, query: parsed.searchParams };
 };
 
-const render = (route: Route): { readonly status: number; readonly body: string } => {
+type Rendered = { readonly status: number; readonly body: string; readonly json?: boolean };
+
+const render = (route: Route): Rendered => {
   const { locale, path } = route;
+
+  // Shopify's own cart endpoint, which the welcome-kit spec reads to tell
+  // "nothing was added" apart from "the cart selectors cannot see it". Without
+  // it here that branch would ship to a live run never having executed.
+  //
+  // Built from `cartLines`, the same function the rendered cart uses, so the
+  // JSON and the DOM cannot drift apart — a fixture where they disagreed would
+  // trip the very check this exists to exercise.
+  if (path === '/cart.js') {
+    const kitInCart = kitByHandle(route.query.get('kit') ?? '');
+    const lines =
+      kitInCart === undefined
+        ? []
+        : cartLines(
+            kitInCart,
+            divergenceFor(kitInCart.handle),
+            route.query.get('removed') === '1',
+          );
+    return {
+      status: 200,
+      json: true,
+      body: JSON.stringify({
+        item_count: lines.length,
+        items: lines.map((item) => ({
+          title: item.title,
+          quantity: 1,
+          line_price: Math.round(Number(item.price.replace(/[^0-9.]/gu, '')) * 100),
+        })),
+      }),
+    };
+  }
 
   if (path === '/' || path === '/index.html') {
     return { status: 200, body: page(locale, 'meta.home_title', 'meta.home_description', homeMain(locale)) };
@@ -560,11 +594,11 @@ const render = (route: Route): { readonly status: number; readonly body: string 
 };
 
 const handler = (request: IncomingMessage, response: ServerResponse): void => {
-  const { status, body } = render(parseRoute(request.url ?? '/'));
+  const { status, body, json } = render(parseRoute(request.url ?? '/'));
   response.writeHead(status, {
     // Declared explicitly. A fixture that got this wrong would manufacture
     // the very mojibake the suite is meant to detect.
-    'Content-Type': 'text/html; charset=utf-8',
+    'Content-Type': json === true ? 'application/json; charset=utf-8' : 'text/html; charset=utf-8',
     'Cache-Control': 'no-store',
   });
   response.end(body);

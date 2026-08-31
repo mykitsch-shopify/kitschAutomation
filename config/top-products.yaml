@@ -190,9 +190,31 @@ selectors:
   # per-alternative counts, so the next run against the store says whether
   # `.first()` is the product's own price or one of its components'.
   compare_at: '[data-testid="pdp-compare-at"], .main-product s.comp-price__value, .main-product s.bundle-price__compare, .main-product .product__price--compare'
-  description: '[data-testid="pdp-description"], .main-product .product__description, .main-product .product-single__description'
-  specifications: '[data-testid="pdp-specs"], .main-product .product__specs, .main-product .product-details__accordion'
-  image: '[data-testid="pdp-image"], .main-product .product__media img, .main-product .product-single__photo img'
+  # These three matched ZERO on all ten products, on every alternative, before
+  # 2026-08-31 — not a near miss. The generic Shopify class names the config
+  # shipped with are simply not this theme's, so they are replaced rather than
+  # kept alongside: a dead alternative in a union adds nothing and implies a
+  # coverage that was never there.
+  #
+  # Read off /products/self-draining-soap-dish-1 (scratch-report/discover.mjs).
+  # One ordinary PDP is enough to map from because all ten failed identically,
+  # but that is one product — the next preflight against the store is what
+  # confirms these hold across the list.
+  #
+  # `.product__excerpt` is the only prose block on the page that is copy rather
+  # than a price or quantity widget. Whether it clears `min_description_chars`
+  # (80) is NOT yet known: the discovery preview truncates at 60 characters and
+  # the text was still running. discover.mjs now prints the full length, so the
+  # next run says. If it falls short, the honest fix is the threshold or the
+  # check, not a selector pointed at something longer and less relevant.
+  description: '[data-testid="pdp-description"], .main-product .product__excerpt'
+  # `.accordion-item` holds "Ingredients" on this theme. Deliberately not
+  # `[class*="detail"]`, which is loose enough here to match gallery images.
+  specifications: '[data-testid="pdp-specs"], .main-product .accordion-item'
+  # The gallery slides. `img.object-cover` carries the same photographs at
+  # different crops, so including it would double the count for an audit whose
+  # job is to confirm at least one image exists and that its bytes load.
+  image: '[data-testid="pdp-image"], .main-product img.object-contain'
   video: '[data-testid="pdp-video"], .main-product .product__media video, .main-product video'
   sold_out: '[data-testid="sold-out"], .main-product .product-form__submit[disabled], .main-product .price--sold-out'
   add_to_cart: '[data-testid="add-to-cart"], .main-product .bundle-buy-button, .main-product .product-form__submit, .main-product button[name="add"]'

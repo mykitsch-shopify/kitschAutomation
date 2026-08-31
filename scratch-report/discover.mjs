@@ -429,6 +429,13 @@ const found = await page.evaluate(() => {
       suggested,
       classes: classes.join(' '),
       text: (el.textContent ?? '').trim().slice(0, 60),
+      // The full length, because the preview above is truncated at 60 and the
+      // audit's thresholds are 80 characters for a description and 40 for a
+      // specifications block. A candidate that reads like copy in a 60-char
+      // preview can still fall under the bar and make every product report
+      // `description_missing` — a major finding, on ten products, caused by
+      // picking a selector nobody could measure.
+      chars: (el.textContent ?? '').trim().length,
       ancestors,
     };
   };
@@ -509,6 +516,11 @@ const found = await page.evaluate(() => {
       ...all('[data-testid*="spec"]'),
     ]
       .filter((el, index, list) => list.indexOf(el) === index)
+      // Text only. `[class*="detail"]` is loose enough to catch gallery images
+      // on this theme, and against the live soap-dish PDP it offered seven
+      // <img> elements as candidates for a specifications block — a role whose
+      // whole check is "is there at least 40 characters of text here".
+      .filter((el) => (el.textContent ?? '').trim().length > 0)
       .slice(0, 8)
       .map(describe),
     // Images are reported with their src, because "an img matched" is not the
@@ -598,13 +610,17 @@ out('  struck-through / compare-at candidates');
 for (const item of found.struck) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
 out('');
 out('  prose blocks — candidates for description  (top-products.yaml)');
+out('  min_description_chars is 80 — anything under that reports as missing');
 if (found.description.length === 0) {
   out('    none — no block of 80+ characters of copy inside the product section.');
 } else {
-  for (const item of found.description) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+  for (const item of found.description) {
+    out(`    ${String(item?.chars ?? 0).padStart(5)} chars  ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+  }
 }
 out('');
 out('  details / accordions — candidates for specifications  (top-products.yaml)');
+out('  min_specification_chars is 40');
 if (found.specifications.length === 0) {
   out('    none matched by shape — no <details>, accordion or ingredients');
   out('    block. Check the prose list above before concluding there is none:');
@@ -613,7 +629,9 @@ if (found.specifications.length === 0) {
   out('    config/top-products.yaml "checks" rather than leave it reporting a');
   out('    gap nobody can close.');
 } else {
-  for (const item of found.specifications) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+  for (const item of found.specifications) {
+    out(`    ${String(item?.chars ?? 0).padStart(5)} chars  ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+  }
 }
 out('');
 out('  images — candidates for image  (top-products.yaml; src shown, not text)');

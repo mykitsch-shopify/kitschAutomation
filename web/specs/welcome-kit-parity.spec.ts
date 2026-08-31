@@ -103,6 +103,45 @@ const assertIdentity = async (page: Page, kit: KitSpec): Promise<void> => {
  * the fixture's `?kit=` parameter and serve a generic cart, which would break
  * the detection control while looking like it still worked.
  */
+/**
+ * What the STORE says is in the cart, rather than what the page looks like.
+ *
+ * Shopify serves `/cart.js` as JSON on every storefront, and it is the only
+ * thing that separates the two failures an empty-looking cart can mean:
+ *
+ *   0 items                    nothing was added. Against mykitsch.com this is
+ *                              the real answer for the kit PDPs — pressing
+ *                              `.bundle-buy-button` opened a builder and put
+ *                              nothing in the cart. No selector fixes it.
+ *   items, but no lines found  everything was added and `cart_line` does not
+ *                              fit this theme. A config edit fixes it.
+ *
+ * Returns undefined where `/cart.js` is absent — the local fixture does not
+ * serve it — and the caller then reports without it rather than inventing a
+ * number.
+ */
+const serverCartCount = async (page: Page): Promise<number | undefined> =>
+  page
+    .evaluate(async () => {
+      // The current page's query is carried across. A real storefront keys the
+      // cart to the session and ignores unknown parameters, so this is a no-op
+      // there; the local fixture is stateless and keys its cart by `?kit=`, and
+      // fetching a bare `/cart.js` made it answer "empty" about a cart that had
+      // two lines in it — which would have exercised the wrong branch of the
+      // diagnosis below and passed for a test of it.
+      const response = await fetch(`/cart.js${location.search}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) return undefined;
+      const body: unknown = await response.json();
+      const count =
+        typeof body === 'object' && body !== null
+          ? (body as { item_count?: unknown }).item_count
+          : undefined;
+      return typeof count === 'number' ? count : undefined;
+    })
+    .catch(() => undefined);
+
 const settleOnCart = async (page: Page): Promise<void> => {
   const onCart = (): boolean => new URL(page.url()).pathname.replace(/\/$/u, '').endsWith('/cart');
 
@@ -207,10 +246,23 @@ const profileKit = async (
   // useless: it reads as a hung page when it means the cart selectors do not
   // fit this theme. Three tests spent 54 seconds each arriving at the wrong
   // description of the same problem.
-  expect(
-    lineCount,
-    `nothing matched "${config.selectors.cart_line}" on the cart after adding ${kit.name}. Either the add-to-cart did not put anything in the cart, or cart_line does not fit this theme — every dimension is read from the cart, so nothing below could be measured. Map the cart selectors in config/kits.yaml "selectors": node scratch-report/discover.mjs --add ${baseCartProbeUrl(kit.handle)}`,
-  ).toBeGreaterThan(0);
+  if (lineCount === 0) {
+    // Ask the store which of the two this is, rather than offering both and
+    // leaving the reader to guess. They have different owners: one is a config
+    // edit, the other is a product that cannot be added to a cart at all.
+    const inStore = await serverCartCount(page);
+    const diagnosis =
+      inStore === undefined
+        ? `"${config.selectors.cart_line}" matched nothing, and /cart.js did not answer, so it cannot be said here whether the cart is empty or merely unreadable.`
+        : inStore === 0
+          ? `the store reports an EMPTY cart (/cart.js item_count 0), so pressing "${config.selectors.add_to_cart}" added nothing. This is not a selector problem and no config edit fixes it — on this theme the buy control on a bundle PDP opens a builder, and pressing it is not the whole flow.`
+          : `the store reports ${String(inStore)} item(s) in the cart (/cart.js), so the add worked and "${config.selectors.cart_line}" does not fit this theme. Map the cart selectors in config/kits.yaml "selectors".`;
+
+    expect(
+      lineCount,
+      `no cart lines were read after adding ${kit.name}, so no dimension below could be measured. ${diagnosis} To see this theme's cart markup: node scratch-report/discover.mjs --add ${baseCartProbeUrl(kit.handle)}`,
+    ).toBeGreaterThan(0);
+  }
 
   const cartPrices: string[] = [];
   let freeLinesWithRemove = 0;

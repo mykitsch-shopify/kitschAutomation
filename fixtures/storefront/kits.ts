@@ -203,21 +203,37 @@ ${gifts
     )}</a>`;
 };
 
-export const kitCart = (
+/**
+ * Which items are in the cart, as data.
+ *
+ * Shared by the rendered cart and by `/cart.js`, and it has to be, because the
+ * spec now reads both: it asks the store for an item count to tell "nothing was
+ * added" apart from "the selectors cannot see it". A fixture whose JSON and DOM
+ * disagreed would make that check fire on a cart that is perfectly fine.
+ *
+ * §8 — removing the qualifying product takes the free kit with it, unless this
+ * kit strands it.
+ */
+export const cartLines = (
   kit: Kit,
   divergence: KitDivergence,
-  view: KitRender,
   qualifyingRemoved: boolean,
-): string => {
-  // §8 — removing the qualifying product takes the free kit with it, unless
-  // this kit strands it.
-  const lines = kit.items.filter((item) => {
+): readonly KitItem[] =>
+  kit.items.filter((item) => {
     if (item.free) {
       if (divergence.notAutoAdded) return false;
       return qualifyingRemoved ? divergence.strandedOnRemoval : true;
     }
     return !qualifyingRemoved;
   });
+
+export const kitCart = (
+  kit: Kit,
+  divergence: KitDivergence,
+  view: KitRender,
+  qualifyingRemoved: boolean,
+): string => {
+  const lines = cartLines(kit, divergence, qualifyingRemoved);
 
   const subtotal = lines
     .filter((item) => !item.free || divergence.leakedPrice)

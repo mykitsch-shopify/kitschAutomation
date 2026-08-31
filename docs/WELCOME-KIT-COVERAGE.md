@@ -227,28 +227,48 @@ Until they are mapped the spec fails on the reference kit naming the selector,
 rather than reporting parity. That is the intended behaviour — it will not
 report agreement it did not observe.
 
-### The add-to-cart click may not add anything
+### Pressing add-to-cart on a kit PDP adds nothing — confirmed
 
 `add_to_cart` on a kit PDP is `.bundle-buy-button`, a DIV. Pressed against
-mykitsch.com on 2026-08-31 it **opened a drawer**, and `/cart` was empty
-afterwards.
+mykitsch.com on 2026-08-31 it opened a drawer, and **the store's own cart
+endpoint reported `item_count: 0`**.
 
-Stated precisely, because the distinction matters: what was observed is that
-the cart page rendered no lines. That is consistent with nothing having been
-added, and also with the cart selectors not fitting — the two are
-indistinguishable from the DOM alone, which is the whole failure this suite
-exists to avoid. `scratch-report/discover.mjs` now reads `/cart.js`, the
-store's own JSON cart, so the next run says which it is:
+That is not inferred from an empty-looking page. `/cart.js` is Shopify's JSON
+cart and it is the only thing that separates the two failures an empty-looking
+cart can mean — nothing was added, or everything was added and `cart_line` does
+not fit. The DOM cannot tell them apart, and both the discovery script and the
+spec now ask the store rather than guessing:
 
 | `/cart.js` | DOM lines | Verdict |
 |---|---|---|
 | `item_count: 0` | — | Nothing was added. A product or flow problem; no selector fixes it. |
-| `item_count: >0` | none found | Everything was added and the cart selectors do not fit. A mapping problem. |
+| `item_count: >0` | none found | Everything was added and the cart selectors do not fit. A config edit fixes it. |
 
-If it is the first, the parity spec's model — press add, read the cart — does
-not hold for these products, and the suite needs the builder flow driven
-before a cart exists to compare. That is a design change, not a config edit,
-and it is the next decision to make about this suite.
+**So the parity spec's model does not hold for these products.** It presses
+add-to-cart and reads the resulting cart; on this theme pressing the control
+opens a bundle builder and pressing it is not the whole flow. Every compared
+dimension is read from the cart, so until a cart exists there is nothing to
+compare — and the spec now fails saying exactly that, naming `item_count: 0`
+rather than blaming a selector.
+
+Three ways forward, and the choice is a real one:
+
+1. **Drive the builder.** Open the drawer, make whatever selections it
+   requires, then add. Highest fidelity — it is what a customer does — and the
+   most work, and the selections themselves become configuration that will
+   drift.
+2. **Add by variant, skipping the PDP.** A Shopify cart permalink
+   (`/cart/<variantId>:1`) or `/cart/add.js` puts the kit in the cart directly.
+   The comparison is then genuinely about cart behaviour, which is what the
+   requirement asks about; what is given up is any assurance that a customer
+   *can* reach that cart through the page.
+3. **Say the suite cannot check these products** and report it, rather than
+   report a parity verdict nobody can stand behind.
+
+Option 2 is the smallest change that restores a real verdict, and its cost is
+worth stating plainly: it would no longer notice that the buy button does not
+work — which, on this evidence, is the single most interesting thing about
+these pages. Whatever is chosen, that finding belongs with merchandising now.
 
 Until that run happens, **this document cannot tell you whether the summer and
 spring kits currently match winter.** It tells you the check exists, covers
