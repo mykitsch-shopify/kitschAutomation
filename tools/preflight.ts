@@ -188,7 +188,13 @@ if (reachable) {
       // are scoped. `pdp_compare_at` scoped to `.main-product` still reported
       // 13 for exactly that reason, and nothing in the output said which of
       // the four alternatives was responsible.
-      if (count === 0 || tooMany) {
+      // Also shown when a singular selector matches more than one without
+      // crossing the "too many" bar. Three matches for "the price" is not a
+      // failure — the spec takes `.first()` — but it is worth knowing which
+      // three, because whether `.first()` is the right one is not visible from
+      // a total, and a sticky bar or a variant repeat is a different story
+      // from a carousel leak.
+      if (count === 0 || tooMany || (SINGULAR.has(name) && count > 1)) {
         for (const alternative of selector.split(',').map((part) => part.trim())) {
           if (alternative === '') continue;
           const each = await page.locator(alternative).count();

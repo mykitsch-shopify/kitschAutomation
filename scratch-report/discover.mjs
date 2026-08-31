@@ -168,6 +168,46 @@ const found = await page.evaluate(() => {
       .filter((el, index, list) => list.indexOf(el) === index)
       .slice(0, 8)
       .map(describe),
+    // Repeated sibling blocks inside the product section.
+    //
+    // This is how a "what's in the kit" list looks in the DOM whatever it is
+    // called: siblings sharing a class signature. Two is enough — the
+    // reference kit lists exactly two items, and a threshold of three reported
+    // "this theme does not list kit contents" about a page that does. `kit_item` is
+    // the last unmapped role and no guess at its class name has landed, so
+    // instead of guessing again this reports every repeating structure and
+    // lets a person recognise the right one.
+    repeated: (() => {
+      const groups = new Map();
+      for (const element of Array.from(scope.querySelectorAll('*'))) {
+        const parent = element.parentElement;
+        if (parent === null) continue;
+        // Keyed by class OR data-testid. Requiring a class reported "this
+        // theme does not list kit contents" against the fixture, whose kit
+        // items carry a data-testid and nothing else — a probe blind to the
+        // one markup style this repo already uses everywhere.
+        const testid = element.getAttribute('data-testid');
+        const own =
+          testid !== null
+            ? `[data-testid="${testid}"]`
+            : element.classList.length > 0
+              ? `${element.tagName.toLowerCase()}.${element.classList[0] ?? ''}`
+              : '';
+        if (own === '') continue;
+        const parentTestid = parent.getAttribute('data-testid');
+        const parentName =
+          parentTestid !== null
+            ? `[data-testid="${parentTestid}"]`
+            : `${parent.tagName.toLowerCase()}${parent.classList.length > 0 ? `.${parent.classList[0] ?? ''}` : ''}`;
+        const key = `${parentName}>${own}`;
+        groups.set(key, (groups.get(key) ?? 0) + 1);
+      }
+      return Array.from(groups.entries())
+        .filter(([, count]) => count >= 2)
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 8)
+        .map(([key, count]) => `${String(count)}x  ${key.split('>')[1] ?? key}   (inside ${key.split('>')[0] ?? ''})`);
+    })(),
   };
 });
 
@@ -188,6 +228,14 @@ for (const item of found.prices) out(`    ${item?.suggested ?? ''}   "${item?.te
 out('');
 out('  struck-through / compare-at candidates');
 for (const item of found.struck) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+out('');
+out('  repeated blocks — candidates for kit_item');
+if (found.repeated.length === 0) {
+  out('    none — nothing inside the product section repeats, so this theme');
+  out('    does not list the kit contents on the PDP.');
+} else {
+  for (const line of found.repeated) out(`    ${line}`);
+}
 out('');
 out('  bundle-builder / BYOB option candidates');
 if (found.options.length === 0) {
