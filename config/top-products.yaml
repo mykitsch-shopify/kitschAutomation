@@ -142,20 +142,50 @@ discounts:
   #   note: 'Confirmed with merchandising 2026-08-21.'
 
 # ── Selectors ────────────────────────────────────────────────────────────
-# testid first, then plausible theme classes; first match wins. Mapping this
-# onto the live theme is an edit here, not a code change. The audit reports an
-# unmatched selector as a harness finding, never as a product defect.
+# testid first, then the theme's own classes. Mapping this onto the live theme
+# is an edit here, not a code change. The audit reports an unmatched selector
+# as a harness finding, never as a product defect.
+#
+# NOT a fallback chain, and this file used to say it was ("first match wins").
+# A comma-separated CSS selector is a UNION — every alternative matches at
+# once. So one unscoped entry drags in the whole page however carefully the
+# others are written, and the count is the sum, not the first hit.
+#
+# That is not hypothetical here. `.price-item--regular` sat unscoped in
+# `compare_at` and matched 13 elements on one PDP of this theme and 21 on
+# another: it was picking up every recommendation and upsell card on the page.
+# A selector that matches twenty-one things reports twenty-one defects that are
+# not there.
+#
+# The practical rule: every alternative must be scoped, and an alternative that
+# cannot be scoped does not belong in the list.
+#
+# ── Where the `.main-product` entries came from ──────────────────────────
+# Read off mykitsch.com on 2026-08-28 and 2026-08-31, from the welcome-kit
+# PDPs (scratch-report/discover.mjs). `.main-product` is this theme's product
+# section wrapper and `h1.font-heading`, `span.text-red-700`,
+# `s.comp-price__value` and `.bundle-buy-button` are what it renders.
+#
+# Read that as evidence about BUNDLE pages, because that is where it was
+# taken. The ten products below are ordinary PDPs and may differ. The generic
+# Shopify classes are kept alongside rather than replaced for exactly that
+# reason — and every one of them is now scoped to `.main-product`, which cannot
+# widen a match and does stop the carousel leak above.
+#
+# Confirm the whole set in one run, before spending an audit on it:
+#
+#   KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight
 selectors:
-  title: '[data-testid="pdp-title"], h1.product__title, .product-single__title'
-  price: '[data-testid="pdp-price"], .price-item--sale, .product__price--sale'
-  compare_at: '[data-testid="pdp-compare-at"], .price-item--regular, .product__price--compare'
-  description: '[data-testid="pdp-description"], .product__description, .product-single__description'
-  specifications: '[data-testid="pdp-specs"], .product__specs, .product-details__accordion'
-  image: '[data-testid="pdp-image"], .product__media img, .product-single__photo img'
-  video: '[data-testid="pdp-video"], .product__media video, video'
-  sold_out: '[data-testid="sold-out"], .product-form__submit[disabled], .price--sold-out'
-  add_to_cart: '[data-testid="add-to-cart"], button[name="add"], .product-form__submit'
-  variant_option: '[data-testid="variant-option"], .product-form__input input, select[name="id"] option'
+  title: '[data-testid="pdp-title"], .main-product h1.font-heading, .main-product h1.product__title, .main-product .product-single__title'
+  price: '[data-testid="pdp-price"], .main-product span.text-red-700, .main-product .price-item--sale, .main-product .product__price--sale'
+  compare_at: '[data-testid="pdp-compare-at"], .main-product s.comp-price__value, .main-product s.bundle-price__compare, .main-product .price-item--regular, .main-product .product__price--compare'
+  description: '[data-testid="pdp-description"], .main-product .product__description, .main-product .product-single__description'
+  specifications: '[data-testid="pdp-specs"], .main-product .product__specs, .main-product .product-details__accordion'
+  image: '[data-testid="pdp-image"], .main-product .product__media img, .main-product .product-single__photo img'
+  video: '[data-testid="pdp-video"], .main-product .product__media video, .main-product video'
+  sold_out: '[data-testid="sold-out"], .main-product .product-form__submit[disabled], .main-product .price--sold-out'
+  add_to_cart: '[data-testid="add-to-cart"], .main-product .bundle-buy-button, .main-product .product-form__submit, .main-product button[name="add"]'
+  variant_option: '[data-testid="variant-option"], .main-product .product-form__input input, .main-product select[name="id"] option'
   cart_line: '[data-testid="cart-line-item"], .cart-item, .cart__row'
   cart_subtotal: '[data-testid="cart-subtotal"], .totals__subtotal-value, .cart__subtotal'
   cart_total: '[data-testid="cart-total"], .totals__total-value, .cart__total'

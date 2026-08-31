@@ -194,7 +194,9 @@ KitschAutomation/
 │   ├── lib/browser.ts       ★ Shared browser launcher for every audit CLI —
 │   │                          --browser / --headed / --slow-mo / --viewport,
 │   │                          headless desktop by default
-│   ├── preflight.ts           Do our selectors match the live theme?
+│   ├── preflight.ts           Do our handles, titles and selectors match the
+│   │                          live theme? Covers kits.yaml and
+│   │                          top-products.yaml
 │   ├── compare-at-audit.ts    Compare-at removal audit
 │   ├── top-products-audit.ts  Daily top-10 seller check
 │   ├── ad-landing-audit.ts    Daily ad-traffic landing page QA
@@ -637,6 +639,30 @@ Preflight against https://www.mykitsch.com
 That mismatch is real and it is why the title check exists: the handle
 returned 200, every selector matched, and the whole comparison would have been
 measuring a product nobody meant.
+
+It covers **both** product configs — the welcome kits and the top-10 sellers.
+The top-10 audit had no preflight, so the only way to learn which of its
+fifteen selectors fit the theme was to run the whole audit and read eleven
+`not_observed` findings out of the report: harness failures dressed as results,
+costing an audit run each time to discover.
+
+The top-10 half needs the real store — the local storefront fixture does not
+carry that catalogue, and pointed at it preflight says so rather than reporting
+ten unresolvable handles. To run one half, or to check the tool itself against
+a fixture that does serve a given catalogue:
+
+```bash
+npm run preflight -- --only kits
+npm run preflight -- --only products
+npx tsx tools/preflight.ts --only products --products-config fixtures/top-products/config.yaml
+```
+
+Not every zero is a problem, and preflight says which is which: `compare_at 0`
+on a product that is not on sale, `video 0` where there is no video, and
+`add_to_cart 0` on a product whose `sold_out` selector matched are all correct
+and are labelled as such. Reporting those would put nine false entries in front
+of someone every morning, and the first thing they would learn is to skim past
+all of them.
 
 Expect unmapped selectors on the first live run against a new theme. The
 fixture uses `data-testid` attributes that a real theme does not carry, so

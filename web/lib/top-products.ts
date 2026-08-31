@@ -458,11 +458,30 @@ export const judgeProduct = (
     if (observation.soldOut === undefined) {
       add('not_observed', 'availability', 'could not tell whether this product is purchasable');
     } else if (observation.soldOut) {
-      add('sold_out', 'availability', 'shown as sold out / unavailable to buy');
+      add(
+        'sold_out',
+        'availability',
+        'shown as sold out / unavailable to buy' +
+          (enabled('add_to_cart')
+            ? '. Add-to-cart was not exercised, because a sold-out product has no buy button to press'
+            : ''),
+      );
     }
   }
 
-  if (enabled('add_to_cart')) {
+  // Skipped when the product is sold out, and only then.
+  //
+  // Both checks fired on a sold-out product and it read as two separate
+  // criticals: "sold out" and "clicking add-to-cart did not put a line in the
+  // cart". The second is a true sentence about a false problem — it describes
+  // a broken button, and sends somebody to debug one, when the shelf is simply
+  // empty. One condition, one finding, and the sold_out detail above now says
+  // what was and was not exercised.
+  //
+  // Narrow on purpose: `soldOut === false` still runs the check, and
+  // `undefined` — meaning we could not tell — still reports `not_observed`
+  // rather than assuming either way.
+  if (enabled('add_to_cart') && observation.soldOut !== true) {
     if (observation.addToCartWorked === undefined) {
       add('not_observed', 'add_to_cart', 'add-to-cart was not exercised');
     } else if (!observation.addToCartWorked) {

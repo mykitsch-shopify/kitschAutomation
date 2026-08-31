@@ -203,6 +203,32 @@ void test('judgeProduct: sold out is critical for a top-10 seller', () => {
   assert.equal(findings[0]?.severity, 'critical');
 });
 
+void test('judgeProduct: a sold-out product reports one finding, not two', () => {
+  // A sold-out product has no buy button, so add-to-cart cannot work. Both
+  // checks used to fire, producing "sold out" AND "clicking add-to-cart did
+  // not put a line in the cart" — a true sentence about a false problem, which
+  // sends somebody to debug a button when the shelf is empty.
+  const findings = judgeProduct(
+    spec(),
+    config(),
+    observation({ soldOut: true, addToCartWorked: false }),
+  );
+  assert.deepEqual(kinds(findings), ['sold_out']);
+  // And the surviving finding says what was not exercised, so the skipped
+  // check is not silently mistaken for a passing one.
+  assert.match(findings[0]?.detail ?? '', /add-to-cart was not exercised/iu);
+});
+
+void test('judgeProduct: an unobservable availability still reports add-to-cart', () => {
+  // Only `soldOut === true` suppresses it. "We could not tell" must not.
+  const findings = judgeProduct(
+    spec(),
+    config(),
+    observation({ soldOut: undefined, addToCartWorked: false }),
+  );
+  assert.deepEqual([...kinds(findings)].sort(), ['add_to_cart_failed', 'not_observed']);
+});
+
 void test('judgeProduct: add-to-cart that does not add is critical', () => {
   assert.deepEqual(
     kinds(judgeProduct(spec(), config(), observation({ addToCartWorked: false }))),
