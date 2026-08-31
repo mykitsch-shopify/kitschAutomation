@@ -152,6 +152,24 @@ if (reachable) {
       write(
         `    ${name.padEnd(15)} ${String(count).padStart(3)} match(es)${tooMany ? '  ← expected one' : ''}`,
       );
+
+      // Per-alternative counts, whenever the total is wrong in either
+      // direction.
+      //
+      // These selectors are written as comma-separated lists and the file
+      // called them fallbacks where "the first match wins". They are not:
+      // a comma list is a union, so every alternative matches at once and one
+      // unscoped entry drags in the whole page however carefully the others
+      // are scoped. `pdp_compare_at` scoped to `.main-product` still reported
+      // 13 for exactly that reason, and nothing in the output said which of
+      // the four alternatives was responsible.
+      if (count === 0 || tooMany) {
+        for (const alternative of selector.split(',').map((part) => part.trim())) {
+          if (alternative === '') continue;
+          const each = await page.locator(alternative).count();
+          write(`        ${String(each).padStart(3)}  ${alternative}`);
+        }
+      }
       if (count === 0) misses.push(name);
       if (tooMany) overreach.push(`${name} (${String(count)})`);
     }

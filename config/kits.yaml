@@ -58,14 +58,25 @@ compare:
 # Theme selectors.
 #
 # The fixture uses data-testid throughout. A real Shopify theme almost
-# certainly does not, so every selector below accepts a comma-separated list
-# and the first match wins: the testid first, then a plausible theme class.
+# certainly does not, so every selector below accepts a comma-separated list:
+# the testid first, then the theme's own class.
+#
+# NOT a fallback chain, and the file used to say it was. A comma-separated CSS
+# selector is a UNION — every alternative matches at once. So one unscoped
+# entry drags in the whole page however carefully the others are scoped, and
+# `pdp_compare_at` kept reporting 13 and 21 matches on a single PDP because
+# `.price-item--regular` was sitting at the end of the list picking up every
+# recommendation card. Preflight now prints per-alternative counts whenever a
+# total looks wrong, so this is visible rather than inferred.
+#
+# The practical rule: every alternative must be scoped, and an alternative that
+# cannot be scoped does not belong in the list.
 #
 # Mapping this suite onto the live theme is an edit here, not a code change.
 # The standing ask remains the one in FRAMEWORK-AND-ROADMAP.md §8 — a
 # data-testid set from the storefront team — because theme classes are
 # regenerated on deploy and merchandising reorders breaks positional
-# selectors weekly. Until then, these fallbacks are the bridge.
+# selectors weekly. Until then, these mappings are the bridge.
 # ─────────────────────────────────────────────────────────────────────────
 #
 # The mykitsch.com entries below were read off the live theme on 2026-08-28
@@ -81,19 +92,23 @@ compare:
 #      theme's section id, so it is deliberately not used.
 #
 selectors:
-  pdp_title: '[data-testid="pdp-title"], .main-product h1.font-heading, h1.product__title, .product-single__title'
-  pdp_price: '[data-testid="pdp-price"], .main-product .price-item--sale, .price-item--sale, .product__price--sale'
-  pdp_compare_at: '[data-testid="pdp-compare-at"], .main-product s.comp-price__value, .main-product s.bundle-price__compare, .price-item--regular'
+  pdp_title: '[data-testid="pdp-title"], .main-product h1.font-heading'
+  # `span.text-red-700` is the sale price on this theme, read off the live
+  # bundle PDP where it renders "$41.60" beside a struck-through "$68.00".
+  pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700'
+  # `.price-item--regular` removed: unscoped, it matched 13-21 carousel cards.
+  pdp_compare_at: '[data-testid="pdp-compare-at"], .main-product s.bundle-price__compare, .main-product s.comp-price__value'
   kit_item: '[data-testid="kit-item"], .product__included-item, .bundle-item'
   kit_item_price: '[data-testid="kit-item-price"], .included-item__price, .bundle-item__price'
   kit_item_badge: '[data-testid="kit-item-badge"], .included-item__badge, .bundle-item__badge'
   free_gift_input: '[data-testid="free-gift-input"], fieldset[name*="gift"] input, input[name*="free-gift"]'
-  # `.product-form__submit` is this theme's buy button, confirmed on the cart
-  # page's upsell forms. On a PDP it is rendered after load, behind the A/B and
-  # anti-flicker scripts — which is why preflight now waits for it rather than
-  # counting at domcontentloaded and reporting a perfectly good selector as
-  # unmatched.
-  add_to_cart: '[data-testid="add-to-cart"], .main-product .product-form__submit, button[name="add"], .product-form__submit'
+  # `.bundle-buy-button` is a DIV, not a button, and is what this theme renders
+  # on bundle and BYOB pages. Waiting for `button[name="add"]` therefore timed
+  # out and reported "buy button never appeared" on a page that has one — the
+  # element was there the whole time under a tag nobody was looking for.
+  # `.product-form__submit` is the ordinary-PDP form button, seen on the cart
+  # page's upsell forms; it renders after load, behind the A/B scripts.
+  add_to_cart: '[data-testid="add-to-cart"], .main-product .bundle-buy-button, .main-product .product-form__submit, .main-product button[name="add"]'
   cart_line: '[data-testid="cart-line-item"], .cart-item, .cart__row'
   cart_line_price: '[data-testid="line-price"], .cart-item__price, .cart__price'
   cart_line_remove: '[data-testid="cart-remove"], .cart-item__remove, a[href*="/cart/change"]'
