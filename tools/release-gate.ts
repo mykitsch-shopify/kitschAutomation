@@ -93,6 +93,13 @@ const STAGES: readonly Stage[] = [
   // The controls. A suite that cannot fail is not evidence, so these decide
   // whether any green above means anything at all.
   {
+    name: 'control: welcome-kit parity',
+    script: 'test:kits-detection',
+    tier: 'offline',
+    risk: 'the parity comparison could report every seasonal kit as matching whatever it does',
+    blocking: true,
+  },
+  {
     name: 'control: locale detection',
     script: 'test:detection',
     tier: 'offline',

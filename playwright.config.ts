@@ -137,6 +137,13 @@ export default defineConfig({
           env: {
             KITSCH_FIXTURE_PORT: fixturePort,
             KITSCH_FIXTURE_PROFILE: fixtureProfile,
+            // Passed through explicitly. The kit detection control seeds one
+            // defect at a time, and a variable the webServer never receives
+            // would leave every run serving the full seeded profile — which
+            // still fails, so the control would look like it was working.
+            ...(process.env.KITSCH_KIT_DIVERGENCE === undefined
+              ? {}
+              : { KITSCH_KIT_DIVERGENCE: process.env.KITSCH_KIT_DIVERGENCE }),
           },
         },
       }

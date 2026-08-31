@@ -9,15 +9,31 @@
 # because it stays correct when merchandising changes the winter kit — the
 # reference moves and the comparison moves with it.
 #
-# Dimensions are taken from the Welcome Kit test plan §7 (free gift
-# selection), §8 (free Welcome Kit validation) and §12 (no MSRP leakage).
+# Dimensions are taken from the Welcome Kit test plan §8 (free Welcome Kit
+# validation), §10 (order summary) and §12 (no MSRP leakage).
+#
+# `canonical_title` is what the storefront currently calls the product, read
+# off the page rather than copied from the brief. A handle returning HTTP 200
+# is not evidence it still points at the kit anybody meant:
+# `winter-welcome-kit-combos` resolves and serves a page titled "Shampoo &
+# Conditioner Bundle with Free Welcome Kit". The reference had been renamed and
+# nothing here said so, because nothing was checking. The same backstop in
+# config/top-products.yaml caught four wrong products.
+#
+# Where it is missing below, the live title has not been read yet — say so, do
+# not guess. `npm run preflight` against the store prints the observed title
+# for every kit; paste it in.
 
 reference:
   name: Winter Welcome Kit Combos
   handle: winter-welcome-kit-combos
+  canonical_title: Shampoo & Conditioner Bundle with Free Welcome Kit
   note: 'Live kit, SKU 2. The reference every seasonal kit is measured against.'
 
 candidates:
+  # No canonical_title on these three yet: preflight has only ever been run
+  # against the reference PDP. Until each is filled in, a run reports their
+  # identity as unverified rather than implying it was confirmed.
   - name: Summer Welcome Kit with Shampoo & Conditioner
     handle: summer-welcome-kit-liquid-combos
   - name: Summer Welcome Kit with Shampoo & Conditioner Bars
@@ -27,18 +43,30 @@ candidates:
 
 # What "handled the same way" means. Each dimension is something a customer
 # can see or do, and each maps to a test case in testcaseswelcomekit.xlsx.
+#
+# All of it is read from the CART and the ORDER SUMMARY. Nothing is read from
+# the product page any more, because this theme does not render it: there is no
+# kit-contents list on a kit PDP (the only repeating structure inside
+# `.main-product` is the image gallery) and no free-gift selector. A dimension
+# nobody can observe does not fail — both kits fall to the same default, agree,
+# and the run goes green having looked at nothing. So the PDP-side dimensions
+# were removed rather than left here to be skipped in silence.
+#
+# Deliberately given up with them: the §12 MSRP-leakage check as read on the
+# PDP, the §7 badge check, and the §7 gift-selector count (WK-TC-020, 024).
+# The money questions all survive — and a price that leaks in the cart is the
+# one that takes money.
 compare:
-  # §8 — how many items in the kit cost nothing.        WK-TC-017, 021
-  - free_item_count
+  # §8 — free lines in the cart after adding the qualifying product. Zero is
+  # the auto-add failing.                               WK-TC-017, 021
+  - free_line_count
+  # Read beside the above: free down and paid up means the gift is in the cart
+  # and being charged for, not missing.                 WK-TC-018, 022
+  - paid_line_count
   # §12 — "no MSRP leakage: free items never show a non-zero price".
   # "Free", "$0.00" and a struck-through price are three different promises.
   #                                                     WK-TC-018, 022, 050
-  - free_item_price_label
-  # §7 — the badge on the item: "Free gift", "Included", or nothing.
-  - free_item_badge
-  # §8 — whether adding the qualifying product puts the kit in the cart, or
-  # leaves the customer to notice it.                   WK-TC-017, 021
-  - auto_added_to_cart
+  - free_line_price_label
   # §8 — "Welcome Kit is never charged at any point".   WK-TC-018, 022
   - counted_in_subtotal
   # §7 — "Free gift cannot be removed or charged separately".
@@ -48,11 +76,6 @@ compare:
   - removed_with_qualifying_product
   # §10 — "Free items remain at $0 in order summary".   WK-TC-019, 023, 050
   - free_at_checkout
-  # §7 — the free-gift selector offers the same number of options.
-  #                                                     WK-TC-020, 024
-  - free_gift_option_count
-  # §7 — "Only one free gift can be selected at a time".
-  - free_gift_single_select
 
 # ─────────────────────────────────────────────────────────────────────────
 # Theme selectors.
@@ -98,10 +121,13 @@ selectors:
   pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700'
   # `.price-item--regular` removed: unscoped, it matched 13-21 carousel cards.
   pdp_compare_at: '[data-testid="pdp-compare-at"], .main-product s.bundle-price__compare, .main-product s.comp-price__value'
-  kit_item: '[data-testid="kit-item"], .product__included-item, .bundle-item'
-  kit_item_price: '[data-testid="kit-item-price"], .included-item__price, .bundle-item__price'
-  kit_item_badge: '[data-testid="kit-item-badge"], .included-item__badge, .bundle-item__badge'
-  free_gift_input: '[data-testid="free-gift-input"], fieldset[name*="gift"] input, input[name*="free-gift"]'
+  # `kit_item`, `kit_item_price`, `kit_item_badge` and `free_gift_input` used to
+  # sit here and are gone. Not renamed, not moved — deleted, because there is
+  # nothing on this theme for them to match. Every repeating block inside
+  # `.main-product` on a kit PDP is the image gallery: 32 zoom buttons, 8
+  # slides, 8 media wrappers. No kit-contents list, no gift selector. Leaving
+  # unmatchable selectors in place meant preflight printing "map these in
+  # config/kits.yaml", which is advice nobody on this store can follow.
   # `.bundle-buy-button` is a DIV, not a button, and is what this theme renders
   # on bundle and BYOB pages. Waiting for `button[name="add"]` therefore timed
   # out and reported "buy button never appeared" on a page that has one — the

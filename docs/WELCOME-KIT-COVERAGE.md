@@ -20,6 +20,19 @@ Sources: `testcaseswelcomekit.xlsx` (57 cases, 13 scenarios) and
 
 Declared in [`config/kits.yaml`](../config/kits.yaml).
 
+> **The reference has been renamed.** `winter-welcome-kit-combos` still
+> resolves, but the page it serves is titled **"Shampoo & Conditioner Bundle
+> with Free Welcome Kit"**. The handle was kept; the product was not. Nothing
+> in the suite noticed, because a handle returning HTTP 200 was treated as
+> proof of identity. `config/kits.yaml` now records a `canonical_title` per
+> kit and both `npm run preflight` and the spec assert it — the same backstop
+> that caught four wrong products in `config/top-products.yaml`.
+>
+> The three candidates have no `canonical_title` yet: their live titles have
+> not been read off the store. Runs report their identity as **unverified**
+> rather than implying it was confirmed. `npm run preflight` against the store
+> prints the observed title for each; paste them in.
+
 ### Why this is built as a comparison, not a checklist
 
 "Should be exactly like the live winter kit" is a *differential* requirement.
@@ -32,47 +45,74 @@ reference moves and the comparison moves with it. A checklist of expected
 values would go stale on that same day and start reporting the *reference* as
 the defect.
 
-### The ten dimensions of "handled the same way"
+### The seven dimensions of "handled the same way"
 
 Each is drawn from the test plan and maps to at least one written test case.
+All seven are read from the **cart** and the **order summary** — see the note
+below on why none are read from the product page.
 
 | Dimension | Test plan | Cases |
 |---|---|---|
-| `free_item_count` | §8 | WK-TC-017, 021 |
-| `free_item_price_label` | §12 — "no MSRP leakage: free items never show a non-zero price" | WK-TC-018, 022 |
-| `free_item_badge` | §7 | — |
-| `auto_added_to_cart` | §8 — "Free Welcome Kit is included in order at $0" | WK-TC-017, 021 |
+| `free_line_count` | §8 — "Free Welcome Kit is included in order at $0"; zero is the auto-add failing | WK-TC-017, 021 |
+| `paid_line_count` | Read beside the above: free down and paid up means the gift is being charged, not missing | WK-TC-018, 022 |
+| `free_line_price_label` | §12 — "no MSRP leakage: free items never show a non-zero price" | WK-TC-018, 022 |
 | `counted_in_subtotal` | §8 — "never charged at any point" | WK-TC-018, 022 |
 | `independently_removable` | §7 — "free gift cannot be removed or charged separately" | — |
 | `removed_with_qualifying_product` | §8 negative cases | WK-TC-025, 026 |
 | `free_at_checkout` | §10 — "free items remain at $0 in order summary" | WK-TC-019, 023, 050 |
-| `free_gift_option_count` | §7 — four gift options | WK-TC-020, 024 |
-| `free_gift_single_select` | §7 — "only one free gift can be selected at a time" | — |
+
+### Why nothing is read from the product page
+
+There used to be ten dimensions. Four read the PDP — a kit-contents list with
+per-item prices and badges, and a free-gift selector — and they are gone,
+because **mykitsch.com does not render any of it**. A discovery run against
+`/products/winter-welcome-kit-combos` found that every repeating structure
+inside `.main-product` is the image gallery: 32 zoom buttons, 16 icons, 8
+slides, 8 media wrappers. There is no contents list and no gift selector, and
+no selector anybody could write would change that.
+
+The temptation is to leave the dimensions in place and let them find nothing.
+That is the worst available outcome: an unobservable dimension does not fail,
+it falls to the same default on both kits, they agree, and the run reports
+parity having examined nothing. So they were removed.
+
+**Given up with them**, stated plainly rather than quietly dropped:
+
+| Lost | Was |
+|---|---|
+| §12 MSRP leakage *on the PDP* | `free_item_price_label` — still checked in the **cart**, which is where a leaked price actually takes money |
+| §7 free-item badge | `free_item_badge` — no equivalent markup exists |
+| §7 gift-selector count and single-select | `free_gift_option_count`, `free_gift_single_select` — **WK-TC-020 and 024 are no longer automated** |
+
+Everything about money survives, because the cart and the order summary do
+render.
 
 ---
 
 ## 2. Automated
 
-15 of 57 cases, in `web/specs/welcome-kit-parity.spec.ts`. These are the cases
+13 of 57 cases, in `web/specs/welcome-kit-parity.spec.ts`. These are the cases
 the requirement is actually about.
 
 | Case | What it asks | Covered by |
 |---|---|---|
 | WK-TC-002 | Winter kit page loads, title and price visible | `welcome kit pages` |
-| WK-TC-005 | Correct product title on each page | `welcome kit pages` |
+| WK-TC-005 | Correct product title on each page | `welcome kit pages` — asserted against `canonical_title`, not merely "an `<h1>` is visible" |
 | WK-TC-008 | Price visible *(and matches Shopify admin — see partial)* | `welcome kit pages` — asserts a real sale price with a higher struck-through original |
 | WK-TC-009 | Add to Cart button visible | `welcome kit pages` |
-| WK-TC-017 | Free Welcome Kit auto-adds as $0 line item (SKU 3) | `auto_added_to_cart` + `free_item_price_label` |
-| WK-TC-018 | Free Welcome Kit shows $0 in cart | `free_item_price_label` + `counted_in_subtotal` |
+| WK-TC-017 | Free Welcome Kit auto-adds as $0 line item (SKU 3) | `free_line_count` + `free_line_price_label` |
+| WK-TC-018 | Free Welcome Kit shows $0 in cart | `free_line_price_label` + `paid_line_count` + `counted_in_subtotal` |
 | WK-TC-019 | Free Welcome Kit at $0 in order summary | `free_at_checkout` |
-| WK-TC-020 | All 4 free gift options selectable | `free_gift_option_count` + `free_gift_single_select` |
-| WK-TC-021 | Free Welcome Kit auto-adds as $0 (SKU 4) | `auto_added_to_cart` + `free_item_price_label` |
-| WK-TC-022 | Free Welcome Kit shows $0 in cart | `free_item_price_label` + `counted_in_subtotal` |
+| WK-TC-021 | Free Welcome Kit auto-adds as $0 (SKU 4) | `free_line_count` + `free_line_price_label` |
+| WK-TC-022 | Free Welcome Kit shows $0 in cart | `free_line_price_label` + `paid_line_count` + `counted_in_subtotal` |
 | WK-TC-023 | Free Welcome Kit at $0 in order summary | `free_at_checkout` |
-| WK-TC-024 | All 4 free gift options selectable | `free_gift_option_count` + `free_gift_single_select` |
 | WK-TC-025 | Remove qualifying product → free kit also removed | `removed_with_qualifying_product` |
 | WK-TC-026 | Same, SKU 4 | `removed_with_qualifying_product` |
 | WK-TC-050 | Free items remain $0 in order summary | `free_at_checkout` |
+
+WK-TC-020 and 024 (four gift options, one selectable at a time) **were** here
+and are not any more — the theme has no gift selector to read. See "Why
+nothing is read from the product page" above.
 
 **A note on case-to-product mapping.** The written cases predate the seasonal
 kits and name SKU 3 / SKU 4 (`shampoo-conditioner-combo-with-free-welcome-kit`
@@ -128,9 +168,17 @@ management, unrelated PDPs.
 ## 5. How to run
 
 ```bash
-npm run test:kits          # parity + page load, all four kits
-npm run verify             # the whole gate, kits included
+npm run test:kits            # parity + page load, all four kits
+npm run test:kits-detection  # the control — proves the comparison can fail
+npm run verify               # the whole gate, both of the above included
 ```
+
+`test:kits-detection` seeds **one** defect at a time and asserts the run fails
+and names the dimension that defect moves. One at a time matters: stacked
+defects mask each other — a leaked price stops the gift line being a free
+line, and both dimensions read off free lines then go silent behind it. A
+control that only checked "the suite went red" would call that a pass while
+two dimensions were dead.
 
 Against a real store:
 
@@ -154,15 +202,24 @@ constraint on the machine this suite runs on: mykitsch.com is a public
 storefront and an ordinary computer reaches it without a VPN, an allowlist or
 any other grant.
 
-The prerequisite that does survive is the second one recorded there: the
-theme selectors need mapping in `config/kits.yaml`, because the live theme
-will not carry the fixture's `data-testid` attributes. Run
-`npm run preflight` against the store to get the exact list.
+Two prerequisites remain, both from `npm run preflight` against the store:
+
+1. **The cart selectors are unmapped.** `cart_line`, `cart_line_price`,
+   `cart_line_remove` and `cart_subtotal` in `config/kits.yaml` still carry
+   guesses, and every dimension now reads from the cart — so they are the
+   load-bearing ones. They need a discovery run against
+   `https://www.mykitsch.com/cart` with something in it. Until then the spec
+   fails loudly on the reference kit rather than reporting parity, which is
+   the intended behaviour: it will not report agreement it did not observe.
+2. **Three candidates have no `canonical_title`.** Preflight prints the
+   observed title for each; paste them into `config/kits.yaml`.
 
 Until that run happens, **this document cannot tell you whether the summer and
-spring kits currently match winter.** It tells you the check exists, covers ten
-dimensions of free-item handling, and has been watched to catch a divergence in
-all eight of the dimensions the seeded fixture varies.
+spring kits currently match winter.** It tells you the check exists, covers
+seven dimensions of free-item handling, and — through
+`npm run test:kits-detection` — has been watched to catch every one of the
+five defects the fixture can seed, each seeded alone so none could hide behind
+another.
 
 ### For the marketing follow-up
 

@@ -1,21 +1,27 @@
 import { chromium } from '@playwright/test';
 
-import { loadKitConfig } from '../web/lib/kit-parity.js';
+import { isSameProduct, loadKitConfig } from '../web/lib/kit-parity.js';
 
 /**
  * Live-target preflight.
  *
- * Answers, in one run and before anyone spends a full suite on it, the three
+ * Answers, in one run and before anyone spends a full suite on it, the four
  * questions that decide whether a live run is worth starting:
  *
  *   1. Can this machine reach the storefront at all?
  *   2. Do the configured product handles resolve?
- *   3. Do the configured selectors actually match the theme's markup?
+ *   3. Does each handle still serve the product it is supposed to?
+ *   4. Do the configured selectors actually match the theme's markup?
  *
- * It exists because those three failures look alike in a normal test run — a
+ * It exists because those failures look alike in a normal test run — a
  * blocked network, a renamed handle and an unmapped selector all surface as a
  * red spec — and telling them apart afterwards costs a triage cycle every
  * time. Here each is named separately.
+ *
+ * Question 3 was added after `winter-welcome-kit-combos` came back HTTP 200
+ * serving a page titled "Shampoo & Conditioner Bundle with Free Welcome Kit".
+ * The handle resolved, every selector matched, and the whole parity comparison
+ * would have been measuring a product nobody meant.
  *
  *   KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight
  */
@@ -27,13 +33,14 @@ const write = (line: string): void => {
   process.stdout.write(`${line}\n`);
 };
 
-const PAGE_SELECTORS = ['pdp_title', 'pdp_price', 'pdp_compare_at', 'kit_item', 'add_to_cart'] as const;
+const PAGE_SELECTORS = ['pdp_title', 'pdp_price', 'pdp_compare_at', 'add_to_cart'] as const;
 
 /**
  * Selectors that identify one thing on the page.
  *
- * A product has one title, one price, one buy button. `kit_item` and its
- * siblings legitimately match many, which is why they are not here.
+ * A product has one title, one price, one buy button. The cart-side selectors
+ * legitimately match many, which is why they are not here — nor is any of them
+ * checked on a PDP at all.
  *
  * This exists because zero is not the only broken count. Against the live
  * theme `pdp_compare_at` matched 13 on one PDP and 25 on another — it was
@@ -168,6 +175,39 @@ if (reachable) {
     }
 
     write(`  ${kit.name}  (HTTP 200)`);
+
+    // ── 3. Identity ───────────────────────────────────────────────────────
+    //
+    // Printed for every kit whether or not a canonical title is recorded,
+    // because the observed title is the thing somebody needs in order to fill
+    // one in. "Not recorded" is reported as a problem in its own right: a run
+    // that cannot confirm which product it looked at has not verified that
+    // product, and saying nothing here would let that pass for a pass.
+    const observed = await page
+      .locator(config.selectors.pdp_title)
+      .first()
+      .innerText()
+      .then((text) => text.trim())
+      .catch(() => '');
+
+    if (kit.canonicalTitle === undefined) {
+      problems += 1;
+      write(`    title        "${observed}"`);
+      write('    → no canonical_title recorded, so nothing confirms this handle still');
+      write('      serves this kit. If the title above is the right product, paste it');
+      write('      into config/kits.yaml under this kit as canonical_title.');
+    } else if (!isSameProduct(kit.canonicalTitle, observed)) {
+      problems += 1;
+      write(`    title        MISMATCH`);
+      write(`      recorded:  "${kit.canonicalTitle}"`);
+      write(`      on page:   "${observed}"`);
+      write('    → either the product was renamed (update canonical_title) or this');
+      write('      handle now points at a different product. Every parity result for');
+      write('      this kit would be describing that other product.');
+    } else {
+      write(`    title        "${observed}"`);
+    }
+
     const misses: string[] = [];
     const overreach: string[] = [];
     for (const name of PAGE_SELECTORS) {

@@ -47,7 +47,18 @@ const kit = (handle: string, title: string, product: string): Kit => ({
 
 export const KITS: readonly Kit[] = [
   // SKU 2 — the live reference.
-  kit('winter-welcome-kit-combos', 'Winter Welcome Kit Combos', 'Rice Water Shampoo & Conditioner Combo'),
+  //
+  // Titled as the storefront titles it, not as the brief names it. The handle
+  // `winter-welcome-kit-combos` serves a page called "Shampoo & Conditioner
+  // Bundle with Free Welcome Kit" on mykitsch.com — the kit was renamed and
+  // the handle kept. config/kits.yaml records that as `canonical_title` and
+  // the spec asserts it, so the fixture has to render the same thing or the
+  // identity check would pass against the store and fail against the fixture.
+  kit(
+    'winter-welcome-kit-combos',
+    'Shampoo & Conditioner Bundle with Free Welcome Kit',
+    'Rice Water Shampoo & Conditioner Combo',
+  ),
   kit(
     'summer-welcome-kit-liquid-combos',
     'Summer Welcome Kit with Shampoo & Conditioner',
@@ -71,9 +82,16 @@ export const kitByHandle = (handle: string): Kit | undefined =>
 /**
  * How a divergent kit misbehaves. Every field is a real defect class from the
  * test plan: MSRP leakage (§12), a gift that is not auto-added or is
- * separately removable (§7, §8), a free item reaching the subtotal or the
- * order summary at a non-zero price (§8, §10), and a gift selector that
- * allows more than one choice (§7).
+ * separately removable (§7, §8), and a free item reaching the subtotal or the
+ * order summary at a non-zero price (§8, §10).
+ *
+ * Two fields used to live here — `multiSelectGifts` and `droppedGiftOption`,
+ * both about the §7 gift selector — and are gone. Not because the fixture
+ * cannot render them, but because the parity spec no longer looks at the
+ * selector: mykitsch.com does not have one, so the dimensions that read it
+ * were removed rather than left to pass by default. A seeded defect that
+ * nothing can detect is worse than no seeded defect at all — it makes the
+ * fixture look like it is proving more than it is.
  */
 export type KitDivergence = {
   readonly leakedPrice: boolean;
@@ -81,9 +99,18 @@ export type KitDivergence = {
   readonly separatelyRemovable: boolean;
   readonly strandedOnRemoval: boolean;
   readonly chargedAtCheckout: boolean;
-  readonly multiSelectGifts: boolean;
-  readonly droppedGiftOption: boolean;
 };
+
+/** Every way this fixture knows how to break a kit. */
+export const DIVERGENCE_KINDS = [
+  'leakedPrice',
+  'notAutoAdded',
+  'separatelyRemovable',
+  'strandedOnRemoval',
+  'chargedAtCheckout',
+] as const;
+
+export type DivergenceKind = (typeof DIVERGENCE_KINDS)[number];
 
 export const NO_DIVERGENCE: KitDivergence = {
   leakedPrice: false,
@@ -91,14 +118,18 @@ export const NO_DIVERGENCE: KitDivergence = {
   separatelyRemovable: false,
   strandedOnRemoval: false,
   chargedAtCheckout: false,
-  multiSelectGifts: false,
-  droppedGiftOption: false,
 };
 
 /**
- * The seeded divergence, on one seasonal kit only. Spread across dimensions
- * on purpose: a check that only ever sees one kind of difference has not been
- * shown to detect the others.
+ * The seeded divergence, on one seasonal kit only. Everything at once, which
+ * is what the `seeded` profile serves.
+ *
+ * Useful for eyeballing, and useless as proof. Defects mask each other when
+ * they are stacked: a leaked price means the gift line is no longer a free
+ * line, so `separatelyRemovable` and `strandedOnRemoval` — both of which are
+ * read off the free lines — become invisible behind it. The detection control
+ * therefore seeds one at a time; see `onlyDivergence` and
+ * tools/verify-kit-parity.ts.
  */
 export const SEEDED_DIVERGENCE: KitDivergence = {
   leakedPrice: true,
@@ -106,9 +137,13 @@ export const SEEDED_DIVERGENCE: KitDivergence = {
   separatelyRemovable: true,
   strandedOnRemoval: true,
   chargedAtCheckout: true,
-  multiSelectGifts: true,
-  droppedGiftOption: true,
 };
+
+/** One defect and nothing else, so what the spec catches is unambiguous. */
+export const onlyDivergence = (kind: DivergenceKind): KitDivergence => ({
+  ...NO_DIVERGENCE,
+  [kind]: true,
+});
 
 export type KitRender = {
   readonly escape: (value: string) => string;
@@ -127,8 +162,11 @@ const freePrice = (divergence: KitDivergence): string =>
   divergence.leakedPrice ? '$12.00' : 'Free';
 
 export const kitPdp = (kit: Kit, divergence: KitDivergence, view: KitRender): string => {
-  const gifts = divergence.droppedGiftOption ? kit.giftOptions.slice(0, -1) : kit.giftOptions;
-  const selector = divergence.multiSelectGifts ? 'checkbox' : 'radio';
+  // Kept rendering, no longer varied. The spec does not read the selector any
+  // more — see KitDivergence — but the markup stays so the fixture page still
+  // resembles the kind of PDP the test plan describes.
+  const gifts = kit.giftOptions;
+  const selector = 'radio';
 
   return `
     <h1 data-testid="pdp-title">${view.escape(kit.title)}</h1>

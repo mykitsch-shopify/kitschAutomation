@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import { diffKits, isFreePrice, loadKitConfig, normalizeLabels } from '../lib/kit-parity.js';
+import { diffKits, isFreePrice, isSameProduct, loadKitConfig, normalizeLabels } from '../lib/kit-parity.js';
 import type { KitDimension, KitProfile, KitSpec, SelectorName } from '../lib/kit-parity.js';
 
 /**
@@ -9,12 +9,11 @@ import type { KitDimension, KitProfile, KitSpec, SelectorName } from '../lib/kit
  *
  * What this catches that an API check cannot: two kits can contain identical
  * line items and still make different promises. The Admin API says both hold
- * a Welcome Kit at zero cost; it does not say that one shows "Free" and the
- * other a struck-through $12.00, that one auto-adds the kit and the other
- * waits to be noticed, that one strands the free kit in the cart after the
- * qualifying product is removed, or that one lets a customer tick three free
- * gifts. All of that is theme and cart behaviour, and all of it is what a
- * customer actually meets.
+ * a Welcome Kit at zero cost; it does not say that one shows "Free" in the
+ * cart and the other a struck-through $12.00, that one auto-adds the kit and
+ * the other waits to be noticed, or that one strands the free kit in the cart
+ * after the qualifying product is removed. All of that is theme and cart
+ * behaviour, and all of it is what a customer actually meets.
  *
  * Deliberately differential. The live Winter Welcome Kit Combos defines
  * correct; the seasonal kits are measured against whatever it does. So this
@@ -22,31 +21,99 @@ import type { KitDimension, KitProfile, KitSpec, SelectorName } from '../lib/kit
  * reference moves and the comparison moves with it — and it never has to be
  * told what a free item "should" do.
  *
+ * Everything compared is read from the cart and the order summary. The theme
+ * renders no kit-contents list and no gift selector on a kit PDP, so the
+ * PDP-side dimensions were removed rather than left to pass by default — see
+ * the header of web/lib/kit-parity.ts.
+ *
  * Requirement: the summer and spring welcome kits must handle free items
  * exactly like the live winter kit.
  *
- * Covers, from testcaseswelcomekit.xlsx: WK-TC-017 through 026 and WK-TC-050
- * (free-kit handling), plus WK-TC-002, 005, 008, 009 (page load) via the
- * second describe below. Full mapping, including what is deliberately not
- * automated, in docs/WELCOME-KIT-COVERAGE.md.
+ * Covers, from testcaseswelcomekit.xlsx: WK-TC-017, 018, 019, 021, 022, 023,
+ * 025, 026 and 050 (free-kit handling), plus WK-TC-002, 005, 008, 009 (page
+ * load) via the second describe below. Full mapping, including what is
+ * deliberately not automated, in docs/WELCOME-KIT-COVERAGE.md.
  */
 
 const config = loadKitConfig();
+
+/**
+ * Confirm the page on screen is still the product the config names, before
+ * anything is read off it.
+ *
+ * A 200 is not identity. `winter-welcome-kit-combos` resolves and serves a
+ * page titled "Shampoo & Conditioner Bundle with Free Welcome Kit" — the
+ * reference had been renamed under the same handle. Every dimension compared
+ * below would have described whatever product that turned out to be, and
+ * reported it as the winter kit's behaviour.
+ *
+ * Where no canonical title has been recorded, this annotates the test rather
+ * than failing it: "not checked" and "checked and fine" are different results,
+ * and the run must not imply the second when it means the first.
+ */
+const assertIdentity = async (page: Page, kit: KitSpec): Promise<void> => {
+  // Read defensively. An unmatched `pdp_title` would otherwise surface as a
+  // locator timeout — true, and useless: it reads as "the page is broken" when
+  // it means "this selector does not fit this theme". Those are different
+  // problems with different owners.
+  const observed = await page
+    .locator(config.selectors.pdp_title)
+    .first()
+    .innerText()
+    .then((text) => text.trim())
+    .catch(() => '');
+
+  expect(
+    observed,
+    `no title matched "${config.selectors.pdp_title}" on /products/${kit.handle}, so nothing here could confirm which product this is. Map pdp_title in config/kits.yaml "selectors", or run: npm run preflight`,
+  ).not.toBe('');
+
+  if (kit.canonicalTitle === undefined) {
+    test.info().annotations.push({
+      type: 'identity unverified',
+      description:
+        `No canonical_title recorded for "${kit.name}" (/products/${kit.handle}), so it ` +
+        `could not be confirmed that this handle still serves that kit. The page is ` +
+        `titled "${observed}" — if that is the right product, paste the title into ` +
+        `config/kits.yaml under this kit as canonical_title.`,
+    });
+    return;
+  }
+
+  expect(
+    isSameProduct(kit.canonicalTitle, observed),
+    `/products/${kit.handle} is titled "${observed}" but config/kits.yaml records ` +
+      `"${kit.canonicalTitle}". Either the product was renamed (update canonical_title) ` +
+      `or the handle now points at a different product — in which case every result ` +
+      `below would be describing that other product.`,
+  ).toBe(true);
+};
 
 const money = (value: string): number => Number(value.replace(/[^0-9.]/gu, '')) || 0;
 
 const free = (value: string): boolean => isFreePrice(value, config.freePricePattern);
 
 /**
- * Prices of the items a kit page lists, paired with whether each is free.
+ * Cart-line prices split into the ones that cost nothing and the ones that do.
  * Free-ness is read from the price the customer is shown, not from a
  * `data-free` attribute — the attribute is a fixture invention and would not
  * exist on the live theme.
  */
-const classify = (prices: readonly string[]): { readonly freePrices: readonly string[]; readonly paidTotal: number } => ({
-  freePrices: prices.filter(free),
-  paidTotal: prices.filter((price) => !free(price)).reduce((total, price) => total + money(price), 0),
-});
+const classify = (
+  prices: readonly string[],
+): {
+  readonly freePrices: readonly string[];
+  readonly paidPrices: readonly string[];
+  readonly paidTotal: number;
+} => {
+  const freePrices = prices.filter(free);
+  const paidPrices = prices.filter((price) => !free(price));
+  return {
+    freePrices,
+    paidPrices,
+    paidTotal: paidPrices.reduce((total, price) => total + money(price), 0),
+  };
+};
 
 /**
  * What the profiler actually managed to see.
@@ -60,31 +127,24 @@ const classify = (prices: readonly string[]): { readonly freePrices: readonly st
  * kit has to prove it observed each thing the comparison claims to compare.
  */
 type Observed = {
-  readonly kitItems: number;
   readonly cartLines: number;
   readonly summaryLines: number;
-  readonly giftInputs: number;
 };
 
 /** Which observation each dimension depends on, and the selector behind it. */
 const REQUIRES: Readonly<Record<KitDimension, keyof Observed>> = {
-  free_item_count: 'kitItems',
-  free_item_price_label: 'kitItems',
-  free_item_badge: 'kitItems',
-  auto_added_to_cart: 'cartLines',
+  free_line_count: 'cartLines',
+  paid_line_count: 'cartLines',
+  free_line_price_label: 'cartLines',
   counted_in_subtotal: 'cartLines',
   independently_removable: 'cartLines',
   removed_with_qualifying_product: 'cartLines',
   free_at_checkout: 'summaryLines',
-  free_gift_option_count: 'giftInputs',
-  free_gift_single_select: 'giftInputs',
 };
 
 const SELECTOR_FOR: Readonly<Record<keyof Observed, SelectorName>> = {
-  kitItems: 'kit_item',
   cartLines: 'cart_line',
   summaryLines: 'summary_line',
-  giftInputs: 'free_gift_input',
 };
 
 /** Reads one kit's free-item treatment as a customer would experience it. */
@@ -98,25 +158,12 @@ const profileKit = async (
     `"${kit.name}" (/products/${kit.handle}) did not resolve — check the handle in config/kits.yaml`,
   ).toBe(200);
 
-  const items = page.locator(config.selectors.kit_item);
-  const kitItemCount = await items.count();
-  expect(
-    kitItemCount,
-    `no kit items matched "${config.selectors.kit_item}" on ${kit.name}. If the theme markup differs, map it in config/kits.yaml under "selectors" — a spec that finds nothing must not pass.`,
-  ).toBeGreaterThan(0);
+  // Before anything is read off this page, confirm it is the right product.
+  await assertIdentity(page, kit);
 
-  const itemPrices = await items.locator(config.selectors.kit_item_price).allInnerTexts();
-  const badges = await items.locator(config.selectors.kit_item_badge).allInnerTexts();
-  const onPdp = classify(itemPrices);
-
-  // §7 — the free-gift selector. A radio group permits one choice.
-  const giftInputs = page.locator(config.selectors.free_gift_input);
-  const giftOptionCount = await giftInputs.count();
-  const inputTypes = await giftInputs.evaluateAll((nodes) =>
-    nodes.map((node) => (node as HTMLInputElement).type),
-  );
-
-  // Adding the kit is where auto-add, subtotal and removability appear.
+  // Adding the kit is where every dimension below becomes visible. Nothing is
+  // read from the PDP: this theme lists no kit contents and offers no gift
+  // selector, so there is nothing there to read.
   await page.locator(config.selectors.add_to_cart).first().click();
 
   // Walked line by line so a free line can be paired with its own remove
@@ -154,28 +201,18 @@ const profileKit = async (
     .allInnerTexts();
 
   const profile: KitProfile = {
-    free_item_count: onPdp.freePrices.length,
-    free_item_price_label: normalizeLabels(onPdp.freePrices),
-    free_item_badge: normalizeLabels(badges),
-    auto_added_to_cart: inCart.freePrices.length > 0,
+    free_line_count: inCart.freePrices.length,
+    paid_line_count: inCart.paidPrices.length,
+    free_line_price_label: normalizeLabels(inCart.freePrices),
     counted_in_subtotal: subtotal > inCart.paidTotal,
     independently_removable: freeLinesWithRemove > 0,
     removed_with_qualifying_product: strandedPrices.filter(free).length === 0,
     free_at_checkout: freeAtCheckout,
-    free_gift_option_count: giftOptionCount,
-    free_gift_single_select: inputTypes.length > 0 && inputTypes.every((type) => type === 'radio'),
   };
 
   return {
     profile,
-    observed: {
-      // Captured on the PDP: by now the page is the cart, where this locator
-      // would report zero and turn the guard below into a false alarm.
-      kitItems: kitItemCount,
-      cartLines: cartPrices.length,
-      summaryLines: summaryPrices.length,
-      giftInputs: giftOptionCount,
-    },
+    observed: { cartLines: cartPrices.length, summaryLines: summaryPrices.length },
   };
 };
 
@@ -203,9 +240,12 @@ test.describe('welcome kit parity @kits @launch', () => {
         `the comparison depends on observations that were never made, so agreement here would mean nothing. Map these in config/kits.yaml "selectors", or run: npm run preflight`,
       ).toEqual([]);
 
+      // The reference must actually give something away, or "the candidate
+      // matches it" is a statement about two carts that both contain nothing
+      // free. That agreement would be perfect and worthless.
       expect(
-        reference.profile.free_item_count,
-        `the ${config.reference.name} has no free items, so there is nothing to match against — check the handle in config/kits.yaml`,
+        reference.profile.free_line_count,
+        `adding the ${config.reference.name} put no free line in the cart, so there is nothing to match against. Either the reference kit no longer includes a free item — which is the finding — or "${config.selectors.cart_line_price}" is not reading this theme's cart prices. Run: npm run preflight`,
       ).toBeGreaterThan(0);
 
       const differences = diffKits(reference.profile, actual.profile, config.compare);
@@ -234,6 +274,10 @@ test.describe('welcome kit pages @kits @smoke', () => {
 
       await expect(page.locator(config.selectors.pdp_title).first()).toBeVisible();
       await expect(page.locator(config.selectors.add_to_cart).first()).toBeVisible();
+
+      // WK-TC-005 — "correct product title on each page". A visible <h1> is
+      // not that; this is.
+      await assertIdentity(page, kit);
 
       // §4 — sale price with the original struck through beside it.
       const sale = money(await page.locator(config.selectors.pdp_price).first().innerText());

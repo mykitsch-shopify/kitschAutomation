@@ -196,14 +196,20 @@ order summary; it never submits payment and never completes an order.
 message like
 
 ```
-no kit items matched "[data-testid="kit-item"], .product__included-item, .bundle-item"
-on Winter Welcome Kit Combos. If the theme markup differs, map it in
-config/kits.yaml under "selectors"
+adding the Winter Welcome Kit Combos put no free line in the cart, so there is
+nothing to match against. Either the reference kit no longer includes a free
+item — which is the finding — or "[data-testid="line-price"], .cart-item__price,
+.cart__price" is not reading this theme's cart prices. Run: npm run preflight
 ```
 
-means the selectors need mapping, not that the kits diverge. The spec is
+means the cart selectors need mapping, not that the kits diverge. The spec is
 written to say which of the two it is, because a suite that reports a missing
 selector as a product defect wastes a triage cycle every time.
+
+The cart selectors are the load-bearing ones now: every compared dimension is
+read from the cart and the order summary, because this theme renders no
+kit-contents list and no gift selector on a kit PDP. See
+[`WELCOME-KIT-COVERAGE.md`](WELCOME-KIT-COVERAGE.md) for what that gave up.
 
 ### Start with preflight
 
@@ -211,9 +217,10 @@ selector as a product defect wastes a triage cycle every time.
 KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight
 ```
 
-One command, and it separates the three failures that otherwise look alike in
-a test report — an unreachable network, a handle that no longer resolves, and
-a selector that does not match the theme:
+One command, and it separates the four failures that otherwise look alike in
+a test report — an unreachable network, a handle that no longer resolves, a
+handle that resolves to the wrong product, and a selector that does not match
+the theme:
 
 ```
 Preflight against https://www.mykitsch.com
@@ -221,11 +228,17 @@ Preflight against https://www.mykitsch.com
   reachable      HTTP 200
 
   Winter Welcome Kit Combos  (HTTP 200)
+    title        MISMATCH
+      recorded:  "Winter Welcome Kit Combos"
+      on page:   "Shampoo & Conditioner Bundle with Free Welcome Kit"
     pdp_title         1 match(es)
-    pdp_price         1 match(es)
-    kit_item          6 match(es)
-    ...
-    → unmatched: kit_item_badge — map these in config/kits.yaml "selectors"
+    pdp_price         3 match(es)
+        1  .main-product span.text-red-700
+        ...
+  Summer Welcome Kit with Shampoo & Conditioner  (HTTP 200)
+    title        "…"
+    → no canonical_title recorded, so nothing confirms this handle still
+      serves this kit.
 ```
 
 Run it before the suite. A spec that cannot find the markup reports a defect

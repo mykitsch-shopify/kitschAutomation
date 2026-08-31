@@ -11,13 +11,16 @@ import {
 import type { Locale } from '../catalog/content.js';
 import { FETCH_FAILED, SEEDED_DEFECTS } from '../catalog/defects.js';
 import {
+  DIVERGENCE_KINDS,
   NO_DIVERGENCE,
   SEEDED_DIVERGENCE,
   kitByHandle,
   kitCart,
   kitOrderSummary,
   kitPdp,
+  onlyDivergence,
 } from './kits.js';
+import type { DivergenceKind, KitDivergence } from './kits.js';
 
 /**
  * A seven-locale storefront fixture.
@@ -429,12 +432,35 @@ const aboutMain = (locale: Locale): string => `
 
 
 /**
- * Which kit carries the seeded divergence. Only the seasonal kits can — the
- * winter kit is the reference, and a reference that misbehaves would make
- * every comparison pass for the wrong reason.
+ * Which defect the divergent kit carries.
+ *
+ * `KITSCH_KIT_DIVERGENCE=<kind>` narrows it to exactly one, which is what the
+ * detection control needs: stacked defects mask each other — a leaked price
+ * stops the gift line being a free line, and the two dimensions read off free
+ * lines then go quiet — so "the suite failed" against the full seeded profile
+ * is not evidence that each individual check works.
+ *
+ * An unrecognised value is refused rather than ignored. Falling back to the
+ * full set would let a typo in a control run look like a passing control.
  */
-const divergenceFor = (handle: string): typeof NO_DIVERGENCE =>
-  renderDefects.divergentKit === handle ? SEEDED_DIVERGENCE : NO_DIVERGENCE;
+const requestedKind = process.env.KITSCH_KIT_DIVERGENCE;
+if (requestedKind !== undefined && requestedKind !== '' && !DIVERGENCE_KINDS.includes(requestedKind as DivergenceKind)) {
+  throw new Error(
+    `KITSCH_KIT_DIVERGENCE="${requestedKind}" is not a known defect. Known: ${DIVERGENCE_KINDS.join(', ')}`,
+  );
+}
+const seededDivergence: KitDivergence =
+  requestedKind === undefined || requestedKind === ''
+    ? SEEDED_DIVERGENCE
+    : onlyDivergence(requestedKind as DivergenceKind);
+
+/**
+ * Which kit carries it. Only the seasonal kits can — the winter kit is the
+ * reference, and a reference that misbehaves would make every comparison pass
+ * for the wrong reason.
+ */
+const divergenceFor = (handle: string): KitDivergence =>
+  renderDefects.divergentKit === handle ? seededDivergence : NO_DIVERGENCE;
 
 const kitView = (locale: Locale): Parameters<typeof kitPdp>[2] => ({
   escape,

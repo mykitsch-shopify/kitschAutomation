@@ -242,7 +242,8 @@ one less way to happen. Roughly 3 minutes.
 | `npm run i18n:parity` | Content parity, source chosen explicitly — see [§9](#9-running-against-a-real-store) | Against a real store, or a specific catalogue |
 | `npm run test:i18n` | Render-layer parity: 350 specs, 7 locales × 6 routes, at 390px | After touching specs or the storefront fixture |
 | `npm run test:mobile-web` | The `mobile-chrome` project (Pixel 7) — web specs plus locale specs | Wider mobile check |
-| `npm run test:kits` | Welcome-kit parity: the summer and spring kits must handle free items exactly like `winter-welcome-kit-combos`, across ten dimensions | After touching kits, or when marketing changes a kit |
+| `npm run test:kits` | Welcome-kit parity: the summer and spring kits must handle free items exactly like `winter-welcome-kit-combos`, across seven dimensions read from the cart and order summary | After touching kits, or when marketing changes a kit |
+| `npm run test:kits-detection` | **Negative control** for it — each of the five kit defects seeded *alone* (stacked ones mask each other), and each run must fail naming the dimension that moved | After touching `web/lib/kit-parity.ts` or the parity spec |
 | `npm run test:detection` | **Negative control** — 19 planted defects must be caught, and the render specs must fail against a broken store | After touching any comparator. This is what keeps the gate honest |
 | `npm run audit:compare-at` | **Compare-at removal audit** — the struck-through price must be gone and the real price untouched; audits the two sheets first, then the storefront. See [`docs/COMPARE-AT-AUDIT.md`](docs/COMPARE-AT-AUDIT.md) | Before and after the compare-at import runs. `--sheets-only` needs no browser |
 | `npm run test:compare-at-detection` | **Negative control** for that audit — 5 planted defects, plus a clean run that must report nothing | After touching `web/lib/compare-at.ts` |
@@ -256,7 +257,7 @@ one less way to happen. Roughly 3 minutes.
 | `npm run audit:translation-backlog` | **Translation backlog check** — are the open Asana translation tasks still true? Writes no copy and changes nothing in Asana. See [`docs/TRANSLATION-BACKLOG.md`](docs/TRANSLATION-BACKLOG.md) | Before a backlog grooming pass |
 | `npm run test:translation-backlog-detection` | **Negative control** for it — every verdict against a known fixture state | After touching `web/lib/translation-backlog.ts` |
 | `npm run precommit` | **The local gate** — typecheck, eslint + Kitsch rules, reviewer + bugbot, unit tests. Offline, ~26s | Runs automatically on `git commit` once `npm run hooks:install` has been run |
-| `npm run gate:release` | **Release gate** — 13 offline stages, then the live tier with `-- --live`. One answer: is it safe to ship? | Before a launch or a release |
+| `npm run gate:release` | **Release gate** — 15 offline stages, then the live tier with `-- --live`. One answer: is it safe to ship? | Before a launch or a release |
 | `npm run audit:a11y` | **Accessibility across all 7 markets** — WCAG 2.2 AA via axe, plus wrong-language and untranslated-label rules. See [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) | Nightly; before a launch |
 | `npm run test:a11y-detection` | **Negative control** for it — 5 planted defects across 4 markets | After touching `web/lib/a11y.ts` |
 | `npm run storefront` | Serves the fixture storefront on `:4173` so you can browse it by hand | Debugging a spec, or seeing what the fixture renders |
@@ -612,9 +613,9 @@ npm run test:i18n     # locale parity, render layer
 ```
 
 **Run `preflight` before the suite, every time you point at a new target.** It
-separates three failures that look identical in a test report — an unreachable
-network, a product handle that no longer resolves, and a selector that does not
-match the theme:
+separates four failures that look identical in a test report — an unreachable
+network, a product handle that no longer resolves, a handle that resolves to
+the *wrong product*, and a selector that does not match the theme:
 
 ```
 Preflight against https://www.mykitsch.com
@@ -622,17 +623,26 @@ Preflight against https://www.mykitsch.com
   reachable      HTTP 200
 
   Winter Welcome Kit Combos  (HTTP 200)
+    title        MISMATCH
+      recorded:  "Winter Welcome Kit Combos"
+      on page:   "Shampoo & Conditioner Bundle with Free Welcome Kit"
+    → either the product was renamed (update canonical_title) or this
+      handle now points at a different product.
     pdp_title         1 match(es)
-    kit_item          0 match(es)
-    ...
-    → unmatched: kit_item — map these in config/kits.yaml "selectors"
+    pdp_price         3 match(es)
+        1  .main-product span.text-red-700
+        ...
 ```
 
-Expect zeros on the first live run. The fixture uses `data-testid` attributes
-that the real theme does not carry, so mapping them in `config/kits.yaml` under
-`selectors` is the first job — an edit, not a code change. A spec that cannot
-find markup reports a defect that is not there, and each one costs a triage
-cycle.
+That mismatch is real and it is why the title check exists: the handle
+returned 200, every selector matched, and the whole comparison would have been
+measuring a product nobody meant.
+
+Expect unmapped selectors on the first live run against a new theme. The
+fixture uses `data-testid` attributes that a real theme does not carry, so
+mapping them in `config/kits.yaml` under `selectors` is the first job — an
+edit, not a code change. A spec that cannot find markup reports a defect that
+is not there, and each one costs a triage cycle.
 
 ### 9.2 Content layer — needs a read-only Admin token
 

@@ -7,6 +7,14 @@
 //      selector you can paste.
 //
 //   node scratch-report/discover.mjs https://www.mykitsch.com/products/<handle>
+//   node scratch-report/discover.mjs https://www.mykitsch.com/cart
+//
+// A /cart URL switches to the cart roles. Those are now the load-bearing ones:
+// every dimension the parity spec compares is read from the cart and the order
+// summary, because this theme renders no kit-contents list and no gift
+// selector on a kit PDP. Put something in the cart first — an empty cart has
+// no lines to find, and "no selector matched" and "nothing was in it" look
+// identical from here.
 
 import { readFileSync } from 'node:fs';
 
@@ -30,6 +38,8 @@ for (const line of readFileSync('config/kits.yaml', 'utf8').split('\n')) {
   if (match !== null) selectors[match[1]] = match[2];
 }
 
+const onCart = /\/cart(\/|\?|$)/u.test(new URL(url).pathname + new URL(url).search);
+
 const browser = await chromium.launch(
   process.env.KITSCH_CHROMIUM_PATH ? { executablePath: process.env.KITSCH_CHROMIUM_PATH } : {},
 );
@@ -40,13 +50,15 @@ const response = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
 // hold it back. Looking at domcontentloaded reported "no add-to-cart" on every
 // PDP while the button was simply not there yet. Never `networkidle`: the store
 // beacons continuously and it would only ever time out.
-const settled = await page
-  .waitForSelector('button[name="add"], .product-form__submit, [data-testid="add-to-cart"]', {
-    timeout: 15000,
-    state: 'attached',
-  })
-  .then(() => true)
-  .catch(() => false);
+const settled = onCart
+  ? true
+  : await page
+      .waitForSelector('button[name="add"], .product-form__submit, [data-testid="add-to-cart"]', {
+        timeout: 15000,
+        state: 'attached',
+      })
+      .then(() => true)
+      .catch(() => false);
 
 const out = (line) => process.stdout.write(`${line}\n`);
 
@@ -57,9 +69,9 @@ out('');
 out('Current config/kits.yaml selectors');
 out('');
 
-// These live on the cart and checkout pages. Zero here is correct, not a
-// finding — run this against /cart to exercise them.
-const ELSEWHERE = new Set([
+// Roles that only exist on the cart and checkout pages, and roles that only
+// exist on a PDP. Zero on the wrong page is correct, not a finding.
+const CART_ROLES = new Set([
   'cart_line',
   'cart_line_price',
   'cart_line_remove',
@@ -71,17 +83,134 @@ const ELSEWHERE = new Set([
 
 for (const [role, selector] of Object.entries(selectors)) {
   const count = await page.locator(selector).count();
-  const note =
-    ELSEWHERE.has(role) && count === 0
-      ? '  (cart/checkout role — expected on a PDP)'
-      : count === 0
-        ? '  ← matches nothing'
-        : count > 3
-          ? '  ← suspiciously many'
-          : '';
+  const belongsHere = CART_ROLES.has(role) === onCart;
+  const note = !belongsHere
+    ? `  (${CART_ROLES.has(role) ? 'cart/checkout' : 'PDP'} role — not expected on this page)`
+    : count === 0
+      ? '  ← matches nothing'
+      : count > 3
+        ? '  ← suspiciously many'
+        : '';
   out(`  ${role.padEnd(20)} ${String(count).padStart(3)}${note}`);
 }
 
+// ── cart page ─────────────────────────────────────────────────────────────
+//
+// A separate probe rather than a branch inside the PDP one, because nothing
+// carries over: there is no `.main-product` to scope to, "the price" is per
+// line rather than per page, and the interesting structure is the repeated
+// line itself.
+//
+// Written flat, with no nested named functions. tsx/esbuild runs with
+// `keepNames`, which wraps a nested named function in `__name(...)` — and
+// `__name` does not exist inside `page.evaluate`, where the code is
+// stringified and run in the browser. That produced `__name is not defined`
+// at runtime in the health-check audit and cost a whole control run.
+if (onCart) {
+  const cart = await page.evaluate(() => {
+    const suggest = (el) => {
+      const testid = el.getAttribute('data-testid');
+      if (testid !== null) return `[data-testid="${testid}"]`;
+      if (el.id !== '') return `#${el.id}`;
+      const first = el.classList[0];
+      return first === undefined ? el.tagName.toLowerCase() : `${el.tagName.toLowerCase()}.${first}`;
+    };
+    const money = /(?:[$£€]\s?\d|\d+[.,]\d{2})/u;
+    const all = (selector) => Array.from(document.querySelectorAll(selector));
+
+    // Repeated sibling blocks across the whole document. On a cart page the
+    // line item is by far the most likely repeating structure, and the counts
+    // make it recognisable: two or three of the same thing, not thirty.
+    const groups = new Map();
+    for (const element of all('*')) {
+      const parent = element.parentElement;
+      if (parent === null) continue;
+      const testid = element.getAttribute('data-testid');
+      const own =
+        testid !== null
+          ? `[data-testid="${testid}"]`
+          : element.classList[0] === undefined
+            ? ''
+            : `${element.tagName.toLowerCase()}.${element.classList[0]}`;
+      if (own === '') continue;
+      groups.set(own, (groups.get(own) ?? 0) + 1);
+    }
+
+    return {
+      repeated: Array.from(groups.entries())
+        .filter(([, count]) => count >= 2 && count <= 12)
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 12)
+        .map(([key, count]) => `${String(count)}x  ${key}`),
+      prices: all('*')
+        .filter((el) => el.children.length === 0 && money.test(el.textContent ?? ''))
+        .slice(0, 12)
+        .map((el) => `${suggest(el)}   "${(el.textContent ?? '').trim().slice(0, 40)}"`),
+      removes: [
+        ...all('a[href*="/cart/change"]'),
+        ...all('[href*="quantity=0"]'),
+        ...all('button[name="minus"]'),
+        ...all('[class*="remove"]'),
+        ...all('[aria-label*="emove"]'),
+        // The repo's own convention, and the fixture's. Without it this probe
+        // reported "no remove control found" against a cart that has one.
+        ...all('[data-testid*="remove"]'),
+      ]
+        .filter((el, index, list) => list.indexOf(el) === index)
+        .slice(0, 8)
+        .map((el) => `${suggest(el)}   "${(el.textContent ?? '').trim().slice(0, 40)}"`),
+      subtotals: [
+        ...all('[class*="subtotal"]'),
+        ...all('[class*="total"]'),
+        ...all('[data-testid*="total"]'),
+      ]
+        .filter((el, index, list) => list.indexOf(el) === index)
+        .filter((el) => el.children.length === 0)
+        .slice(0, 8)
+        .map((el) => `${suggest(el)}   "${(el.textContent ?? '').trim().slice(0, 40)}"`),
+      checkout: [
+        ...all('button[name="checkout"]'),
+        ...all('[href*="/checkout"]'),
+        ...all('[class*="checkout"]'),
+      ]
+        .filter((el, index, list) => list.indexOf(el) === index)
+        .slice(0, 6)
+        .map((el) => `${suggest(el)}   "${(el.textContent ?? '').trim().slice(0, 40)}"`),
+    };
+  });
+
+  const section = (title, role, lines, empty) => {
+    out('');
+    out(`  ${title}  →  ${role}`);
+    if (lines.length === 0) out(`    ${empty}`);
+    else for (const line of lines) out(`    ${line}`);
+  };
+
+  out('');
+  out('What this theme actually uses on the cart');
+
+  section(
+    'repeated blocks',
+    'cart_line',
+    cart.repeated,
+    'nothing repeats — the cart is probably empty. Add a kit and re-run.',
+  );
+  section('price-bearing leaves', 'cart_line_price', cart.prices, 'no prices found');
+  section('remove controls', 'cart_line_remove', cart.removes, 'no remove control found');
+  section('totals', 'cart_subtotal', cart.subtotals, 'no subtotal found');
+  section('checkout', 'checkout_button', cart.checkout, 'no checkout control found');
+  out('');
+  out('  cart_line must be the LINE, not the price inside it: the spec walks');
+  out('  each line and looks for that line\'s own price and remove control, so a');
+  out('  cart_line that matches the price element finds neither.');
+  out('');
+
+  await browser.close();
+  process.exit(0);
+}
+
+// ── product page ──────────────────────────────────────────────────────────
+//
 // What the theme actually uses. Found semantically — by role, not by class —
 // then rendered back as a selector you can paste.
 const found = await page.evaluate(() => {
@@ -171,12 +300,13 @@ const found = await page.evaluate(() => {
     // Repeated sibling blocks inside the product section.
     //
     // This is how a "what's in the kit" list looks in the DOM whatever it is
-    // called: siblings sharing a class signature. Two is enough — the
-    // reference kit lists exactly two items, and a threshold of three reported
-    // "this theme does not list kit contents" about a page that does. `kit_item` is
-    // the last unmapped role and no guess at its class name has landed, so
-    // instead of guessing again this reports every repeating structure and
-    // lets a person recognise the right one.
+    // called: siblings sharing a class signature. Kept as a diagnostic, not as
+    // a mapping aid — there is no `kit_item` role any more. This probe is what
+    // established there is nothing to map: on mykitsch.com every repeating
+    // block inside `.main-product` is the image gallery (32 zoom buttons, 8
+    // slides, 8 media wrappers), so the PDP-side dimensions were removed
+    // rather than left unobservable. Re-run it if the theme changes and a
+    // contents list appears; until then a gallery is all it will show.
     repeated: (() => {
       const groups = new Map();
       for (const element of Array.from(scope.querySelectorAll('*'))) {
@@ -229,10 +359,10 @@ out('');
 out('  struck-through / compare-at candidates');
 for (const item of found.struck) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
 out('');
-out('  repeated blocks — candidates for kit_item');
+out('  repeated blocks inside the product section  (diagnostic — no role maps');
+out('  to these; on this theme they are the image gallery)');
 if (found.repeated.length === 0) {
-  out('    none — nothing inside the product section repeats, so this theme');
-  out('    does not list the kit contents on the PDP.');
+  out('    none — nothing inside the product section repeats.');
 } else {
   for (const line of found.repeated) out(`    ${line}`);
 }

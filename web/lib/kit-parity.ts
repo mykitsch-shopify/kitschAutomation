@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 
 import { parse } from 'yaml';
 
+import { normalizeTitle } from './top-products.js';
+
 /**
  * Welcome-kit free-item parity — pure logic.
  *
@@ -16,58 +18,92 @@ import { parse } from 'yaml';
  * defines correct; the summer kits are measured against it. So this file
  * contains no opinion about what a free item should do, which is what keeps
  * it right when merchandising changes the reference.
+ *
+ * ── Everything is read from the CART, not the PDP ────────────────────────
+ *
+ * It used to be read from both. The PDP half is gone, and not because it was
+ * less interesting — because mykitsch.com does not render it. The theme lists
+ * no kit contents on the product page: the only repeating structure inside
+ * `.main-product` is the image gallery, so `kit_item` matched nothing on every
+ * kit and there is no selector anybody could write that would change that.
+ * There is no free-gift selector on the page either.
+ *
+ * A dimension that cannot be observed does not fail — it falls to its default
+ * on both kits, they agree, and the run goes green having looked at nothing.
+ * That is the failure mode this suite exists to prevent, so the unobservable
+ * dimensions were removed rather than left in place to be silently skipped.
+ *
+ * What is lost, said plainly: the §12 "no MSRP leakage on the PDP" check and
+ * the §7 badge check, as read from the product page, and the §7 gift-selector
+ * count (WK-TC-020, 024). The money questions all survive, because the cart
+ * and the order summary do render — and the cart is where a leaked price
+ * actually costs someone money.
  */
 
 export type KitDimension =
-  | 'free_item_count'
-  | 'free_item_price_label'
-  | 'free_item_badge'
-  | 'auto_added_to_cart'
+  | 'free_line_count'
+  | 'paid_line_count'
+  | 'free_line_price_label'
   | 'counted_in_subtotal'
   | 'independently_removable'
   | 'removed_with_qualifying_product'
-  | 'free_at_checkout'
-  | 'free_gift_option_count'
-  | 'free_gift_single_select';
+  | 'free_at_checkout';
 
 export const ALL_DIMENSIONS: readonly KitDimension[] = [
-  'free_item_count',
-  'free_item_price_label',
-  'free_item_badge',
-  'auto_added_to_cart',
+  'free_line_count',
+  'paid_line_count',
+  'free_line_price_label',
   'counted_in_subtotal',
   'independently_removable',
   'removed_with_qualifying_product',
   'free_at_checkout',
-  'free_gift_option_count',
-  'free_gift_single_select',
 ];
 
-/** How one kit treats its free items, as a customer would experience it. */
+/**
+ * How one kit treats its free items, as a customer would experience it.
+ *
+ * `free_line_count` and `paid_line_count` are both here on purpose, and the
+ * pair is what makes a finding legible. Adding the qualifying product to an
+ * empty cart should produce one paid line and one free one. If the gift is
+ * never added, free goes 1 → 0 and paid stays 1. If the gift is added but
+ * charged, free goes 1 → 0 and paid goes 1 → 2. Either alone reads as "the
+ * gift is missing"; together they say which of the two actually happened.
+ */
 export type KitProfile = {
-  readonly free_item_count: number;
+  /** Cart lines that cost the customer nothing. Zero means no gift arrived. */
+  readonly free_line_count: number;
+  /** Cart lines that cost money. A charged gift shows up as one of these. */
+  readonly paid_line_count: number;
   /** Normalised, sorted — "Free", "FREE" and " free " are the same promise. */
-  readonly free_item_price_label: readonly string[];
-  readonly free_item_badge: readonly string[];
-  readonly auto_added_to_cart: boolean;
+  readonly free_line_price_label: readonly string[];
   readonly counted_in_subtotal: boolean;
   readonly independently_removable: boolean;
   readonly removed_with_qualifying_product: boolean;
   readonly free_at_checkout: boolean;
-  readonly free_gift_option_count: number;
-  readonly free_gift_single_select: boolean;
 };
 
-export type KitSpec = { readonly name: string; readonly handle: string };
+export type KitSpec = {
+  readonly name: string;
+  readonly handle: string;
+  /**
+   * What the storefront currently calls this product, read off the page.
+   *
+   * A handle resolving 200 does not mean it still points at the kit anybody
+   * meant. `winter-welcome-kit-combos` resolves and serves a page titled
+   * "Shampoo & Conditioner Bundle with Free Welcome Kit" — the reference has
+   * been renamed, and nothing here would have said so. The identical backstop
+   * in config/top-products.yaml caught four wrong products the same way.
+   *
+   * Undefined means it has not been recorded yet, which is reported as
+   * unverified rather than passed over in silence.
+   */
+  readonly canonicalTitle: string | undefined;
+};
 
 export type SelectorName =
   | 'pdp_title'
   | 'pdp_price'
   | 'pdp_compare_at'
-  | 'kit_item'
-  | 'kit_item_price'
-  | 'kit_item_badge'
-  | 'free_gift_input'
   | 'add_to_cart'
   | 'cart_line'
   | 'cart_line_price'
@@ -78,11 +114,19 @@ export type SelectorName =
   | 'summary_price';
 
 const SELECTOR_NAMES: readonly SelectorName[] = [
-  'pdp_title', 'pdp_price', 'pdp_compare_at', 'kit_item', 'kit_item_price',
-  'kit_item_badge', 'free_gift_input', 'add_to_cart', 'cart_line',
+  'pdp_title', 'pdp_price', 'pdp_compare_at', 'add_to_cart', 'cart_line',
   'cart_line_price', 'cart_line_remove', 'cart_subtotal', 'checkout_button',
   'summary_line', 'summary_price',
 ];
+
+/**
+ * Whether the page on screen is still the product the config names.
+ *
+ * Normalised the same way top-products does it — case, ampersands and dash
+ * variants folded — so a typographic change is not reported as a rename.
+ */
+export const isSameProduct = (canonicalTitle: string, observed: string): boolean =>
+  normalizeTitle(canonicalTitle) === normalizeTitle(observed);
 
 export type KitConfig = {
   readonly reference: KitSpec;
@@ -101,12 +145,12 @@ export type KitDifference = {
 
 /** Why each dimension matters, quoted straight into the finding. */
 const WHY: Readonly<Record<KitDimension, string>> = {
-  free_item_count: 'The kits include a different number of free items.',
-  free_item_price_label:
-    'The free item is priced differently to the customer — "Free", "$0.00" and a struck-through price are three different promises.',
-  free_item_badge: 'The free item carries a different badge, so it reads as a different kind of offer.',
-  auto_added_to_cart:
-    'One kit puts the free item in the cart automatically and the other does not, so the gift is only received if the customer notices it.',
+  free_line_count:
+    'Adding the qualifying product puts a different number of free lines in the cart. A drop to zero is the auto-add failing: the gift is only received if the customer goes and finds it. Test plan §8, WK-TC-017 and 021.',
+  paid_line_count:
+    'Adding the qualifying product puts a different number of paid lines in the cart. Read this beside free_line_count: if free fell and paid rose, the gift is in the cart and being charged for, which is a different defect from the gift not arriving at all.',
+  free_line_price_label:
+    'The free line is priced differently to the customer in the cart — "Free", "$0.00" and a struck-through price are three different promises. Test plan §12, WK-TC-018 and 022.',
   counted_in_subtotal:
     'The free item contributes to the subtotal in one kit and not the other, so the same promise produces different order values.',
   independently_removable:
@@ -115,10 +159,6 @@ const WHY: Readonly<Record<KitDimension, string>> = {
     'Removing the qualifying product takes the free kit with it in one and leaves it behind in the other. A free kit stranded in the cart is either given away unearned or charged for. Test plan §8, negative cases.',
   free_at_checkout:
     'The free item is $0 in one kit and not the other by the time the customer reaches the order summary — the last place anyone looks and the only one that takes money. Test plan §10.',
-  free_gift_option_count:
-    'The free-gift selector offers a different number of options, so the same promise buys a different choice. Test plan §7.',
-  free_gift_single_select:
-    'One kit allows several free gifts to be selected at once and the other does not. Test plan §7: only one free gift can be selected at a time.',
 };
 
 export const normalizeLabel = (value: string): string =>
@@ -172,6 +212,14 @@ const parseKit = (value: unknown, at: string): KitSpec => {
   return {
     name: requireString(value.name, `${at}.name`),
     handle: requireString(value.handle, `${at}.handle`),
+    // Optional, and absent is a real state rather than a placeholder: the
+    // candidates' live titles have not been read off the store yet. Blank and
+    // whitespace-only are treated as absent so a half-filled row cannot pass
+    // an identity check against the empty string.
+    canonicalTitle:
+      typeof value.canonical_title === 'string' && value.canonical_title.trim() !== ''
+        ? value.canonical_title.trim()
+        : undefined,
   };
 };
 
