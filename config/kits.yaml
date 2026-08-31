@@ -31,15 +31,20 @@ reference:
   note: 'Live kit, SKU 2. The reference every seasonal kit is measured against.'
 
 candidates:
-  # No canonical_title on these three yet: preflight has only ever been run
-  # against the reference PDP. Until each is filled in, a run reports their
-  # identity as unverified rather than implying it was confirmed.
+  # All three read off the live store by `npm run preflight` on 2026-08-31.
   - name: Summer Welcome Kit with Shampoo & Conditioner
     handle: summer-welcome-kit-liquid-combos
+    canonical_title: Summer Welcome Kit with Shampoo & Conditioner
   - name: Summer Welcome Kit with Shampoo & Conditioner Bars
     handle: summer-welcome-kit-bar-combos
+    canonical_title: Summer Welcome Kit with Shampoo & Conditioner Bars
+  # The brief calls this one "Spring Welcome Kit Combo". The storefront calls
+  # it "Spring Welcome Kit" — no "Combo". A small difference, and exactly the
+  # kind that makes a handle look confirmed when nobody checked: the name above
+  # is what we were told, the title below is what is actually being served.
   - name: Spring Welcome Kit Combo
     handle: shampoo-conditioner-bar-bundle-with-free-spring-welcome-kit-combo
+    canonical_title: Spring Welcome Kit
 
 # What "handled the same way" means. Each dimension is something a customer
 # can see or do, and each maps to a test case in testcaseswelcomekit.xlsx.

@@ -7,22 +7,31 @@
 //      selector you can paste.
 //
 //   node scratch-report/discover.mjs https://www.mykitsch.com/products/<handle>
+//   node scratch-report/discover.mjs --add https://www.mykitsch.com/products/<handle>
 //   node scratch-report/discover.mjs https://www.mykitsch.com/cart
 //
-// A /cart URL switches to the cart roles. Those are now the load-bearing ones:
-// every dimension the parity spec compares is read from the cart and the order
-// summary, because this theme renders no kit-contents list and no gift
-// selector on a kit PDP. Put something in the cart first — an empty cart has
-// no lines to find, and "no selector matched" and "nothing was in it" look
-// identical from here.
+// `--add` loads the PDP, clicks add-to-cart, and then probes the cart. Use it:
+// the cart roles are the load-bearing ones now — every dimension the parity
+// spec compares is read from the cart and the order summary — and a bare /cart
+// URL almost always finds an empty cart.
+//
+// An empty cart is the trap this script exists to avoid walking into. Probed
+// directly, it answered with twelve "repeated blocks" that were the nav, the
+// footer and the payment-icon strip, and reported "no remove control found"
+// and "no subtotal found" as though those were facts about the theme. They
+// were facts about an empty page. It now detects that and says so instead.
 
 import { readFileSync } from 'node:fs';
 
 import { chromium } from '@playwright/test';
 
-const url = process.argv[2];
+const args = process.argv.slice(2);
+const addFirst = args.includes('--add');
+const url = args.find((value) => !value.startsWith('--'));
 if (url === undefined) {
-  process.stderr.write('usage: node scratch-report/discover.mjs <product-url>\n');
+  process.stderr.write(
+    'usage: node scratch-report/discover.mjs [--add] <product-url | cart-url>\n',
+  );
   process.exit(2);
 }
 
@@ -38,27 +47,64 @@ for (const line of readFileSync('config/kits.yaml', 'utf8').split('\n')) {
   if (match !== null) selectors[match[1]] = match[2];
 }
 
-const onCart = /\/cart(\/|\?|$)/u.test(new URL(url).pathname + new URL(url).search);
+const isCartUrl = (value) => /\/cart(\/|\?|$)/u.test(new URL(value).pathname);
+let onCart = isCartUrl(url);
 
 const browser = await chromium.launch(
   process.env.KITSCH_CHROMIUM_PATH ? { executablePath: process.env.KITSCH_CHROMIUM_PATH } : {},
 );
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-const response = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
+let response = await page.goto(url, { waitUntil: 'load', timeout: 60000 });
 
 // This theme renders the buy button after load — A/B and anti-flicker scripts
 // hold it back. Looking at domcontentloaded reported "no add-to-cart" on every
 // PDP while the button was simply not there yet. Never `networkidle`: the store
 // beacons continuously and it would only ever time out.
+const buyButton = 'button[name="add"], .product-form__submit, [data-testid="add-to-cart"], .bundle-buy-button';
 const settled = onCart
   ? true
   : await page
-      .waitForSelector('button[name="add"], .product-form__submit, [data-testid="add-to-cart"]', {
-        timeout: 15000,
-        state: 'attached',
-      })
+      .waitForSelector(buyButton, { timeout: 15000, state: 'attached' })
       .then(() => true)
       .catch(() => false);
+
+// ── --add: put something in the cart, then look at the cart ───────────────
+//
+// Reported rather than assumed at every step. "Clicked add-to-cart and the
+// cart is empty" and "never managed to click anything" are different findings
+// about the theme, and the second one is the more interesting.
+let addNote = '';
+if (addFirst && !onCart) {
+  const clicked = await page
+    .locator(buyButton)
+    .first()
+    .click({ timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!clicked) {
+    addNote = 'the buy button never became clickable — nothing was added';
+  } else {
+    // Most themes open a drawer and stay on the PDP; some navigate. Wait for a
+    // navigation, then go to the cart if none came.
+    await page
+      .waitForURL((next) => isCartUrl(next), { timeout: 5000 })
+      .catch(() => undefined);
+    // Only navigate if the click did not. Going to a bare /cart regardless
+    // would throw away whatever query the theme put on the URL — the fixture
+    // carries the kit in `?kit=`, and dropping it served a generic cart.
+    if (isCartUrl(page.url())) {
+      addNote = 'the click navigated to the cart';
+    } else {
+      addNote = 'the click opened a drawer rather than navigating; went to /cart';
+      response = await page.goto(new URL('/cart', url).href, {
+        waitUntil: 'load',
+        timeout: 60000,
+      });
+    }
+  }
+  onCart = isCartUrl(page.url());
+}
 
 const out = (line) => process.stdout.write(`${line}\n`);
 
@@ -116,11 +162,44 @@ if (onCart) {
       return first === undefined ? el.tagName.toLowerCase() : `${el.tagName.toLowerCase()}.${first}`;
     };
     const money = /(?:[$£€]\s?\d|\d+[.,]\d{2})/u;
-    const all = (selector) => Array.from(document.querySelectorAll(selector));
 
-    // Repeated sibling blocks across the whole document. On a cart page the
-    // line item is by far the most likely repeating structure, and the counts
-    // make it recognisable: two or three of the same thing, not thirty.
+    // Scoped to the cart region, for the same reason the PDP probe scopes to
+    // `.main-product`. Unscoped, this reported the nav, the footer, the
+    // announcement bar and the payment-icon strip as candidates for
+    // `cart_line`, and the free-shipping banner's "$35.00" as a line price.
+    let region = document.body;
+    for (const candidate of [
+      'form[action*="/cart"]',
+      '[class*="cart-items"]',
+      '[class*="cart__items"]',
+      '[id*="cart" i][class*="item" i]',
+      'main',
+    ]) {
+      const found = document.querySelector(candidate);
+      if (found !== null) {
+        region = found;
+        break;
+      }
+    }
+
+    // Never `script`, `style`, `noscript` or `template`. They are leaf nodes
+    // full of text, and JSON blobs and CSS both contain things that look like
+    // money — the unscoped run offered `#apple-pay-shop-capabilities` and a
+    // TriplePixel bootstrap as candidates for `cart_line_price`.
+    const DEAD = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'LINK', 'META', 'TITLE']);
+    const all = (selector) =>
+      Array.from(region.querySelectorAll(selector)).filter((el) => !DEAD.has(el.tagName));
+
+    // How full the cart is, decided before anything is interpreted. An empty
+    // cart makes every answer below meaningless, and it looks identical to a
+    // theme whose selectors do not fit.
+    const emptyText = /your (cart|bag) is empty|cart is currently empty/iu.test(
+      document.body.innerText,
+    );
+
+    // Repeated sibling blocks inside the cart region. On a cart page the line
+    // item is by far the most likely repeating structure, and the counts make
+    // it recognisable: two or three of the same thing, not thirty.
     const groups = new Map();
     for (const element of all('*')) {
       const parent = element.parentElement;
@@ -137,6 +216,8 @@ if (onCart) {
     }
 
     return {
+      empty: emptyText,
+      region: `${region.tagName.toLowerCase()}${region.classList[0] === undefined ? '' : `.${region.classList[0]}`}`,
       repeated: Array.from(groups.entries())
         .filter(([, count]) => count >= 2 && count <= 12)
         .sort((left, right) => right[1] - left[1])
@@ -168,10 +249,15 @@ if (onCart) {
         .filter((el) => el.children.length === 0)
         .slice(0, 8)
         .map((el) => `${suggest(el)}   "${(el.textContent ?? '').trim().slice(0, 40)}"`),
+      // Only things a customer can press. `[href*="/checkout"]` unrestricted
+      // matched six `<link rel="prefetch">` tags in the document head and
+      // printed them as six nameless candidates.
       checkout: [
         ...all('button[name="checkout"]'),
-        ...all('[href*="/checkout"]'),
-        ...all('[class*="checkout"]'),
+        ...all('a[href*="/checkout"]'),
+        ...all('button[class*="checkout"]'),
+        ...all('a[class*="checkout"]'),
+        ...all('input[type="submit"][name*="checkout"]'),
       ]
         .filter((el, index, list) => list.indexOf(el) === index)
         .slice(0, 6)
@@ -187,13 +273,46 @@ if (onCart) {
   };
 
   out('');
-  out('What this theme actually uses on the cart');
+  if (addNote !== '') out(`  note: ${addNote}`);
+
+  // Say this before anything is interpreted, and stop.
+  //
+  // An empty cart makes every section below a statement about page furniture.
+  // Printed anyway, the first run offered `li.list-payment__item` and
+  // `div.announcement__item` as candidates for `cart_line` and reported "no
+  // subtotal found" — which reads as a fact about the theme and is a fact
+  // about an empty page. Guessing from that output would have mapped the
+  // payment-icon strip as the cart line.
+  // Not "nothing repeats". A cart holding exactly one line has nothing to
+  // repeat, and that heuristic declared the fixture's one-line cart empty —
+  // the same confident-wrong-answer failure this section exists to stop, in
+  // the code written to stop it. A cart with anything in it always prices it,
+  // so the absence of a price is the reliable signal, alongside the theme
+  // saying so in words.
+  if (cart.empty || cart.prices.length === 0) {
+    out('  THE CART IS EMPTY.');
+    out('');
+    out('  Nothing below would be about the cart, so nothing below is printed.');
+    out('  Every "no X found" here would describe an empty page, not this theme.');
+    out('');
+    out('  Fill it first — the script can do it:');
+    out('');
+    out('    node scratch-report/discover.mjs --add <product-url>');
+    out('');
+    out('  which loads the PDP, presses add-to-cart, and then probes the cart.');
+    out('');
+    await browser.close();
+    process.exit(2);
+  }
+
+  out(`What this theme actually uses on the cart   (searched inside ${cart.region})`);
 
   section(
     'repeated blocks',
     'cart_line',
     cart.repeated,
-    'nothing repeats — the cart is probably empty. Add a kit and re-run.',
+    'nothing repeats — expected if the cart holds exactly one line. Add a' +
+      ' second product and re-run to see the line structure.',
   );
   section('price-bearing leaves', 'cart_line_price', cart.prices, 'no prices found');
   section('remove controls', 'cart_line_remove', cart.removes, 'no remove control found');

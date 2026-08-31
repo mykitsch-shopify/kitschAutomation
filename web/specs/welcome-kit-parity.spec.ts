@@ -89,7 +89,35 @@ const assertIdentity = async (page: Page, kit: KitSpec): Promise<void> => {
   ).toBe(true);
 };
 
+/**
+ * Get to the cart page after adding, however this theme handles the click.
+ *
+ * The spec used to assume the click navigates. That is true of the fixture,
+ * whose add-to-cart is an `<a href="/cart?kit=…">`, and false of most real
+ * Shopify themes — mykitsch.com renders `.bundle-buy-button` as a DIV and
+ * opens a drawer, leaving the URL on the PDP. Reading "the cart" off a product
+ * page finds nothing, which is indistinguishable from a cart that is empty.
+ *
+ * So: give the click a moment to navigate on its own, and if it did not, go to
+ * the cart. Not the other way round — navigating unconditionally would drop
+ * the fixture's `?kit=` parameter and serve a generic cart, which would break
+ * the detection control while looking like it still worked.
+ */
+const settleOnCart = async (page: Page): Promise<void> => {
+  const onCart = (): boolean => new URL(page.url()).pathname.replace(/\/$/u, '').endsWith('/cart');
+
+  await page.waitForURL((url) => url.pathname.replace(/\/$/u, '').endsWith('/cart'), {
+    timeout: 5_000,
+  }).catch(() => undefined);
+
+  if (!onCart()) await page.goto('/cart');
+};
+
 const money = (value: string): number => Number(value.replace(/[^0-9.]/gu, '')) || 0;
+
+/** The command that maps this theme's cart, quoted into failures verbatim. */
+const baseCartProbeUrl = (handle: string): string =>
+  `${process.env.KITSCH_BASE_URL ?? 'http://127.0.0.1:4173'}/products/${handle}`;
 
 const free = (value: string): boolean => isFreePrice(value, config.freePricePattern);
 
@@ -165,23 +193,57 @@ const profileKit = async (
   // read from the PDP: this theme lists no kit contents and offers no gift
   // selector, so there is nothing there to read.
   await page.locator(config.selectors.add_to_cart).first().click();
+  await settleOnCart(page);
 
   // Walked line by line so a free line can be paired with its own remove
   // control — a cart-wide count cannot tell which line the control belongs to.
   const cartLines = page.locator(config.selectors.cart_line);
+  const lineCount = await cartLines.count();
+
+  // Fail here, on the root cause, rather than thirty seconds later on whatever
+  // reads next. Against mykitsch.com every cart selector matched nothing, and
+  // the first thing to notice was `cart_subtotal` — which timed out with
+  // Playwright's own "locator.innerText: Timeout 30000ms exceeded". True, and
+  // useless: it reads as a hung page when it means the cart selectors do not
+  // fit this theme. Three tests spent 54 seconds each arriving at the wrong
+  // description of the same problem.
+  expect(
+    lineCount,
+    `nothing matched "${config.selectors.cart_line}" on the cart after adding ${kit.name}. Either the add-to-cart did not put anything in the cart, or cart_line does not fit this theme — every dimension is read from the cart, so nothing below could be measured. Map the cart selectors in config/kits.yaml "selectors": node scratch-report/discover.mjs --add ${baseCartProbeUrl(kit.handle)}`,
+  ).toBeGreaterThan(0);
+
   const cartPrices: string[] = [];
   let freeLinesWithRemove = 0;
-  for (let index = 0; index < (await cartLines.count()); index += 1) {
+  for (let index = 0; index < lineCount; index += 1) {
     const line = cartLines.nth(index);
-    const price = await line.locator(config.selectors.cart_line_price).first().innerText();
-    cartPrices.push(price);
-    if (free(price) && (await line.locator(config.selectors.cart_line_remove).count()) > 0) {
+    // A line with no price is a mapping problem, not a free line: defaulting
+    // it to "" would classify it as not-free and inflate paid_line_count.
+    const price = await line
+      .locator(config.selectors.cart_line_price)
+      .first()
+      .innerText()
+      .catch(() => undefined);
+    expect(
+      price,
+      `cart line ${String(index + 1)} of ${String(lineCount)} on ${kit.name} has no price matching "${config.selectors.cart_line_price}". Every money dimension reads this, so a missing price cannot be treated as $0 — map cart_line_price in config/kits.yaml "selectors".`,
+    ).not.toBeUndefined();
+    cartPrices.push(price ?? '');
+    if (free(price ?? '') && (await line.locator(config.selectors.cart_line_remove).count()) > 0) {
       freeLinesWithRemove += 1;
     }
   }
   const inCart = classify(cartPrices);
 
-  const subtotal = money(await page.locator(config.selectors.cart_subtotal).first().innerText());
+  const subtotalText = await page
+    .locator(config.selectors.cart_subtotal)
+    .first()
+    .innerText()
+    .catch(() => undefined);
+  expect(
+    subtotalText,
+    `no subtotal matched "${config.selectors.cart_subtotal}" on the cart for ${kit.name}. counted_in_subtotal compares the subtotal against the paid lines, so without it a free item reaching the subtotal would go unreported — map cart_subtotal in config/kits.yaml "selectors".`,
+  ).not.toBeUndefined();
+  const subtotal = money(subtotalText ?? '');
 
   // §10 — the order summary, the last place a "free" item can cost money.
   await page.locator(config.selectors.checkout_button).first().click();

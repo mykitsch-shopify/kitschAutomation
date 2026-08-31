@@ -211,6 +211,19 @@ read from the cart and the order summary, because this theme renders no
 kit-contents list and no gift selector on a kit PDP. See
 [`WELCOME-KIT-COVERAGE.md`](WELCOME-KIT-COVERAGE.md) for what that gave up.
 
+To map them, let the discovery script fill the cart itself:
+
+```bash
+node scratch-report/discover.mjs --add https://www.mykitsch.com/products/winter-welcome-kit-combos
+```
+
+It loads the PDP, presses add-to-cart, goes to the cart and prints each role
+with paste-ready selectors. Pointing it at a bare `/cart` almost always finds
+an empty cart — and an empty cart is the trap: probed directly it offered the
+payment-icon strip and the announcement bar as candidates for `cart_line` and
+reported "no subtotal found", which reads as a fact about the theme and is a
+fact about an empty page. The script now detects that and refuses to guess.
+
 ### Start with preflight
 
 ```bash

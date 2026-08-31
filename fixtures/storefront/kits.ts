@@ -69,9 +69,13 @@ export const KITS: readonly Kit[] = [
     'Summer Welcome Kit with Shampoo & Conditioner Bars',
     'Summer Shampoo & Conditioner Bar Combo',
   ),
+  // "Spring Welcome Kit", not "Spring Welcome Kit Combo" — the brief says
+  // Combo, the storefront does not. Titled as the store titles it, for the
+  // same reason as the reference above: one config has to satisfy the identity
+  // check against both this fixture and mykitsch.com.
   kit(
     'shampoo-conditioner-bar-bundle-with-free-spring-welcome-kit-combo',
-    'Spring Welcome Kit Combo',
+    'Spring Welcome Kit',
     'Spring Shampoo & Conditioner Bar Bundle',
   ),
 ];

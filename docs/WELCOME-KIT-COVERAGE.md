@@ -20,18 +20,25 @@ Sources: `testcaseswelcomekit.xlsx` (57 cases, 13 scenarios) and
 
 Declared in [`config/kits.yaml`](../config/kits.yaml).
 
-> **The reference has been renamed.** `winter-welcome-kit-combos` still
-> resolves, but the page it serves is titled **"Shampoo & Conditioner Bundle
-> with Free Welcome Kit"**. The handle was kept; the product was not. Nothing
-> in the suite noticed, because a handle returning HTTP 200 was treated as
-> proof of identity. `config/kits.yaml` now records a `canonical_title` per
-> kit and both `npm run preflight` and the spec assert it — the same backstop
-> that caught four wrong products in `config/top-products.yaml`.
+> **Two of these four are not called what the brief calls them.** A handle
+> returning HTTP 200 was being treated as proof of identity, so nothing
+> noticed. `config/kits.yaml` now records a `canonical_title` per kit, read off
+> the live store by `npm run preflight` on 2026-08-31, and both preflight and
+> the spec assert it — the same backstop that caught four wrong products in
+> `config/top-products.yaml`.
 >
-> The three candidates have no `canonical_title` yet: their live titles have
-> not been read off the store. Runs report their identity as **unverified**
-> rather than implying it was confirmed. `npm run preflight` against the store
-> prints the observed title for each; paste them in.
+> | Handle | Brief calls it | Storefront serves |
+> |---|---|---|
+> | `winter-welcome-kit-combos` | Winter Welcome Kit Combos | **Shampoo & Conditioner Bundle with Free Welcome Kit** |
+> | `summer-welcome-kit-liquid-combos` | Summer Welcome Kit with Shampoo & Conditioner | *(same)* |
+> | `summer-welcome-kit-bar-combos` | Summer Welcome Kit with Shampoo & Conditioner Bars | *(same)* |
+> | `shampoo-conditioner-bar-bundle-with-free-spring-welcome-kit-combo` | Spring Welcome Kit Combo | **Spring Welcome Kit** |
+>
+> The winter one matters most: it is the reference every other kit is measured
+> against, and the handle was kept while the product was renamed. Worth putting
+> to marketing — is this still the kit the comparison should be anchored to?
+> If it is not, all three seasonal kits are wrong in the same direction and the
+> check will not say so.
 
 ### Why this is built as a comparison, not a checklist
 
@@ -202,17 +209,29 @@ constraint on the machine this suite runs on: mykitsch.com is a public
 storefront and an ordinary computer reaches it without a VPN, an allowlist or
 any other grant.
 
-Two prerequisites remain, both from `npm run preflight` against the store:
+`npm run preflight` against mykitsch.com is **clean**: four handles resolve,
+four titles confirmed against `canonical_title`, and `pdp_title`,
+`pdp_compare_at` and `add_to_cart` each match exactly one element. The page-load
+half of the suite (WK-TC-002, 005, 008, 009) passes against the live store.
 
-1. **The cart selectors are unmapped.** `cart_line`, `cart_line_price`,
-   `cart_line_remove` and `cart_subtotal` in `config/kits.yaml` still carry
-   guesses, and every dimension now reads from the cart — so they are the
-   load-bearing ones. They need a discovery run against
-   `https://www.mykitsch.com/cart` with something in it. Until then the spec
-   fails loudly on the reference kit rather than reporting parity, which is
-   the intended behaviour: it will not report agreement it did not observe.
-2. **Three candidates have no `canonical_title`.** Preflight prints the
-   observed title for each; paste them into `config/kits.yaml`.
+One prerequisite remains: **the cart selectors are unmapped.** `cart_line`,
+`cart_line_price`, `cart_line_remove` and `cart_subtotal` in `config/kits.yaml`
+still carry guesses, and every compared dimension now reads through them, so
+they are the load-bearing ones. Map them with:
+
+```bash
+node scratch-report/discover.mjs --add https://www.mykitsch.com/products/winter-welcome-kit-combos
+```
+
+Until they are mapped the spec fails on the reference kit naming the selector,
+rather than reporting parity. That is the intended behaviour — it will not
+report agreement it did not observe.
+
+One open question for the theme, raised by the live run and not yet answered:
+`add_to_cart` on a kit PDP is `.bundle-buy-button`, a DIV, and clicking it
+opens a drawer rather than navigating. The spec now goes to `/cart` when the
+click does not navigate, but whether the click adds anything at all — a bundle
+builder may require choices first — is unverified.
 
 Until that run happens, **this document cannot tell you whether the summer and
 spring kits currently match winter.** It tells you the check exists, covers
