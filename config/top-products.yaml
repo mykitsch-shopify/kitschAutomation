@@ -178,7 +178,18 @@ discounts:
 selectors:
   title: '[data-testid="pdp-title"], .main-product h1.font-heading, .main-product h1.product__title, .main-product .product-single__title'
   price: '[data-testid="pdp-price"], .main-product span.text-red-700, .main-product .price-item--sale, .main-product .product__price--sale'
-  compare_at: '[data-testid="pdp-compare-at"], .main-product s.comp-price__value, .main-product s.bundle-price__compare, .main-product .price-item--regular, .main-product .product__price--compare'
+  # `.price-item--regular` removed, on evidence rather than suspicion. Across
+  # the ten live PDPs its matches are a strict SUPERSET of `s.comp-price__value`
+  # — 4 against 3 on the combos, 2 against 1 on the single products, with the
+  # union equal to its own count every time, so it contributes only the extra
+  # element and never a unique one. That extra is the carousel leak. Dropping it
+  # takes compare_at from 4 to 3 and from 2 to 1.
+  #
+  # The remaining 3 on combo PDPs is not yet explained — possibly a compare-at
+  # per bundled component. The audit takes `.first()`, and preflight prints the
+  # per-alternative counts, so the next run against the store says whether
+  # `.first()` is the product's own price or one of its components'.
+  compare_at: '[data-testid="pdp-compare-at"], .main-product s.comp-price__value, .main-product s.bundle-price__compare, .main-product .product__price--compare'
   description: '[data-testid="pdp-description"], .main-product .product__description, .main-product .product-single__description'
   specifications: '[data-testid="pdp-specs"], .main-product .product__specs, .main-product .product-details__accordion'
   image: '[data-testid="pdp-image"], .main-product .product__media img, .main-product .product-single__photo img'

@@ -90,6 +90,8 @@ if (addFirst && !onCart) {
     await page
       .waitForURL((next) => isCartUrl(next), { timeout: 5000 })
       .catch(() => undefined);
+    // Give an AJAX add time to land before anything concludes it did not.
+    await page.waitForTimeout(2000);
     // Only navigate if the click did not. Going to a bare /cart regardless
     // would throw away whatever query the theme put on the URL — the fixture
     // carries the kit in `?kit=`, and dropping it served a generic cart.
@@ -107,6 +109,37 @@ if (addFirst && !onCart) {
 }
 
 const out = (line) => process.stdout.write(`${line}\n`);
+
+/**
+ * What the STORE says is in the cart, not what the DOM looks like.
+ *
+ * Shopify serves /cart.js as JSON on every storefront, and it is the only way
+ * to tell the two failures apart:
+ *
+ *   item_count 0  — nothing was added. A product or flow problem: the button
+ *                   opened a builder that wants selections first, or the add
+ *                   silently failed. No selector can fix this.
+ *   item_count >0 with no DOM lines found — everything was added and the cart
+ *                   selectors do not fit this theme. A mapping problem.
+ *
+ * Inferring "the cart is empty" from an unmatched selector is exactly the
+ * collapse this repo exists to prevent, and the DOM probe alone cannot avoid
+ * it. Absent or not JSON (a non-Shopify target, or the fixture) it reports
+ * `undefined` and the DOM verdict stands on its own, labelled as such.
+ */
+const serverCart = await page
+  .evaluate(async () => {
+    const response = await fetch('/cart.js', { headers: { Accept: 'application/json' } });
+    if (!response.ok) return undefined;
+    const body = await response.json();
+    return {
+      count: body.item_count,
+      lines: (body.items ?? []).map(
+        (item) => `${String(item.quantity)}x  ${item.title}  —  ${String(item.line_price / 100)}`,
+      ),
+    };
+  })
+  .catch(() => undefined);
 
 out('');
 out(`${url}`);
@@ -275,6 +308,28 @@ if (onCart) {
   out('');
   if (addNote !== '') out(`  note: ${addNote}`);
 
+  // The store's own answer, before any DOM reading is interpreted.
+  if (serverCart !== undefined) {
+    out(`  /cart.js says the cart holds ${String(serverCart.count)} item(s)`);
+    for (const line of serverCart.lines) out(`      ${line}`);
+  } else {
+    out('  /cart.js did not answer, so the verdict below is read from the DOM alone.');
+  }
+  out('');
+
+  // Everything was added and we simply cannot see it. Say that, loudly — it is
+  // the opposite conclusion from an empty cart and it has a different fix.
+  if (serverCart !== undefined && serverCart.count > 0 && cart.prices.length === 0) {
+    out('  THE CART IS FULL AND THE SELECTORS CANNOT SEE IT.');
+    out('');
+    out(`  The store reports ${String(serverCart.count)} item(s), and nothing on this page`);
+    out('  matched a price. That is a mapping problem, not an empty cart — the');
+    out('  region search below is looking in the wrong place.');
+    out('');
+    out(`  searched inside: ${cart.region}`);
+    out('');
+  }
+
   // Say this before anything is interpreted, and stop.
   //
   // An empty cart makes every section below a statement about page furniture.
@@ -289,17 +344,36 @@ if (onCart) {
   // the code written to stop it. A cart with anything in it always prices it,
   // so the absence of a price is the reliable signal, alongside the theme
   // saying so in words.
-  if (cart.empty || cart.prices.length === 0) {
+  // `/cart.js` overrules the DOM in both directions when it answered.
+  const reallyEmpty =
+    serverCart !== undefined ? serverCart.count === 0 : cart.empty || cart.prices.length === 0;
+
+  if (reallyEmpty) {
     out('  THE CART IS EMPTY.');
     out('');
     out('  Nothing below would be about the cart, so nothing below is printed.');
     out('  Every "no X found" here would describe an empty page, not this theme.');
     out('');
-    out('  Fill it first — the script can do it:');
-    out('');
-    out('    node scratch-report/discover.mjs --add <product-url>');
-    out('');
-    out('  which loads the PDP, presses add-to-cart, and then probes the cart.');
+    if (addFirst) {
+      // The add was attempted and the store still reports nothing. That is a
+      // finding about the product, not about this script.
+      out('  Add-to-cart was pressed and the store still holds nothing. No');
+      out('  selector can fix that — the button did not add this product.');
+      out('');
+      out('  On this theme the buy control on a bundle PDP is a DIV');
+      out('  (.bundle-buy-button) that opens a builder. If it wants choices made');
+      out('  before anything is added, pressing it is not the whole flow, and the');
+      out('  parity spec\'s model — press add, read cart — does not hold here.');
+      out('');
+      out('  Worth confirming by hand: open the PDP, press the button, and see');
+      out('  whether a drawer asks you to choose items.');
+    } else {
+      out('  Fill it first — the script can do it:');
+      out('');
+      out('    node scratch-report/discover.mjs --add <product-url>');
+      out('');
+      out('  which loads the PDP, presses add-to-cart, and then probes the cart.');
+    }
     out('');
     await browser.close();
     process.exit(2);
@@ -401,6 +475,51 @@ const found = await page.evaluate(() => {
       .slice(0, 8)
       .map(describe),
     struck: [...all('s'), ...all('del'), ...all('[class*="compare"]')].slice(0, 6).map(describe),
+    // Roles the top-10 audit needs and this probe never looked for.
+    //
+    // All three matched zero on all ten products, every alternative, which is
+    // not a near miss — the guesses shipped with the config were generic
+    // Shopify class names and this theme uses none of them. Guessing a fourth
+    // time is not a plan; these report what is actually there.
+    //
+    // Description and specifications are found by shape, not by name: a block
+    // of prose, and a details/accordion element. Anything long enough to be
+    // copy rather than a label.
+    description: all('div, section, article, p')
+      .filter((el) => {
+        const text = (el.textContent ?? '').trim();
+        // Long, and mostly its own text rather than a wrapper around children.
+        return (
+          text.length >= 80 &&
+          text.length <= 2000 &&
+          el.querySelectorAll('div, section, article').length <= 2
+        );
+      })
+      .slice(0, 6)
+      .map(describe),
+    specifications: [
+      ...all('details'),
+      ...all('[class*="accordion"]'),
+      ...all('[class*="ingredient"]'),
+      ...all('[class*="spec"]'),
+      ...all('[class*="detail"]'),
+      // The repo's own convention. Without it this reported "none" against a
+      // fixture whose specs block carries a data-testid and no class — while
+      // the prose list above was showing that very block.
+      ...all('[data-testid*="spec"]'),
+    ]
+      .filter((el, index, list) => list.indexOf(el) === index)
+      .slice(0, 8)
+      .map(describe),
+    // Images are reported with their src, because "an img matched" is not the
+    // same as "the product's photo matched" — a payment icon or a badge is
+    // also an img, and the audit counts these to decide `images_missing`.
+    images: all('img')
+      .slice(0, 8)
+      .map((el) => ({
+        ...describe(el),
+        text: (el.getAttribute('src') ?? '').split('?')[0]?.slice(-58) ?? '',
+      })),
     // Bundle-builder / BYOB slots. Named separately because "0 option(s)" on
     // every BYOB flow is the single largest block of findings in the
     // ad-landing audit, and it is worth knowing whether that is a wrong
@@ -477,6 +596,32 @@ for (const item of found.prices) out(`    ${item?.suggested ?? ''}   "${item?.te
 out('');
 out('  struck-through / compare-at candidates');
 for (const item of found.struck) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+out('');
+out('  prose blocks — candidates for description  (top-products.yaml)');
+if (found.description.length === 0) {
+  out('    none — no block of 80+ characters of copy inside the product section.');
+} else {
+  for (const item of found.description) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+}
+out('');
+out('  details / accordions — candidates for specifications  (top-products.yaml)');
+if (found.specifications.length === 0) {
+  out('    none matched by shape — no <details>, accordion or ingredients');
+  out('    block. Check the prose list above before concluding there is none:');
+  out('    a specifications block that is a plain <div> shows up there instead.');
+  out('    If this theme genuinely has none, turn `specifications` off in');
+  out('    config/top-products.yaml "checks" rather than leave it reporting a');
+  out('    gap nobody can close.');
+} else {
+  for (const item of found.specifications) out(`    ${item?.suggested ?? ''}   "${item?.text ?? ''}"`);
+}
+out('');
+out('  images — candidates for image  (top-products.yaml; src shown, not text)');
+if (found.images.length === 0) {
+  out('    none — no <img> inside the product section at all.');
+} else {
+  for (const item of found.images) out(`    ${item?.suggested ?? ''}   ${item?.text ?? ''}`);
+}
 out('');
 out('  repeated blocks inside the product section  (diagnostic — no role maps');
 out('  to these; on this theme they are the image gallery)');

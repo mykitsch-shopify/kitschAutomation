@@ -227,11 +227,28 @@ Until they are mapped the spec fails on the reference kit naming the selector,
 rather than reporting parity. That is the intended behaviour — it will not
 report agreement it did not observe.
 
-One open question for the theme, raised by the live run and not yet answered:
-`add_to_cart` on a kit PDP is `.bundle-buy-button`, a DIV, and clicking it
-opens a drawer rather than navigating. The spec now goes to `/cart` when the
-click does not navigate, but whether the click adds anything at all — a bundle
-builder may require choices first — is unverified.
+### The add-to-cart click may not add anything
+
+`add_to_cart` on a kit PDP is `.bundle-buy-button`, a DIV. Pressed against
+mykitsch.com on 2026-08-31 it **opened a drawer**, and `/cart` was empty
+afterwards.
+
+Stated precisely, because the distinction matters: what was observed is that
+the cart page rendered no lines. That is consistent with nothing having been
+added, and also with the cart selectors not fitting — the two are
+indistinguishable from the DOM alone, which is the whole failure this suite
+exists to avoid. `scratch-report/discover.mjs` now reads `/cart.js`, the
+store's own JSON cart, so the next run says which it is:
+
+| `/cart.js` | DOM lines | Verdict |
+|---|---|---|
+| `item_count: 0` | — | Nothing was added. A product or flow problem; no selector fixes it. |
+| `item_count: >0` | none found | Everything was added and the cart selectors do not fit. A mapping problem. |
+
+If it is the first, the parity spec's model — press add, read the cart — does
+not hold for these products, and the suite needs the builder flow driven
+before a cart exists to compare. That is a design change, not a config edit,
+and it is the next decision to make about this suite.
 
 Until that run happens, **this document cannot tell you whether the summer and
 spring kits currently match winter.** It tells you the check exists, covers
