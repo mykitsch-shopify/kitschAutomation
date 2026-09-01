@@ -78,13 +78,25 @@ export default defineConfig({
    * Baselines beside the suite that owns them, not scattered next to the spec
    * in Playwright's default `<spec>-snapshots/` layout.
    *
-   * `{projectName}` is in the path deliberately: a 390px mobile shot and a
-   * 1280px desktop shot of the same page are different pictures, and a layout
-   * that stores both under one name would have the second silently overwrite
-   * the first. `{platform}` for the same reason across machines — font
-   * rendering differs, and a baseline made on macOS cannot be met on Linux.
+   * Three things separate one baseline directory from another, and each earns
+   * its place:
+   *
+   *   fixture / live  A picture of the deterministic fixture and a picture of
+   *                   mykitsch.com are different artifacts about different
+   *                   things. Without this they collided: a live bless on a
+   *                   machine would overwrite the fixture baseline of the same
+   *                   name, and the next offline run would compare the fixture
+   *                   against a photograph of the real store.
+   *   {platform}      Font rendering differs, so a baseline made on Windows
+   *                   cannot be met on Linux.
+   *   the shot name   Carries page and viewport, so a 390px and a 1280px shot
+   *                   of the same page never overwrite each other.
+   *
+   * The `fixture-*` directories are committed and reviewed. `live-*` belongs to
+   * whoever blessed it against a store at a moment in the merchandising
+   * calendar — see docs/VISUAL-REGRESSION.md before committing one.
    */
-  snapshotPathTemplate: 'visual/baselines/{projectName}-{platform}/{arg}{ext}',
+  snapshotPathTemplate: `visual/baselines/${usingFixture ? 'fixture' : 'live'}-{platform}/{arg}{ext}`,
 
   /**
    * Budgets scale with the target, because a slow fixture and a slow storefront

@@ -80,15 +80,42 @@ test.describe('visual regression @visual', () => {
           )
           .catch(() => undefined);
 
-        await expect(browserPage).toHaveScreenshot(shotName(page.id, viewport.id), {
-          fullPage: true,
-          // Masked regions are painted over before comparison. Each one is a
-          // declared blind spot with a reason in config/visual.yaml.
-          mask: config.masks.map((entry) => browserPage.locator(entry.selector)),
-          maxDiffPixelRatio: config.maxDiffRatio,
-          threshold: config.pixelThreshold,
-          animations: 'disabled',
-        });
+        try {
+          await expect(browserPage).toHaveScreenshot(shotName(page.id, viewport.id), {
+            fullPage: true,
+            // Masked regions are painted over before comparison. Each one is a
+            // declared blind spot with a reason in config/visual.yaml.
+            mask: config.masks.map((entry) => browserPage.locator(entry.selector)),
+            maxDiffPixelRatio: config.maxDiffRatio,
+            threshold: config.pixelThreshold,
+            animations: 'disabled',
+            timeout: config.stabilityTimeoutMs,
+          });
+        } catch (cause) {
+          const message = cause instanceof Error ? cause.message : String(cause);
+
+          // "Failed to take two consecutive stable screenshots" is not a
+          // regression, and the raw message does not say so. It means the page
+          // never held still: Playwright compares consecutive shots for EXACT
+          // equality before it compares anything to a baseline, so no
+          // `maxDiffPixelRatio` relaxes it. Against the live homepage this
+          // reported 725k, 191k, 188k then 321k differing pixels — 4-14% of
+          // the frame still moving — and read in the report as a visual defect.
+          if (!message.includes('consecutive stable screenshots')) throw cause;
+          throw new Error(
+            `COULD NOT CHECK — ${page.path} at ${viewport.id} never held still, so no ` +
+              `screenshot was compared and this is not a visual regression.\n\n` +
+              `Something on the page is still animating after ` +
+              `${String(config.stabilityTimeoutMs)}ms with animations disabled and every ` +
+              `configured mask applied. A wider max_diff_ratio will NOT fix this — the ` +
+              `stability check is a separate gate and demands exact equality.\n\n` +
+              `The fix is to find what is moving and mask it (with a reason), or to drop ` +
+              `this page from config/visual.yaml. A page that will not hold still has no ` +
+              `meaningful baseline.\n\n` +
+              `Playwright's own account of what moved:\n${message}`,
+            { cause },
+          );
+        }
       });
     }
   }

@@ -42,7 +42,11 @@ pages:
     path: /
     why: 'The page most traffic lands on. A broken hero here is the whole store.'
   - id: collection
-    path: /collections/hair-tools
+    # `/collections/hair-tools` 404s on mykitsch.com — it was a fixture path,
+    # and it was fixed in config/i18n.yaml and left wrong here, so the
+    # collection shots failed on a page that does not exist. One path, both
+    # targets: the fixture serves this alias too.
+    path: /collections/all
     why: 'Grid layout — the thing most likely to collapse on a breakpoint change.'
   - id: pdp
     path: /products/winter-welcome-kit-combos
@@ -86,6 +90,18 @@ masks:
     why: 'A paused frame is whichever frame the decoder reached.'
   - selector: '[class*="afterpay"], [class*="klarna"]'
     why: 'Third-party instalment widgets render asynchronously and reflow.'
+  # ── Added after the first live bless failed to settle ──────────────────
+  # `home @ desktop` could not produce two consecutive identical screenshots:
+  # 725k, then 191k, then 188k, then 321k pixels different — 4-14% of the frame
+  # still moving after four attempts over 20 seconds. Everything below is a
+  # thing this theme animates on its own schedule, evidenced by the discovery
+  # runs against mykitsch.com.
+  - selector: '[class*="announcement"]'
+    why: 'The announcement bar rotates its messages on a timer — 10 items observed.'
+  - selector: '[class*="keen-slider"], [class*="slider"], [class*="carousel"], [class*="marquee"]'
+    why: 'Hero and product carousels advance on their own; a paused frame is whichever frame it reached.'
+  - selector: '[class*="rivo"]'
+    why: 'The Rivo loyalty widget mounts late and animates its own scroller.'
 
 # How different is too different, as a fraction of the frame. Not zero: font
 # hinting and sub-pixel antialiasing differ between machines and CI images, and
@@ -95,3 +111,20 @@ max_diff_ratio: 0.02
 # Pixels whose colour differs by less than this are treated as equal. Absorbs
 # antialiasing without absorbing a real colour change.
 pixel_threshold: 0.2
+
+# How long to wait for a page to hold still before giving up.
+#
+# Before comparing anything, Playwright takes screenshots until two consecutive
+# ones are IDENTICAL. That is a separate gate from `max_diff_ratio`, and no
+# threshold relaxes it — a page that never settles can never be photographed,
+# however wide the comparison tolerance.
+#
+# The fixture settles immediately. A live marketing homepage carries a rotating
+# announcement bar, a hero carousel and a handful of third-party widgets that
+# mount on their own schedule, so it needs longer even with those masked.
+#
+# If a page still cannot settle at this budget, the answer is another mask or
+# removing the page from `pages` — NOT a bigger number and NOT a wider
+# `max_diff_ratio`. A page that will not hold still has no meaningful baseline,
+# and pretending otherwise produces a check that passes on noise.
+stability_timeout_ms: 45000

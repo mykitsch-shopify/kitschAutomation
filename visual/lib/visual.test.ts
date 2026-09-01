@@ -31,6 +31,7 @@ masks:
     why: 'Rotates on a timer.'
 max_diff_ratio: 0.02
 pixel_threshold: 0.2
+stability_timeout_ms: 45000
 `;
 
 void test('a valid config loads', () => {
@@ -70,6 +71,13 @@ void test('a mask without a reason is refused', () => {
 void test('a threshold of 0 or 1 is refused, with the reason', () => {
   assert.throws(() => loadVisualConfig(write(VALID.replace('0.02', '0'))), /must sit between 0 and 1/u);
   assert.throws(() => loadVisualConfig(write(VALID.replace('0.02', '1'))), /nothing can fail/u);
+});
+
+void test('the stability budget is loaded, because no threshold substitutes for it', () => {
+  // Playwright compares consecutive screenshots for EXACT equality before it
+  // compares anything to a baseline. A page that never settles cannot be
+  // photographed however wide max_diff_ratio is, so this is its own knob.
+  assert.equal(loadVisualConfig(write(VALID)).stabilityTimeoutMs, 45000);
 });
 
 void test('shot names are readable and stable', () => {

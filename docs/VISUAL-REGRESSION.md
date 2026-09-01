@@ -44,10 +44,17 @@ visual/
 ├── lib/visual.test.ts       every way the config can stop checking anything
 ├── specs/…spec.ts           the suite
 └── baselines/
-    └── visual-linux/        {projectName}-{platform}: a mac baseline
-        ├── home-mobile.png  cannot be met on Linux, so they never collide
-        └── …
+    ├── fixture-linux/       committed and reviewed
+    │   ├── home-mobile.png
+    │   └── …
+    └── live-win32/          somebody's photograph of the real store
 ```
+
+**`fixture-` and `live-` are separate on purpose.** Without that split they
+collided: blessing against mykitsch.com overwrote the fixture baseline of the
+same name, and the next offline run compared the fixture to a photograph of the
+real store. The `{platform}` half is there because font rendering differs — a
+baseline made on Windows cannot be met on Linux.
 
 Baselines are **committed**. A baseline nobody can review in a diff is not a
 baseline, and the filenames are readable (`home-mobile.png`, not a hash) for
@@ -96,9 +103,34 @@ npm run visual:bless
 npm run visual
 ```
 
-Before doing that, be clear about what you are signing up for: every banner
-change, every price change and every new review count becomes a diff somebody
-has to triage. The masks in `config/visual.yaml` are written for this, but a
+### When a page will not hold still
+
+The first live bless failed on `home @ desktop` with *"Failed to take two
+consecutive stable screenshots"* — 725k, then 191k, then 188k, then 321k
+differing pixels between consecutive shots, 4–14% of the frame still moving
+after 20 seconds.
+
+**That is not a regression and no threshold fixes it.** Before comparing
+anything to a baseline, Playwright takes screenshots until two consecutive ones
+are *identical*. It is a separate gate from `max_diff_ratio`, and a page that
+never settles can never be photographed however wide the tolerance.
+
+The suite now reports it as COULD NOT CHECK, with Playwright's own account of
+what moved. When you see it:
+
+1. Find what is animating and **mask it, with a reason**. The masks added for
+   this failure — announcement bar, carousels, the Rivo widget — are all things
+   this theme animates on its own schedule.
+2. If it still will not settle, **drop the page from `config/visual.yaml`**.
+
+Do not raise `stability_timeout_ms` past the point where it is buying real
+settling, and never widen `max_diff_ratio` to make it go away: that knob does
+not apply to this gate, and a page that will not hold still has no meaningful
+baseline.
+
+Before pointing at the store, be clear about what you are signing up for: every
+banner change, every price change and every new review count becomes a diff
+somebody has to triage. The masks in `config/visual.yaml` are written for this, but a
 live baseline needs a person who will look at the failures rather than re-bless
 them. If nobody has that time, the fixture baselines still catch theme and
 template regressions and cost nothing to keep.

@@ -28,6 +28,15 @@ export type VisualConfig = {
   readonly masks: readonly Mask[];
   readonly maxDiffRatio: number;
   readonly pixelThreshold: number;
+  /**
+   * How long to wait for the page to hold still before giving up.
+   *
+   * A separate gate from `maxDiffRatio`, and the one that actually failed
+   * first against the live store: Playwright compares consecutive screenshots
+   * for EXACT equality before it compares anything to a baseline, so a page
+   * that never settles can never be photographed however wide the tolerance.
+   */
+  readonly stabilityTimeoutMs: number;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -103,6 +112,7 @@ export const loadVisualConfig = (path = 'config/visual.yaml'): VisualConfig => {
     }),
     maxDiffRatio,
     pixelThreshold: requireNumber(raw.pixel_threshold, 'pixel_threshold'),
+    stabilityTimeoutMs: requireNumber(raw.stability_timeout_ms, 'stability_timeout_ms'),
   };
 };
 

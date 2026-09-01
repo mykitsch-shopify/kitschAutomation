@@ -42,9 +42,16 @@ let broken = 0;
 // ── 1 & 2. Baselines exist, and cover every configured shot ──────────────
 //
 // Checked before anything is run, because both failures make the suite pass.
+// Only the fixture baselines.
+//
+// A `live-*` directory is a photograph of mykitsch.com, blessed by somebody at
+// a particular moment in the merchandising calendar. It is not this control's
+// to judge: demanding that it hold every configured shot would fail the gate
+// because a person had blessed four pages on a laptop and not the fifth, and
+// that says nothing about whether the comparison works.
 const roots = existsSync('visual/baselines')
   ? readdirSync('visual/baselines', { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith('fixture-'))
       .map((entry) => entry.name)
   : [];
 
