@@ -73,7 +73,20 @@ routes:
   - { path: '/collections/all', name: collection, tags: ['@smoke'] }
   - { path: '/products/{launch_handle}', name: pdp, tags: ['@smoke', '@launch'] }
   - { path: '/cart', name: cart, tags: ['@smoke'] }
-  - { path: '/checkout', name: checkout, tags: ['@smoke', '@launch'] }
+  # @cart-required — not browsable without a cart.
+  #
+  # On the fixture this is a static page and the specs run against it. On
+  # mykitsch.com every request for it came back HTTP 429: 68 of them in one
+  # run, across all five locales, while every other route in the same run
+  # answered 200. That distribution rules out our own request volume — it is
+  # Shopify's checkout throttle refusing a session with an empty cart.
+  #
+  # So the render specs exclude it off-fixture rather than filling half the
+  # report with COULD NOT CHECK on a page that was never going to open.
+  # **Live checkout is unverified, not passing.** Closing the gap needs a
+  # seeded cart before the navigation, which this theme's buy button cannot
+  # produce today — see docs/WELCOME-KIT-COVERAGE.md.
+  - { path: '/checkout', name: checkout, tags: ['@smoke', '@launch', '@cart-required'] }
   - { path: '/pages/about', name: content_page, tags: [] }
   # Needs a real order to exist. Against a live store this route is only
   # browsable with KITSCH_ORDER_STATUS_URL pointing at a test order, so the
@@ -100,11 +113,34 @@ routes:
 # say so rather than guess. Map them from the live theme:
 #   node scratch-report/discover.mjs https://www.mykitsch.com/
 selectors:
-  # Confirmed on the live theme.
-  site_header: '[data-testid="site-header"], header.header, #shopify-section-header header'
+  # Confirmed on the live theme: a live run read copy through these.
   site_footer: '[data-testid="site-footer"], footer.footer, #shopify-section-footer'
   main: '[data-testid="main"], main#MainContent, main'
-  # The PDP sale price — same element config/kits.yaml maps as pdp_price.
+
+  # ── Demoted back to testid-only, on evidence ──────────────────────────
+  #
+  # site_header carried `header.header, #shopify-section-header header`. Those
+  # were guesses at a Dawn-shaped theme and this store is not one: across a
+  # full live run they matched nothing, on 27 page loads, on every route. The
+  # note above says not to guess a theme class in here, and this is what it
+  # costs — 27 red specs that read as broken pages and were nothing of the
+  # kind. site_footer in the line above is the contrast: it was guessed too,
+  # and it happens to match, which is luck rather than method.
+  #
+  # Unmapped is the honest state until somebody runs the discovery script
+  # against the store and reads what the header actually is:
+  #   node scratch-report/discover.mjs https://www.mykitsch.com/
+  site_header: '[data-testid="site-header"]'
+
+  # The PDP price.
+  #
+  # `.main-product span.text-red-700` is the *sale* price. It is in the markup
+  # on every PDP and empty on a product that is not on sale, so `innerText`
+  # returned '' and the price specs reported `price "" does not match the EUR
+  # pattern` in four locales — a formatting verdict on a string nobody read.
+  # The spec now refuses a matched-but-empty element, so this reports COULD NOT
+  # CHECK instead of a false defect. It still needs scoping to the element that
+  # carries the price whether or not the product is discounted.
   pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700'
 
   # ── testid only: these carry NO live-theme mapping yet ────────────────

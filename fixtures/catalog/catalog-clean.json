@@ -1,4 +1,5 @@
 {
+  "describes": "fixture",
   "keys": {
     "nav.hair": {
       "resourceType": "ONLINE_STORE_MENU",

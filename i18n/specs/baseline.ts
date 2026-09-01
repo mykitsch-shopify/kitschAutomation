@@ -63,6 +63,38 @@ export type { Sentinel } from '../lib/sentinels.js';
 export { showsEnglish } from '../lib/sentinels.js';
 
 /**
+ * Which storefront's copy this baseline holds. Absent means the fixture — no
+ * live-store catalogue collector exists yet, so nothing else can be true.
+ */
+const describes = catalog.describes ?? 'fixture';
+
+/**
+ * Whether the baseline's copy describes the storefront under test.
+ *
+ * This is the difference between two checks that look identical and are not:
+ *
+ *   "the French page does not show 'Rejoignez la liste'"   — needs this true
+ *   "the French page shows 'Join the list'"                — does not
+ *
+ * The first compares against contracted copy and is meaningless when the
+ * contract belongs to a different store. The second only needs an English
+ * string the store actually uses, so it stays valid either way — which is why
+ * the English-fallback scan runs live and the positive assertions do not.
+ *
+ * A live run reported 30 "missing its {locale} copy" failures including five
+ * against **English**, whose contracted copy was the fixture's invented
+ * footer. English cannot be missing its own translation: that whole block was
+ * measuring the gap between two stores, and reporting it as defects.
+ */
+export const baselineDescribesTarget = (usingFixture: boolean): boolean =>
+  describes === 'fixture'
+    ? usingFixture
+    : describes === (process.env.KITSCH_BASE_URL ?? '');
+
+/** For the message a declining spec prints, so it names the actual file. */
+export const baselineProvenance = (): string => `"${baselinePath}" (describes: ${describes})`;
+
+/**
  * Strings for a locale, or a loud failure.
  *
  * The `?? {}` this replaces was the most dangerous line in the render layer.

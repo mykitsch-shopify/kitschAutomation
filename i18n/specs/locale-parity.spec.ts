@@ -4,7 +4,13 @@ import { resolveLaunchHandle } from '@kitsch/fixtures/launch-set.js';
 
 import { loadI18nConfig, targetLocales } from '../lib/config.js';
 import { describeDefects, findEncodingDefects, matchesScript } from '../lib/text-integrity.js';
-import { englishSentinels, renderedFragments, showsEnglish } from './baseline.js';
+import {
+  baselineDescribesTarget,
+  baselineProvenance,
+  englishSentinels,
+  renderedFragments,
+  showsEnglish,
+} from './baseline.js';
 
 /**
  * Locale parity — render layer.
@@ -30,11 +36,43 @@ import { englishSentinels, renderedFragments, showsEnglish } from './baseline.js
 const config = loadI18nConfig();
 
 /**
- * Routes a browser can simply visit. The order-confirmation route needs an
- * order to exist, so it is handled separately rather than reporting a 404 as
- * a translation defect.
+ * Whether this run is pointed at the local storefront fixture.
+ *
+ * Resolved exactly the way playwright.config.ts resolves `baseURL`: an unset
+ * KITSCH_BASE_URL means the fixture, and the detection control sets it
+ * explicitly to a 127.0.0.1 port that is not the default one.
  */
-const browsableRoutes = config.routes.filter((route) => !route.tags.includes('@order'));
+const usingFixture =
+  process.env.KITSCH_BASE_URL === undefined || process.env.KITSCH_BASE_URL.includes('127.0.0.1');
+
+/**
+ * Routes a browser can simply visit.
+ *
+ * Two exclusions, both because the route is not browsable rather than because
+ * it is uninteresting:
+ *
+ *   @order          needs an order to exist.
+ *   @cart-required  needs a cart. On the fixture `/checkout` is a static page,
+ *                   so it stays in. On mykitsch.com every request for it —
+ *                   68 across five locales in one run — came back HTTP 429,
+ *                   while every other route in the same run loaded normally.
+ *                   That is not our request volume: it is Shopify's checkout
+ *                   throttle answering a session with nothing in its cart.
+ *
+ * Excluded rather than left to fail. Those 68 reported as COULD NOT CHECK,
+ * which is honest but is still half the run's red on one route that was never
+ * going to open — and a report where the noise outnumbers the findings is a
+ * report nobody reads to the bottom.
+ *
+ * This is a coverage gap and it is worth naming: **checkout is unverified on
+ * the live store, not passing.** Closing it needs a seeded cart before the
+ * navigation, which the render layer cannot do today — the buy button on this
+ * theme opens a bundle builder rather than adding a line (docs/WELCOME-KIT-COVERAGE.md).
+ */
+const browsableRoutes = config.routes.filter(
+  (route) =>
+    !route.tags.includes('@order') && (usingFixture || !route.tags.includes('@cart-required')),
+);
 
 const localizedPath = (localeCode: string, path: string): string => {
   const resolved = path.replace('{launch_handle}', resolveLaunchHandle());
@@ -97,21 +135,28 @@ const visit = async (
   try {
     const response = await page.goto(path);
 
-    // 429 is us, not the store.
+    // 429 is throttling, and throttling is never a statement about the copy.
     //
-    // A seven-locale × six-route sweep with the audits running alongside asked
-    // mykitsch.com for several hundred pages in an hour, and it started
-    // rate-limiting — which surfaced as `Expected: 200 / Received: 429` on the
-    // checkout route in every locale, indistinguishable in the report from a
-    // checkout that is down. Reporting our own traffic as a store defect is
-    // the same collapse as reporting an unmapped selector as a missing
-    // translation.
+    // It first appeared as `Expected: 200 / Received: 429` and read in the
+    // report as a checkout that is down. It is not — nothing on the page was
+    // read either way.
+    //
+    // The later evidence narrowed *which* throttle. Across a full run every
+    // one of the 68 429s was on `/checkout`, in all five locales, while every
+    // other route answered 200 in the same run: not our request volume, which
+    // would have been spread across routes, but Shopify refusing a checkout
+    // with nothing in the cart. `/checkout` is tagged @cart-required and left
+    // out of live runs for that reason; this stays as the general case,
+    // because a genuinely rate-limited sweep looks the same from here.
     if (response?.status() === 429) {
       throw new Error(
-        `COULD NOT CHECK — ${path} returned HTTP 429 (rate limited).\n` +
-          'This is our own traffic, not a defect: nothing on the page was read. ' +
-          'Re-run with fewer workers, or run the locale suite on its own rather ' +
-          'than alongside the daily audits.',
+        `COULD NOT CHECK — ${path} returned HTTP 429 (throttled).\n` +
+          'Nothing on the page was read, so this is not a defect in the copy.\n' +
+          'If it is only /checkout, the cart is empty and Shopify will not open ' +
+          'checkout — that route is tagged @cart-required and excluded from live ' +
+          'runs. If it is spread across routes, it is our own traffic: re-run with ' +
+          'fewer workers, or run the locale suite on its own rather than alongside ' +
+          'the daily audits.',
       );
     }
     return response;
@@ -152,11 +197,23 @@ const selectorFor = (role: string): string => {
 };
 
 /**
- * Reads a container's text, refusing to confuse "not found" with "empty".
+ * Reads a container's text, refusing to confuse "not found" or "empty" with
+ * "read, and here is what it said".
  *
- * A container that matched nothing yields `''`, and every "is this string
- * translated?" assertion over `''` reports every string as missing — ninety
- * defects from one unmapped selector.
+ * Two ways to get `''` out of a locator, and both used to be returned as if
+ * they were the page's answer:
+ *
+ *   nothing matched   Every "is this string translated?" assertion over `''`
+ *                     reports every string as missing — ninety defects from
+ *                     one unmapped selector.
+ *   matched, no text  Subtler and it got through. `pdp_price` maps to
+ *                     `.main-product span.text-red-700`, the *sale* price:
+ *                     present in the markup and empty on a product that is
+ *                     not on sale. `innerText` returned `''`, and the price
+ *                     spec reported `price "" does not match the EUR pattern
+ *                     for FR` in four locales — a confident claim about
+ *                     formatting, made about a string that was never on the
+ *                     page.
  */
 const readContainer = async (page: Page, role: string, where: string): Promise<string> => {
   const selector = selectorFor(role);
@@ -169,7 +226,22 @@ const readContainer = async (page: Page, role: string, where: string): Promise<s
         'page. Remap it in config/i18n.yaml under "selectors".',
     );
   }
-  return page.locator(selector).first().innerText();
+
+  const text = await page.locator(selector).first().innerText();
+  if (text.trim() === '') {
+    throw new Error(
+      `COULD NOT CHECK — "${selector}" (role: ${role}) matched ${String(count)} element(s) on ` +
+        `${where}, and the first one renders no text.\n` +
+        'A matched-but-empty element is still nothing read. Reporting the `""` as ' +
+        'the page\'s answer would claim the copy is wrong, or the price malformed, ' +
+        'on evidence that was never collected.\n' +
+        'Usual cause: the selector names an element this page keeps empty — a sale ' +
+        'price on a product that is not on sale, a slot the theme fills only ' +
+        'sometimes. Scope it to the element that always carries the value, in ' +
+        'config/i18n.yaml under "selectors".',
+    );
+  }
+  return text;
 };
 
 /**
@@ -210,16 +282,41 @@ test.describe('locale shell', () => {
       test(`${locale.code} — ${route.name} resolves and applies lang ${tags(route)}`, async ({
         page,
       }) => {
-        const response = await visit(page, localizedPath(locale.code, route.path));
+        const requested = localizedPath(locale.code, route.path);
+        const response = await visit(page, requested);
         expect(
           response?.status(),
           'localized route must resolve without a redirect chain to /en',
         ).toBe(200);
 
-        await expect(page.locator('html')).toHaveAttribute(
-          'lang',
-          new RegExp(`^${locale.code}`, 'i'),
-        );
+        // Reported with the URL the browser actually ended on, because the two
+        // ways this fails need opposite fixes and `Received: "en"` names
+        // neither:
+        //
+        //   still on /fr/products/x   the localized page renders, in English —
+        //                             a translation/theme wiring defect.
+        //   now on /products/x        the store redirected the locale away, so
+        //                             the French page was never served — a
+        //                             markets/routing defect.
+        //
+        // A live run hit this on the PDP in all four target locales, 200 with
+        // `lang="en"`, and the report could not say which.
+        // Compared on the locale prefix rather than the whole path: a store
+        // may normalise a trailing slash or append a query without that being
+        // a redirect away from the locale.
+        const landed = new URL(page.url()).pathname;
+        const keptLocale =
+          locale.code === config.sourceLocale ||
+          landed === `/${locale.code}` ||
+          landed.startsWith(`/${locale.code}/`);
+
+        await expect(
+          page.locator('html'),
+          `requested ${requested} and landed on ${landed}; ` +
+            (keptLocale
+              ? 'the localized page was served but declares the wrong language — the locale is routed and not applied'
+              : `the store redirected out of /${locale.code}, so no ${locale.code} page was rendered at all`),
+        ).toHaveAttribute('lang', new RegExp(`^${locale.code}`, 'i'));
       });
 
       test(`${locale.code} — ${route.name} declares hreflang alternates ${tags(route)}`, async ({
@@ -282,11 +379,30 @@ test.describe('locale shell', () => {
         page,
       }) => {
         await visit(page, localizedPath(locale.code, route.path));
-        await expect(page.locator(selectorFor('site_header')).first()).toBeVisible();
 
-        const overflowPx = await page.evaluate(
-          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        );
+        // Both numbers in one evaluate, because the second is what makes the
+        // first mean anything.
+        //
+        // An overflow measurement passes trivially on a page that rendered
+        // nothing: a blank body has scrollWidth === clientWidth, so the test
+        // goes green having measured an empty frame. This used to be guarded
+        // by asserting the site header was visible — which was a proxy for
+        // "the page rendered", not part of what the test measures, and it
+        // borrowed a selector this theme does not match. That cost 27 failures
+        // in one live run, on pages that had rendered perfectly well.
+        //
+        // Painted text is the proof the measurement needs and it belongs to no
+        // theme: every one of these routes carries copy.
+        const { overflowPx, renderedChars } = await page.evaluate(() => ({
+          overflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          renderedChars: (document.body.innerText ?? '').trim().length,
+        }));
+
+        expect(
+          renderedChars,
+          `COULD NOT CHECK — the ${locale.code} ${route.name} rendered almost no text (${String(renderedChars)} characters), so measuring its width proves nothing. An empty page has no horizontal overflow. This is a page that did not render, not a layout that fits.`,
+        ).toBeGreaterThan(200);
+
         expect(
           overflowPx,
           `horizontal overflow in ${locale.code} — long strings (typically de) are breaking the layout`,
@@ -427,6 +543,30 @@ const SURFACES = [
 ] as const;
 
 test.describe('localized content renders', () => {
+  /**
+   * Positive copy assertions need a baseline captured from the store under
+   * test. Pointed at mykitsch.com with the fixture catalogue, this block
+   * reported 30 failures of the form "footer is missing its {locale} copy" —
+   * **five of them against English**, whose contracted footer says "Join the
+   * list" because that sentence was written for the fixture. English cannot be
+   * missing its own translation: the block was measuring the distance between
+   * two stores and calling every inch of it a defect.
+   *
+   * Declined rather than deleted, and declined rather than left red. There is
+   * no live-store catalogue collector yet (see i18n/specs/baseline.ts), so
+   * **live positive-copy coverage is absent, not passing.** What still runs
+   * against the real store is the negative scan below, which needs only an
+   * English string the store actually uses — and that is where the run's real
+   * findings came from.
+   */
+  test.skip(
+    !baselineDescribesTarget(usingFixture),
+    `the baseline ${baselineProvenance()} holds the fixture's copy, not this store's — ` +
+      'comparing them would report the difference between two catalogues as missing ' +
+      'translations. Point KITSCH_BASELINE at a catalogue pulled from this store to ' +
+      'restore the check.',
+  );
+
   for (const locale of config.locales) {
     for (const surface of SURFACES) {
       test(`${locale.code} — ${surface.name} shows the contracted copy @i18n @smoke`, async ({
@@ -672,6 +812,16 @@ test.describe('dynamic content', () => {
  * which is how it survives a manual pass and reaches search results.
  */
 test.describe('meta translation @i18n @launch', () => {
+  // Same reason as `localized content renders`: `missingCopy` compares the
+  // served title against a contracted one, and a contract belonging to another
+  // store makes every title look untranslated. Eight failures live, on meta
+  // tags that may well be correct — nobody can say from this baseline.
+  test.skip(
+    !baselineDescribesTarget(usingFixture),
+    `the baseline ${baselineProvenance()} holds the fixture's meta copy, not this ` +
+      "store's, so a mismatch here would say nothing about the store's meta tags.",
+  );
+
   const metaRoutes = [
     { path: '/', titleKey: 'meta.home_title', descriptionKey: 'meta.home_description' },
     {
@@ -729,6 +879,21 @@ test.describe('meta translation @i18n @launch', () => {
  * behind when translations are added surface by surface.
  */
 test.describe('checkout translation @i18n @launch', () => {
+  // These navigate to /checkout directly rather than through browsableRoutes,
+  // so the @cart-required exclusion has to be repeated here. On a live store
+  // the navigation returns 429 before a label is ever read — the cart is
+  // empty and Shopify will not open checkout for it.
+  //
+  // **Live checkout translation is unverified, not passing.** Closing it needs
+  // a seeded cart, which the render layer cannot build on this theme today
+  // (docs/WELCOME-KIT-COVERAGE.md), and a hosted checkout that is not
+  // themeable may never expose these selectors at all.
+  test.skip(
+    !usingFixture,
+    'checkout is not browsable with an empty cart — every live request for it ' +
+      'returned HTTP 429, so no form label was read. See @cart-required in config/i18n.yaml.',
+  );
+
   for (const locale of targetLocales(config)) {
     test(`${locale.code} — checkout form labels are localized`, async ({ page }) => {
       await visit(page, localizedPath(locale.code, '/checkout'));
@@ -782,10 +947,6 @@ test.describe('checkout translation @i18n @launch', () => {
 test.describe('order confirmation', () => {
   const confirmationRoute = config.routes.find((route) => route.tags.includes('@order'));
   const orderPath = process.env.KITSCH_ORDER_STATUS_URL ?? confirmationRoute?.path;
-  // Matches how playwright.config resolves baseURL: an unset KITSCH_BASE_URL
-  // means the local fixture, not a real store.
-  const explicitBaseURL = process.env.KITSCH_BASE_URL;
-  const usingFixture = explicitBaseURL === undefined || explicitBaseURL.includes('127.0.0.1');
 
   test.skip(
     orderPath === undefined || (!usingFixture && process.env.KITSCH_ORDER_STATUS_URL === undefined),

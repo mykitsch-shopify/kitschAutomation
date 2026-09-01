@@ -56,7 +56,13 @@ export const buildCatalog = (profile: Profile): CatalogFile => {
     }
   }
 
-  return { keys, locales, fetchFailed };
+  // Stamped, not inferred. The render layer's positive copy assertions ask
+  // "is this store's contracted string on the page?", and that question only
+  // means something when the catalogue describes the store being tested.
+  // Against mykitsch.com with this catalogue it does not, and saying so here
+  // is what lets the specs decline rather than report the mismatch as 30
+  // missing-translation defects.
+  return { describes: 'fixture', keys, locales, fetchFailed };
 };
 
 const writeCatalog = (profile: Profile, path: string): void => {

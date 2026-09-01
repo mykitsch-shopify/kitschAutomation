@@ -288,6 +288,78 @@ Everything except the live target:
 | Kit divergence detected | 8 of 8 dimensions |
 
 The logic is exercised, the comparators have been watched to fail, and the
-selectors are externalised. What has not happened is a single request to
-mykitsch.com — so nothing here says anything about the real store's kits or
-translations, and this document should not be read as if it did.
+selectors are externalised. None of it is evidence about mykitsch.com.
+
+For that, see §5 — the suite **has** since been run against the live store,
+from a laptop outside this environment.
+
+---
+
+## 5. The live run, and what it actually found
+
+Run from a Windows laptop against `https://www.mykitsch.com`, which retires
+§1 entirely: the network was never the blocker on a normal machine.
+
+The first full live run reported **231 failures**, the second **136**. Neither
+number is a count of defects, and that is the whole point of this section: a
+report is only as good as its ability to tell a broken store from a blind
+harness. Sorted by what each failure was actually about:
+
+### 5.1 Real findings
+
+| What | Where | Evidence |
+|---|---|---|
+| English nav labels render in FR/DE/IT/ES | `nav.account`, `nav.best_sellers`, `nav.hair`, `nav.sale`, `nav.shower`, `nav.sleep` | 20 failures, four locales, from the English-fallback scan |
+| The localized PDP declares `lang="en"` | `/{fr,de,it,es}/products/…` | 200 OK, `<html lang="en">` |
+| Meta titles are not localized | home and PDP, four locales | 8 failures |
+
+The nav finding is the substantive one and it is the check that most deserves
+trust: it is negative-only. It asks whether an English string the store itself
+uses is showing on a page requested in another language, which needs no
+contracted translation to be meaningful.
+
+### 5.2 Harness problems that were being reported as store defects
+
+Each of these was fixed rather than muted, and each fix is a check that says
+more than it did before, not less:
+
+- **27 × "fits the mobile viewport".** The overflow test asserted the site
+  header was visible before measuring. That was a proxy for "the page
+  rendered", not part of the measurement, and it borrowed a `site_header`
+  selector that matches nothing on this theme. It now proves the page rendered
+  by requiring painted text — which no theme owns, and which closes the hole
+  the header assertion existed for: a blank page has no horizontal overflow
+  and would otherwise pass.
+- **30 × "missing its {locale} copy".** The baseline is the fixture's
+  catalogue; the live footer does not say *"Join the list"* because that
+  sentence was invented for the fixture. **Five of the thirty were against
+  English**, and English cannot be missing its own translation — the block was
+  measuring the gap between two stores. Catalogues now declare which store
+  they describe, and the positive-copy specs decline rather than compare.
+- **68 × HTTP 429, every one of them on `/checkout`.** Every other route in the
+  same run answered 200, so this is not our request volume — it is Shopify
+  refusing to open a checkout with an empty cart. `/checkout` is now tagged
+  `@cart-required` and excluded from live runs.
+- **4 × `price "" does not match the EUR pattern`.** `pdp_price` maps to the
+  *sale* price, which exists in the markup and is empty on a product that is
+  not discounted. A verdict on formatting was being issued about a string
+  nobody had read; `readContainer` now refuses a matched-but-empty element.
+- **`site_header` demoted to testid-only.** `header.header` and
+  `#shopify-section-header header` were guesses at a Dawn-shaped theme, and
+  this store is not one. `config/i18n.yaml` says not to guess theme classes
+  into that block; this is what it cost.
+
+### 5.3 What is now unverified — and unverified is not passing
+
+Three gaps were opened deliberately, in preference to red that means nothing.
+They are gaps:
+
+| Gap | Why | To close |
+|---|---|---|
+| Live checkout, every locale | Not browsable with an empty cart | Seed a cart before navigating — blocked on the same bundle-builder problem as `docs/WELCOME-KIT-COVERAGE.md` |
+| Positive copy on the live store — "does the French footer say the right thing?" | No collector emits a live-store catalogue | Pull one via Admin `translatableResources`, stamp it `describes: https://www.mykitsch.com`, point `KITSCH_BASELINE` at it |
+| Anything read through `site_header` | Unmapped on this theme | `node scratch-report/discover.mjs https://www.mykitsch.com/` |
+
+The English-fallback scan, price formatting, encoding integrity, hreflang and
+layout overflow all still run against the live store. Those are what the
+findings in §5.1 come from.
