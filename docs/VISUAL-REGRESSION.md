@@ -103,6 +103,12 @@ npm run visual:bless
 npm run visual
 ```
 
+**A bless immediately followed by a compare is a weak signal.** Nine of ten
+shots passing that way proves the store held still for three minutes — not
+that the baselines are right, and not that the suite would notice a regression
+tomorrow. The number worth watching is the second morning's run, against
+baselines nobody has touched since.
+
 ### When a page will not hold still
 
 The first live bless failed on `home @ desktop` with *"Failed to take two
@@ -127,6 +133,60 @@ Do not raise `stability_timeout_ms` past the point where it is buying real
 settling, and never widen `max_diff_ratio` to make it go away: that knob does
 not apply to this gate, and a page that will not hold still has no meaningful
 baseline.
+
+### When the page is a different height than its baseline
+
+The first live comparison failed on `collection @ mobile` like this:
+
+```
+Expected an image 390px by 6044px, received 390px by 5626px.
+622608 pixels (ratio 0.27 of all image pixels) are different.
+```
+
+**Read the two sizes, not the ratio.** Only 163,020 pixels of content actually
+went missing — 390 × the 418px difference, about one row of a mobile product
+grid. The other 460,000 are everything below that row shifted up and counted as
+different. The ratio measures *displacement*, not repainting, and read as a
+percentage it looks like a quarter of the page broke. Nothing broke.
+
+Two frames of different sizes are not compared pixel-for-pixel at all, so no
+`max_diff_ratio` and no mask changes the outcome. The suite now reports this as
+COULD NOT COMPARE, with both sizes and the delta.
+
+On a grid or a feed it almost always means the page has a different amount of
+content on it than when the baseline was taken — a product added or sold out.
+That is merchandising, and re-blessing only teaches the baseline to agree with
+today's catalogue.
+
+The fix is `clip_height_px`:
+
+```yaml
+  - id: collection
+    path: /collections/all
+    why: 'Grid layout — the thing most likely to collapse on a breakpoint change.'
+    clip_height_px: 2400
+```
+
+It photographs the first N px instead of the whole page, which makes the frame
+a fixed size. The judgement it encodes is worth stating: this shot exists to
+catch a grid **collapsing**, and that shows in the first rows. The remaining
+4,000px is product photography that turns over weekly and was never what the
+baseline was for. Clipping is a coverage decision — make it where the page's
+layout is worth a baseline and its content is not, and leave it off anything
+with a bounded, designed length.
+
+### The fixture has to resemble the page in the ways the check depends on
+
+The fixture's collection page used to serve **one** product card, in a `<ul>`
+with no grid. So the offline baseline was a photograph of a list item: a grid
+of one cannot collapse, and the check could not have failed for the reason it
+was written for. It was also 844px tall against the live page's 6,000px, which
+is why nothing offline resembled the store closely enough to predict the
+failure above.
+
+It now serves 24 cards in a real two-then-four-column grid. That is what makes
+`clip_height_px` exercised offline rather than only against the store — the
+mobile shot is 2400px and clipped, the desktop one is 2083px and is not.
 
 Before pointing at the store, be clear about what you are signing up for: every
 banner change, every price change and every new review count becomes a diff

@@ -16,6 +16,21 @@ export type VisualPage = {
   readonly path: string;
   /** Why this page is worth a baseline. Quoted into the report. */
   readonly why: string;
+  /**
+   * Photograph only the first N px of the page, instead of all of it.
+   *
+   * For pages whose LAYOUT is worth a baseline and whose CONTENT is not. A
+   * collection grid is the case: whether it collapses at a breakpoint shows in
+   * the first rows, while the remaining 5,000px is product imagery that turns
+   * over with the merchandising calendar. A full-page shot of it fails
+   * whenever the catalogue changes — and a full-page shot of a *paginated*
+   * grid is worse than noisy, because the frame height itself moves and two
+   * differently-sized frames cannot be compared at all.
+   *
+   * Absent means the whole page, which is right for everything that has a
+   * bounded, designed length.
+   */
+  readonly clipHeightPx?: number;
 };
 
 export type Viewport = { readonly id: string; readonly width: number; readonly height: number };
@@ -84,10 +99,18 @@ export const loadVisualConfig = (path = 'config/visual.yaml'): VisualConfig => {
     pages: raw.pages.map((entry, index) => {
       const at = `pages[${String(index)}]`;
       if (!isRecord(entry)) throw new Error(`${path}: expected a mapping at "${at}"`);
+      const clip = entry.clip_height_px;
+      if (clip !== undefined && (typeof clip !== 'number' || !Number.isFinite(clip) || clip <= 0)) {
+        throw new Error(
+          `${path}: "${at}.clip_height_px" is ${JSON.stringify(clip)}. It is a height in CSS px ` +
+            'and must be a positive number, or absent to photograph the whole page.',
+        );
+      }
       return {
         id: requireString(entry.id, `${at}.id`),
         path: requireString(entry.path, `${at}.path`),
         why: requireString(entry.why, `${at}.why`),
+        ...(clip === undefined ? {} : { clipHeightPx: clip }),
       };
     }),
     viewports: raw.viewports.map((entry, index) => {

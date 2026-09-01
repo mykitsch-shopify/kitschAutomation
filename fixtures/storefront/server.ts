@@ -218,6 +218,21 @@ const styles = (locale: Locale): string => `
     header, footer, main { padding: 12px; }
     nav ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
     .price { font-weight: 600; }
+    /* An actual grid, so the collection shot photographs the thing it exists
+       to check. Two columns at mobile and four above 900px is the shape this
+       theme uses, and it is the breakpoint change a collapse shows up at. */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .product-grid li { min-height: 220px; }
+    @media (min-width: 900px) {
+      .product-grid { grid-template-columns: repeat(4, 1fr); }
+    }
     ${
       renderDefects.overflow === locale
         ? `.overflow-probe { white-space: nowrap; width: 640px; }`
@@ -354,13 +369,36 @@ const homeMain = (locale: Locale): string => `
     <h2 data-testid="section-heading">${escape(t(locale, 'home.section_bestsellers'))}</h2>
     <h2 data-testid="section-heading">${escape(t(locale, 'home.section_new'))}</h2>`;
 
+/**
+ * How many product cards the collection page serves.
+ *
+ * It used to serve one. `config/visual.yaml` says the collection shot exists
+ * to catch "the grid collapsing on a breakpoint change", and a grid of one
+ * card cannot collapse — so that baseline was a photograph of a list item and
+ * the check could not have failed for the reason it was written for.
+ *
+ * It also meant the fixture's collection page was 844px tall, one screen,
+ * while the live one is 6,000px of paginated grid. The live comparison failed
+ * on exactly that difference (a row of products disappeared between the bless
+ * and the compare) and nothing offline resembled the page closely enough to
+ * have predicted it.
+ *
+ * Twenty-four is a realistic first page and makes the fixture tall enough that
+ * the `clip_height_px` path is exercised offline instead of only against the
+ * store.
+ */
+const COLLECTION_CARDS = 24;
+
 const collectionMain = (locale: Locale): string => `
     <h1 data-testid="collection-heading">${escape(t(locale, 'nav.hair'))}</h1>
-    <ul>
-      <li data-testid="product-card">
-        <a href="${localePrefix(locale)}/products/${LAUNCH_HANDLE}">${escape(t(locale, 'pdp.title'))}</a>
+    <ul class="product-grid">
+${Array.from(
+  { length: COLLECTION_CARDS },
+  (_unused, index) => `      <li data-testid="product-card">
+        <a href="${localePrefix(locale)}/products/${LAUNCH_HANDLE}">${escape(t(locale, 'pdp.title'))} ${String(index + 1)}</a>
         <span class="price" data-testid="card-price">${escape(price(locale))}</span>
-      </li>
+      </li>`,
+).join('\n')}
     </ul>`;
 
 const pdpMain = (locale: Locale): string => `

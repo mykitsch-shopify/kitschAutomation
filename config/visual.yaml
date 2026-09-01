@@ -48,6 +48,25 @@ pages:
     # targets: the fixture serves this alias too.
     path: /collections/all
     why: 'Grid layout — the thing most likely to collapse on a breakpoint change.'
+    # Shot to a fixed height instead of full-page, on live evidence.
+    #
+    # The first live comparison failed here: baseline 390x6044, actual
+    # 390x5626 three minutes later. One grid row's worth (418px) of content had
+    # gone, and everything below it shifted up — which Playwright counted as
+    # "622608 pixels (ratio 0.27) are different" even though only 163,020
+    # pixels of content actually changed. Two frames of different heights are
+    # not comparable at all, so no threshold and no mask fixes it.
+    #
+    # A paginated grid has no stable full-page height by construction: how tall
+    # it is depends on how many products are in it and how many batches loaded.
+    # The `why` above is the answer to what to do about that — this shot exists
+    # to catch a grid COLLAPSING, and that shows in the first rows. The
+    # remaining 4,000px is product photography that turns over with the
+    # merchandising calendar and was never what the baseline was for.
+    #
+    # 2400px is ~3 rows at mobile and ~2 at desktop: enough to see the grid
+    # form, bounded enough to hold still.
+    clip_height_px: 2400
   - id: pdp
     path: /products/winter-welcome-kit-combos
     why: 'Price, buy button and gallery in one frame. The conversion path.'
