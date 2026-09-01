@@ -246,6 +246,11 @@ one less way to happen. Roughly 3 minutes.
 | `npm run test:mobile-web` | The `mobile-chrome` project (Pixel 7) — web specs plus locale specs | Wider mobile check |
 | `npm run test:kits` | Welcome-kit parity: the summer and spring kits must handle free items exactly like `winter-welcome-kit-combos`, across seven dimensions read from the cart and order summary | After touching kits, or when marketing changes a kit |
 | `npm run test:kits-detection` | **Negative control** for it — each of the five kit defects seeded *alone* (stacked ones mask each other), and each run must fail naming the dimension that moved | After touching `web/lib/kit-parity.ts` or the parity spec |
+| `npm run visual` | **Visual regression** — photographs each configured page at 390px and 1280px and compares against committed baselines. The only check here that sees a collapsed grid or overflowing copy. See [`docs/VISUAL-REGRESSION.md`](docs/VISUAL-REGRESSION.md) | After a theme or template change |
+| `npm run visual:bless` | Rewrite the baselines. **Not a fix** — it records whatever is on screen as correct, so read the diff before committing | Only when a visual change was intended |
+| `npm run visual:detection` | **Negative control** for it — are there baselines at all, does every configured shot have one, and does a real layout break still fail? | After touching the visual config or spec |
+| `npm run asana:pull` | Pull the open translation tasks off the Asana board into `data/asana/translation-tasks.json`. Needs `ASANA_TOKEN`. Read-only | Before a backlog verification run |
+| `npm run asana:close` | Close the tasks the audit proved are done. **Dry run by default**; `-- --confirm` acts. Only ever touches `closeable` — never `partial`, `stale_product` or `unverified` | After reading the backlog report |
 | `npm run test:detection` | **Negative control** — 19 planted defects must be caught, and the render specs must fail against a broken store | After touching any comparator. This is what keeps the gate honest |
 | `npm run audit:compare-at` | **Compare-at removal audit** — the struck-through price must be gone and the real price untouched; audits the two sheets first, then the storefront. See [`docs/COMPARE-AT-AUDIT.md`](docs/COMPARE-AT-AUDIT.md) | Before and after the compare-at import runs. `--sheets-only` needs no browser |
 | `npm run test:compare-at-detection` | **Negative control** for that audit — 5 planted defects, plus a clean run that must report nothing | After touching `web/lib/compare-at.ts` |
@@ -259,7 +264,7 @@ one less way to happen. Roughly 3 minutes.
 | `npm run audit:translation-backlog` | **Translation backlog check** — are the open Asana translation tasks still true? Writes no copy and changes nothing in Asana. See [`docs/TRANSLATION-BACKLOG.md`](docs/TRANSLATION-BACKLOG.md) | Before a backlog grooming pass |
 | `npm run test:translation-backlog-detection` | **Negative control** for it — every verdict against a known fixture state | After touching `web/lib/translation-backlog.ts` |
 | `npm run precommit` | **The local gate** — typecheck, eslint + Kitsch rules, reviewer + bugbot, unit tests. Offline, ~26s | Runs automatically on `git commit` once `npm run hooks:install` has been run |
-| `npm run gate:release` | **Release gate** — 15 offline stages, then the live tier with `-- --live`. One answer: is it safe to ship? | Before a launch or a release |
+| `npm run gate:release` | **Release gate** — 17 offline stages, then the live tier with `-- --live`. One answer: is it safe to ship? | Before a launch or a release |
 | `npm run audit:a11y` | **Accessibility across all 7 markets** — WCAG 2.2 AA via axe, plus wrong-language and untranslated-label rules. See [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) | Nightly; before a launch |
 | `npm run test:a11y-detection` | **Negative control** for it — 5 planted defects across 4 markets | After touching `web/lib/a11y.ts` |
 | `npm run storefront` | Serves the fixture storefront on `:4173` so you can browse it by hand | Debugging a spec, or seeing what the fixture renders |

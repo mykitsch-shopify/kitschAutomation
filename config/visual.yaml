@@ -1,0 +1,97 @@
+# Visual regression contract.
+#
+# What this catches that nothing else here does: a page that is correct in
+# every assertable way and wrong to look at. Every other check in this repo
+# reads the DOM — a price is present, a selector matches, a string is
+# translated. None of them notice a collapsed grid, a hero image that stopped
+# loading, a footer that has climbed into the header, or copy that overflows
+# its button. Those reach the customer as "the site is broken" and reach us as
+# nothing at all.
+#
+# ── Why this is the hardest check here to keep honest ────────────────────
+#
+# A screenshot diff fails on anything that moved, and on a live storefront
+# almost everything moves: a rotating banner, a review count, a "3 left in
+# stock" badge, a lazily-loaded image, an A/B variant. A suite that cries wolf
+# every morning gets its baselines re-blessed without being looked at, and a
+# re-blessed baseline is worse than no baseline — it is a check that has been
+# taught to agree with whatever it sees.
+#
+# So three rules, and they are the whole design:
+#
+#   1. MASK what is legitimately dynamic. Named below, per area, with a reason.
+#      A mask is a deliberate blind spot and it is written down as one.
+#   2. FREEZE what can be frozen — animation, carousel autoplay, caret blink.
+#   3. Compare at a THRESHOLD, not pixel-exact. Font rendering differs between
+#      machines, and a check that only passes on the machine that made the
+#      baseline is not a check.
+#
+# Baselines live in visual/baselines/<project>/. They are committed, because a
+# baseline nobody can review in a diff is not a baseline. Regenerate with
+# `npm run visual:bless` and READ THE DIFF before committing it.
+
+# Target the fixture by default, like everything else here. A live baseline is
+# a legitimate thing to want, and it belongs to a specific store and a specific
+# viewport — see docs/VISUAL-REGRESSION.md before pointing this at mykitsch.com.
+
+# Pages to photograph. Kept small on purpose: every entry is a baseline
+# somebody has to review on every intended change, and a suite of forty
+# screenshots is one nobody reads.
+pages:
+  - id: home
+    path: /
+    why: 'The page most traffic lands on. A broken hero here is the whole store.'
+  - id: collection
+    path: /collections/hair-tools
+    why: 'Grid layout — the thing most likely to collapse on a breakpoint change.'
+  - id: pdp
+    path: /products/winter-welcome-kit-combos
+    why: 'Price, buy button and gallery in one frame. The conversion path.'
+  - id: cart
+    path: /cart
+    why: 'Totals and the checkout control. Layout breakage here costs orders.'
+  # A localized page, and not as an afterthought.
+  #
+  # The first version of this file photographed English only, and the detection
+  # control caught it: the seeded German layout overflow — a real, visible
+  # defect — passed, because no configured shot was ever in German. That is the
+  # exact hole a screenshot suite is supposed to close. Translated copy is
+  # longer than English in every one of these markets; German is the worst of
+  # them, and long copy in a fixed-width button is a layout break no DOM
+  # assertion notices.
+  - id: home-de
+    path: /de/
+    why: 'German copy runs ~30% longer than English. The market most likely to overflow.'
+
+# Viewports. Mobile first because 80% of this store's traffic is, and because a
+# desktop-only baseline would have missed every mobile-only regression.
+viewports:
+  - id: mobile
+    width: 390
+    height: 844
+  - id: desktop
+    width: 1280
+    height: 900
+
+# ── Masks ────────────────────────────────────────────────────────────────
+# Every entry is a region the comparison ignores. Each one is a place a real
+# regression could hide, so each needs a reason that is about the page being
+# genuinely non-deterministic — never "this kept failing".
+masks:
+  - selector: '[data-testid="promo-banner"]'
+    why: 'Rotates on a timer and carries a countdown. Never the same twice.'
+  - selector: '[class*="oke-sr"], [class*="review"]'
+    why: 'Review counts and star averages change as reviews arrive.'
+  - selector: 'video, [class*="video"]'
+    why: 'A paused frame is whichever frame the decoder reached.'
+  - selector: '[class*="afterpay"], [class*="klarna"]'
+    why: 'Third-party instalment widgets render asynchronously and reflow.'
+
+# How different is too different, as a fraction of the frame. Not zero: font
+# hinting and sub-pixel antialiasing differ between machines and CI images, and
+# a zero threshold means the suite only ever passes where the baseline was made.
+max_diff_ratio: 0.02
+
+# Pixels whose colour differs by less than this are treated as equal. Absorbs
+# antialiasing without absorbing a real colour change.
+pixel_threshold: 0.2

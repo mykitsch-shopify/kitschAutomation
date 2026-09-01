@@ -58,9 +58,33 @@ process.stdout.write(
 const chromiumPath = process.env.KITSCH_CHROMIUM_PATH;
 const chromiumLaunch = chromiumPath === undefined ? {} : { launchOptions: { executablePath: chromiumPath } };
 
+/**
+ * Keeps the visual suite out of every other project.
+ *
+ * A file has to match the global `testMatch` for any project to see it, and a
+ * project without its own `testMatch` inherits that list — so adding
+ * `visual/specs` globally silently enrolled the six browser projects in
+ * screenshot comparison. Each would have demanded its own baseline directory,
+ * and `npm run test:mobile-web` would have started failing on pictures nobody
+ * had blessed.
+ */
+const notVisual = { testIgnore: 'visual/specs/**' } as const;
+
 export default defineConfig({
   testDir: '.',
-  testMatch: ['web/specs/**/*.spec.ts', 'i18n/specs/**/*.spec.ts'],
+  testMatch: ['web/specs/**/*.spec.ts', 'i18n/specs/**/*.spec.ts', 'visual/specs/**/*.spec.ts'],
+
+  /**
+   * Baselines beside the suite that owns them, not scattered next to the spec
+   * in Playwright's default `<spec>-snapshots/` layout.
+   *
+   * `{projectName}` is in the path deliberately: a 390px mobile shot and a
+   * 1280px desktop shot of the same page are different pictures, and a layout
+   * that stores both under one name would have the second silently overwrite
+   * the first. `{platform}` for the same reason across machines — font
+   * rendering differs, and a baseline made on macOS cannot be met on Linux.
+   */
+  snapshotPathTemplate: 'visual/baselines/{projectName}-{platform}/{arg}{ext}',
 
   /**
    * Budgets scale with the target, because a slow fixture and a slow storefront
@@ -153,24 +177,29 @@ export default defineConfig({
     // ── Tier 1: mobile web — 80% of traffic, runs on every PR ──────────
     {
       name: 'mobile-safari',
+      ...notVisual,
       use: { ...devices['iPhone 14'] },
     },
     {
       name: 'mobile-chrome',
+      ...notVisual,
       use: { ...devices['Pixel 7'], ...chromiumLaunch },
     },
 
     // ── Tier 2: desktop — nightly and pre-launch ──────────────────────
     {
       name: 'desktop-chrome',
+      ...notVisual,
       use: { ...devices['Desktop Chrome'], ...chromiumLaunch },
     },
     {
       name: 'desktop-safari',
+      ...notVisual,
       use: { ...devices['Desktop Safari'] },
     },
     {
       name: 'desktop-firefox',
+      ...notVisual,
       // Named in the Translations test plan §3. Under 1% of this store's
       // traffic, so it is nightly rather than on the PR gate — but it is in
       // the matrix, because "we don't test Firefox" and "Firefox is covered"
@@ -179,6 +208,7 @@ export default defineConfig({
     },
     {
       name: 'desktop-edge',
+      ...notVisual,
       // Edge is a named requirement from the QA scorecard, and it is a
       // distinct channel rather than plain Chromium.
       use: { ...devices['Desktop Edge'], channel: 'msedge' },
@@ -193,6 +223,16 @@ export default defineConfig({
     // locale suite runs anywhere a single browser is installed. WebKit
     // coverage of these same routes comes from the nightly `mobile-safari`
     // project — see the note at the foot of this file.
+    // ── Visual regression ─────────────────────────────────────────────
+    // Its own project so the baselines have a stable directory name, and so
+    // the visual suite never runs as a side effect of a mobile-web run: a
+    // screenshot comparison against a store nobody blessed a baseline for
+    // would fail for reasons that have nothing to do with the change.
+    {
+      name: 'visual',
+      testMatch: 'visual/specs/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], ...chromiumLaunch },
+    },
     {
       name: 'i18n-mobile',
       testMatch: 'i18n/specs/**/*.spec.ts',

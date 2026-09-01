@@ -3,13 +3,16 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Kitsch QA automation suite — locale parity (content + render), web specs, mobile smoke",
+  "description": "Kitsch QA automation suite \u2014 locale parity (content + render), web specs, mobile smoke",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
+    "a11y:daily": "tsx tools/a11y-audit.ts",
     "a11y:fixture": "tsx fixtures/a11y/server.ts",
     "ad-landing:fixture": "tsx fixtures/ad-landing/server.ts",
+    "asana:close": "tsx tools/asana-close.ts",
+    "asana:pull": "tsx tools/asana-pull.ts",
     "audit:a11y": "tsx tools/a11y-audit.ts",
     "audit:ad-landing": "tsx tools/ad-landing-audit.ts",
     "audit:compare-at": "tsx tools/compare-at-audit.ts",
@@ -53,11 +56,14 @@
     "test:top-products-detection": "tsx tools/verify-top-products.ts",
     "test:translation-backlog-detection": "tsx tools/verify-translation-backlog.ts",
     "test:ui": "playwright test --ui",
-    "test:unit": "node --import tsx --test \"i18n/lib/*.test.ts\" \"web/lib/*.test.ts\" \"tools/review/*.test.ts\" \"tools/lib/*.test.ts\"",
+    "test:unit": "node --import tsx --test \"i18n/lib/*.test.ts\" \"web/lib/*.test.ts\" \"visual/lib/*.test.ts\" \"tools/review/*.test.ts\" \"tools/lib/*.test.ts\"",
     "top-products:fixture": "tsx fixtures/top-products/server.ts",
     "translation-backlog:fixture": "tsx fixtures/translation-backlog/server.ts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:kits-detection && npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection && npm run test:ad-landing-detection && npm run test:translation-backlog-detection && npm run test:a11y-detection && npm run test:health-check-detection"
+    "verify": "npm run review -- --gate && npm run test:unit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:kits-detection && npm run visual && npm run visual:detection && npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection && npm run test:ad-landing-detection && npm run test:translation-backlog-detection && npm run test:a11y-detection && npm run test:health-check-detection",
+    "visual": "playwright test --project=visual",
+    "visual:bless": "playwright test --project=visual --update-snapshots",
+    "visual:detection": "tsx tools/verify-visual.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

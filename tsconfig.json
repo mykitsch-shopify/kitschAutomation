@@ -30,6 +30,6 @@
       "@kitsch/fixtures/*": ["./fixtures/*"]
     }
   },
-  "include": ["i18n/**/*.ts", "web/**/*.ts", "core/**/*.ts", "collectors/**/*.ts", "config/**/*.ts", "fixtures/**/*.ts", "tools/**/*.ts", "playwright.config.ts", "playwright.grid.config.ts", "allurerc.ts"],
+  "include": ["i18n/**/*.ts", "web/**/*.ts", "visual/**/*.ts", "core/**/*.ts", "collectors/**/*.ts", "config/**/*.ts", "fixtures/**/*.ts", "tools/**/*.ts", "playwright.config.ts", "playwright.grid.config.ts", "allurerc.ts"],
   "exclude": ["node_modules", "test-results", "playwright-report", "review-report"]
 }

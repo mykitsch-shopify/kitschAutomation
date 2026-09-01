@@ -90,8 +90,22 @@ const STAGES: readonly Stage[] = [
     risk: 'free-item handling across seasonal kits unproven',
     blocking: true,
   },
+  {
+    name: 'visual regression',
+    script: 'visual',
+    tier: 'offline',
+    risk: 'a layout break that no DOM assertion can see would ship unnoticed',
+    blocking: true,
+  },
   // The controls. A suite that cannot fail is not evidence, so these decide
   // whether any green above means anything at all.
+  {
+    name: 'control: visual regression',
+    script: 'visual:detection',
+    tier: 'offline',
+    risk: 'a screenshot suite that cannot fail would report a green picture of a broken page',
+    blocking: true,
+  },
   {
     name: 'control: welcome-kit parity',
     script: 'test:kits-detection',

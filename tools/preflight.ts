@@ -210,6 +210,18 @@ type Role = {
    * selector that is already right.
    */
   readonly excusedBy?: string;
+  /**
+   * A content threshold the audit will apply to this role's text.
+   *
+   * A selector can fit perfectly and still be the wrong one. `description` was
+   * mapped to `.product__excerpt` because it is the only prose block on the
+   * page, and it matches 1 on all ten products — which looks settled and is
+   * not: the audit calls anything under `min_description_chars` a
+   * `description_missing` major. Ten of those every morning would be caused by
+   * a selector nobody could measure, and "matches 1" would keep saying it was
+   * fine.
+   */
+  readonly minChars?: number;
 };
 
 const KIT_ROLES: readonly Role[] = [
@@ -222,8 +234,18 @@ const KIT_ROLES: readonly Role[] = [
 const PRODUCT_ROLES: readonly Role[] = [
   { name: 'title', required: true, singular: true },
   { name: 'price', required: true, singular: true },
-  { name: 'description', required: true, singular: false },
-  { name: 'specifications', required: true, singular: false },
+  {
+    name: 'description',
+    required: true,
+    singular: false,
+    minChars: topProducts.thresholds.minDescriptionChars,
+  },
+  {
+    name: 'specifications',
+    required: true,
+    singular: false,
+    minChars: topProducts.thresholds.minSpecificationChars,
+  },
   { name: 'image', required: true, singular: false },
   { name: 'add_to_cart', required: true, singular: true, excusedBy: 'sold_out' },
   {
@@ -394,6 +416,32 @@ const checkProductPage = async (
     }
     if (count === 0 && role.required && !excused) misses.push(role.name);
     if (tooMany) overreach.push(`${role.name} (${String(count)})`);
+
+    // Measure the text the audit will measure, on the element it will read.
+    // A selector that matches but whose content cannot clear the bar produces
+    // a defect report about the store for a decision made in this config.
+    if (role.minChars !== undefined && count > 0) {
+      const text = await page
+        .locator(selector)
+        .first()
+        .innerText()
+        .then((value) => value.trim())
+        .catch(() => '');
+      if (text.length < role.minChars) {
+        found += 1;
+        write(
+          `        ${String(text.length).padStart(3)} chars in the first match — under the ${String(role.minChars)} the audit requires`,
+        );
+        write(
+          `    → ${role.name} would report as missing on this product even though the selector fits.`,
+        );
+        write(
+          `      Either point it at the fuller block, or lower the threshold in config/top-products.yaml.`,
+        );
+      } else {
+        write(`        ${String(text.length).padStart(3)} chars in the first match  (needs ${String(role.minChars)})`);
+      }
+    }
   }
 
   if (misses.length > 0) {

@@ -27,7 +27,7 @@ import {
  * products that no longer exist.
  *
  * Options:
- *   --tasks <path>     Asana export, default data/translation-backlog/asana-tasks.json
+ *   --tasks <path>     Asana export, default data/asana/translation-tasks.json (npm run asana:pull)
  *   --limit <n>        check at most n tasks (a smoke run)
  *   --locale-prefix    URL shape for a locale, default "/{locale}"
  *   --out <dir>        report directory, default translation-backlog-report
@@ -63,7 +63,7 @@ if (baseURL === '') {
   process.exit(2);
 }
 
-const tasksPath = flags.get('tasks') ?? 'data/translation-backlog/asana-tasks.json';
+const tasksPath = flags.get('tasks') ?? 'data/asana/translation-tasks.json';
 const outDir = flags.get('out') ?? 'translation-backlog-report';
 const localePrefix = flags.get('locale-prefix') ?? '/{locale}';
 const limitText = flags.get('limit');
