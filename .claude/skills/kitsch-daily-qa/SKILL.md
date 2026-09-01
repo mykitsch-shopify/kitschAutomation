@@ -145,7 +145,16 @@ equality. Mask what animates, with a reason, or drop the page.
 `/collections/all` excludes UNLISTED products, so most Welcome Kit children
 look dead when they aren't. This produced two false escalations.
 
-**A handle corrected in one config is stale in the others.** `config/a11y.yaml`
+**A redirect out of the locale is usually the PRODUCT, not the locale.** When
+`/fr/products/x` lands on `/products/x`, check whether the other `/fr/` routes
+in the same run passed. If they did, that product is not published to that
+market — a merchandising fact, not a translation defect, and it goes to a
+different team. All four target locales did exactly this on the launch handle
+while `/fr/`, `/fr/collections/all`, `/fr/cart` and `/fr/pages/about` all
+passed. It also means the PDP row is uncovered in those markets until
+`KITSCH_LAUNCH_HANDLE` names a product sold there.
+
+**A selector learned in one config is stale in the others.** `config/a11y.yaml`
 scanned `/products/self-draining-soap-dish` for weeks after
 `config/top-products.yaml` recorded that the live handle carries a trailing
 `-1`. Same for `/collections/hair-tools`. When you fix a handle:
@@ -153,6 +162,21 @@ scanned `/products/self-draining-soap-dish` for weeks after
 ```bash
 grep -rn "<old-handle>" config/ fixtures/ docs/
 ```
+
+The same happened to the PDP price selector: `config/top-products.yaml`
+learned two alternatives from a live discovery run and `config/i18n.yaml` kept
+the narrower pair it shipped with. Both drifts are now pinned by unit tests —
+markets between `a11y.yaml` and `i18n.yaml`, price selector between
+`i18n.yaml` and `top-products.yaml`. **When you resolve a selector or a handle
+against the live store, grep every config for the old value before moving on.**
+
+**A price selector that names only the SALE price reads empty on anything not
+discounted.** `span.text-red-700`, `.price-item--sale` and
+`.product__price--sale` are all sale prices; on a full-price product they
+match an element that renders nothing. That is a COULD NOT CHECK, not a
+malformed price. The regular-price element on this theme is still unmapped —
+`.price-item--regular` was tried and removed, because unscoped it matched 13
+and 21 elements on two PDPs by pulling in recommendation cards.
 
 **A 404 route is not coverage.** The audits report it honestly — a non-200 page
 becomes a `not_scanned` harness finding, never a pass — but it sits in the

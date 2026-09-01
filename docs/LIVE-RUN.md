@@ -307,19 +307,55 @@ harness. Sorted by what each failure was actually about:
 
 ### 5.1 Real findings
 
+Counts below are from the run of 1 September against the fixed harness —
+**40 failed, 50 skipped, 125 passed**, down from 136 failures when most of the
+red was the harness itself.
+
 | What | Where | Evidence |
 |---|---|---|
-| English nav labels render in FR/DE/IT/ES | `nav.account`, `nav.best_sellers`, `nav.hair`, `nav.sale`, `nav.shower`, `nav.sleep` | 20 failures, four locales, from the English-fallback scan |
-| The localized PDP declares `lang="en"` | `/{fr,de,it,es}/products/…` | 200 OK, `<html lang="en">` |
-| ~~Meta titles are not localized~~ | home and PDP, four locales | **Withdrawn — see below** |
+| English nav labels render in FR/DE/IT/ES | `nav.hair`, `nav.sleep`, `nav.shower`, `nav.best_sellers`, `nav.sale`, `nav.account` | 20 failures, four locales, every browsable route |
+| `footer.heading_shop` renders "Shop" in FR, IT and ES | footer | Exempt in DE only (cognate); a real gap in the other three |
+| The launch product redirects out of every non-English market | `/{fr,de,it,es}/products/self-draining-soap-dish-1` → `/products/…` | 4 failures. **Not a locale defect** — see below |
 
-The nav finding is the substantive one and it is the check that most deserves
-trust: it is negative-only. It asks whether an English string the store itself
-uses is showing on a page requested in another language, which needs no
-contracted translation to be meaningful. `showsEnglish` matches on letter
-boundaries, so "Hair" cannot match inside another word.
+**The nav finding is the substantive one**, and it is the check that most
+deserves trust. Per route it is between two and six labels; the PDP carries the
+most because it renders the fullest navigation. Worked example, French:
 
-**The meta finding is withdrawn, and the reason matters more than the finding.**
+| Key | Renders | Contracted |
+|---|---|---|
+| `nav.hair` | "Hair" | "Cheveux" |
+| `nav.sleep` | "Sleep" | "Sommeil" |
+| `nav.shower` | "Shower" | "Douche" |
+| `nav.best_sellers` | "Best Sellers" | "Meilleures ventes" |
+| `nav.sale` | "Sale" | "Soldes" |
+| `nav.account` | "Account" | "Compte" |
+| `footer.heading_shop` | "Shop" | "Boutique" |
+
+The exemptions are working, which is worth noting because it is the check on
+the check: `nav.account` is absent from the Italian list (declared a cognate)
+and `footer.heading_shop` is absent from the German one, both per
+`config/i18n.yaml`.
+
+**The PDP redirect is not the locale defect it looks like.** All four target
+locales redirect `/products/self-draining-soap-dish-1` back to the English
+path — but `/fr/`, `/fr/collections/all`, `/fr/cart` and `/fr/pages/about` all
+kept their prefix and passed, in every locale. Locale routing works. **This one
+product is not published to those markets**, which is a merchandising question
+for whoever owns the catalogue, not a translation one. Reporting it as "the
+French locale is broken" would send it to the wrong team, so the assertion now
+says so and names both possibilities.
+
+It also means the PDP row of the locale suite is not being exercised in any
+non-English market: set `KITSCH_LAUNCH_HANDLE` to a product actually sold in
+FR/DE/IT/ES to get coverage there.
+
+Why the nav scan is the one to trust: it is negative-only. It asks whether an
+English string the store itself uses is showing on a page requested in another
+language, which needs no contracted translation to be meaningful.
+`showsEnglish` matches on letter boundaries, so "Hair" cannot match inside
+another word.
+
+**A meta finding reported here earlier is withdrawn, and the reason matters more than the finding.**
 It was reported here as confirmed on the strength of eight failures. Reading
 one of them properly shows what it actually asserts:
 

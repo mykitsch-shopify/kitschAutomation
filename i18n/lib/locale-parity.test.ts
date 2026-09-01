@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { loadTopProductsConfig } from '../../web/lib/top-products.js';
+import { loadI18nConfig } from './config.js';
 import type { FindingKind, I18nConfig, LocaleSpec, Severity } from './config.js';
 import {
   auditSource,
@@ -105,6 +107,28 @@ const kinds = (findings: readonly Finding[]): readonly string[] =>
   findings.map((item) => item.kind);
 
 // ── Presence and completeness ──────────────────────────────────────────────
+
+// ── cross-config drift ───────────────────────────────────────────────────
+
+void test('config: the PDP price selector agrees with config/top-products.yaml', () => {
+  // Two configs describing the same element on the same theme, so they are
+  // asserted equal rather than maintained in parallel.
+  //
+  // They had drifted. config/top-products.yaml learned two more alternatives
+  // from a discovery run against the live store; config/i18n.yaml kept the
+  // narrower pair it shipped with, and nothing connected them. That is the
+  // same failure as the stale product handle in config/a11y.yaml, which sat
+  // 404ing for weeks after config/top-products.yaml had recorded the live one.
+  //
+  // If a future theme genuinely needs these to differ, delete this test and
+  // say why in both files — do not let them drift silently.
+  assert.equal(
+    loadI18nConfig().selectors.pdp_price,
+    loadTopProductsConfig().selectors.price,
+    'config/i18n.yaml selectors.pdp_price and config/top-products.yaml selectors.price ' +
+      'name the same element and must stay identical',
+  );
+});
 
 void test('absent translation is a major finding', () => {
   const found = only(

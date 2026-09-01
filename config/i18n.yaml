@@ -132,16 +132,30 @@ selectors:
   #   node scratch-report/discover.mjs https://www.mykitsch.com/
   site_header: '[data-testid="site-header"]'
 
-  # The PDP price.
+  # The PDP price. Kept identical to `selectors.price` in
+  # config/top-products.yaml, and pinned to it by a unit test.
   #
-  # `.main-product span.text-red-700` is the *sale* price. It is in the markup
-  # on every PDP and empty on a product that is not on sale, so `innerText`
-  # returned '' and the price specs reported `price "" does not match the EUR
-  # pattern` in four locales — a formatting verdict on a string nobody read.
-  # The spec now refuses a matched-but-empty element, so this reports COULD NOT
-  # CHECK instead of a false defect. It still needs scoping to the element that
-  # carries the price whether or not the product is discounted.
-  pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700'
+  # This file carried a narrower version — `[data-testid="pdp-price"],
+  # .main-product span.text-red-700` — while top-products.yaml already held two
+  # more alternatives resolved against the live theme on 2026-08-28/31. Same
+  # drift as the stale handle in config/a11y.yaml: one config learns something
+  # about the theme and the others never hear about it. They describe the same
+  # element on the same store, so they are now asserted equal rather than
+  # maintained in parallel.
+  #
+  # Every alternative here is a SALE price, which is the open problem: the
+  # element exists on every PDP and is empty on a product that is not
+  # discounted. That produced `price "" does not match the EUR pattern` in four
+  # locales — a formatting verdict on a string nobody read — and now correctly
+  # reports COULD NOT CHECK instead.
+  #
+  # The regular price still has no scoped selector. `.price-item--regular` was
+  # tried and removed on evidence: unscoped it matched 13 and 21 elements on
+  # two live PDPs, pulling in every recommendation card. Finding the element
+  # that carries the price whether or not the product is on sale needs a
+  # discovery run against a PDP that is NOT discounted:
+  #   node scratch-report/discover.mjs https://www.mykitsch.com/products/<handle>
+  pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700, .main-product .price-item--sale, .main-product .product__price--sale'
 
   # ── testid only: these carry NO live-theme mapping yet ────────────────
   #

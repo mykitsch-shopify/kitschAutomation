@@ -296,26 +296,42 @@ test.describe('locale shell', () => {
         //   still on /fr/products/x   the localized page renders, in English —
         //                             a translation/theme wiring defect.
         //   now on /products/x        the store redirected the locale away, so
-        //                             the French page was never served — a
-        //                             markets/routing defect.
+        //                             the French page was never served.
         //
-        // A live run hit this on the PDP in all four target locales, 200 with
-        // `lang="en"`, and the report could not say which.
-        // Compared on the locale prefix rather than the whole path: a store
-        // may normalise a trailing slash or append a query without that being
-        // a redirect away from the locale.
+        // Compared on the locale prefix rather than the whole path: a store may
+        // normalise a trailing slash or append a query without that being a
+        // redirect away from the locale.
         const landed = new URL(page.url()).pathname;
         const keptLocale =
           locale.code === config.sourceLocale ||
           landed === `/${locale.code}` ||
           landed.startsWith(`/${locale.code}/`);
 
+        // A redirect out of the locale has two causes, and which one it is
+        // depends on whether the OTHER routes in this locale survived.
+        //
+        // Measured, not assumed: a live run redirected all four target locales
+        // off `/products/<launch handle>` while `/fr/`, `/fr/collections/all`,
+        // `/fr/cart` and `/fr/pages/about` all kept their prefix and passed.
+        // Locale routing was working; the product was not available in those
+        // markets. Reporting that as "the French locale is broken" would send
+        // somebody to the wrong team.
+        const redirectedOut =
+          `the store redirected out of /${locale.code}, so no ${locale.code} page was rendered ` +
+          `at all.\n\nTwo causes, and the sibling tests in this run tell them apart:\n` +
+          `  • if the other ${locale.code} routes passed, this RESOURCE is not published to ` +
+          `the ${locale.market} market — a merchandising fact about ${route.path}, not a ` +
+          `locale defect. Publish it to that market, or point KITSCH_LAUNCH_HANDLE at a ` +
+          `product that is sold there.\n` +
+          `  • if the other ${locale.code} routes redirected too, the market itself is not ` +
+          `routing — that is the locale defect.`;
+
         await expect(
           page.locator('html'),
           `requested ${requested} and landed on ${landed}; ` +
             (keptLocale
               ? 'the localized page was served but declares the wrong language — the locale is routed and not applied'
-              : `the store redirected out of /${locale.code}, so no ${locale.code} page was rendered at all`),
+              : redirectedOut),
         ).toHaveAttribute('lang', new RegExp(`^${locale.code}`, 'i'));
       });
 
