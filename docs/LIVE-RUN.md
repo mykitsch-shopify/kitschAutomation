@@ -311,12 +311,34 @@ harness. Sorted by what each failure was actually about:
 |---|---|---|
 | English nav labels render in FR/DE/IT/ES | `nav.account`, `nav.best_sellers`, `nav.hair`, `nav.sale`, `nav.shower`, `nav.sleep` | 20 failures, four locales, from the English-fallback scan |
 | The localized PDP declares `lang="en"` | `/{fr,de,it,es}/products/…` | 200 OK, `<html lang="en">` |
-| Meta titles are not localized | home and PDP, four locales | 8 failures |
+| ~~Meta titles are not localized~~ | home and PDP, four locales | **Withdrawn — see below** |
 
 The nav finding is the substantive one and it is the check that most deserves
 trust: it is negative-only. It asks whether an English string the store itself
 uses is showing on a page requested in another language, which needs no
-contracted translation to be meaningful.
+contracted translation to be meaningful. `showsEnglish` matches on letter
+boundaries, so "Hair" cannot match inside another word.
+
+**The meta finding is withdrawn, and the reason matters more than the finding.**
+It was reported here as confirmed on the strength of eight failures. Reading
+one of them properly shows what it actually asserts:
+
+```
+Error: meta title is not the fr copy
++   "meta.home_title: expected \"Kitsch | Accessoires cheveux et essentiels beauté en satin\""
+```
+
+That expected string is the **fixture's invented French title**. The assertion
+compares the live title against a catalogue describing a different store, and
+it never prints what the live title actually was — so it cannot separate "the
+meta title is English" from "the meta title is good French that differs from
+ours". Eight failures, and not one of them is evidence either way.
+
+This is the same defect as the thirty "missing its {locale} copy" failures in
+§5.2, in a block I did not initially recognise as the same shape. The
+provenance guard now covers it: the meta specs decline off-fixture rather than
+comparing. Whether mykitsch.com localizes its meta tags is **unverified**, and
+answering it needs a catalogue pulled from the store.
 
 ### 5.2 Harness problems that were being reported as store defects
 

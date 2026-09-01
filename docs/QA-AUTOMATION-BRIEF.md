@@ -208,7 +208,7 @@ These came from the suite, not from a manual pass.
 |---|---|---|
 | Navigation labels render in English — account, best sellers, hair, sale, shower, sleep | FR, DE, IT, ES | Confirmed, 20 failures |
 | Localized product pages return 200 and declare `html lang="en"` | FR, DE, IT, ES | Confirmed |
-| Meta titles are not localized on home and product pages | FR, DE, IT, ES | Confirmed, 8 failures |
+| ~~Meta titles are not localized~~ | FR, DE, IT, ES | **Withdrawn** — the assertion compared the live title against the fixture's invented French one and never printed what the store actually served. Unverified |
 | The welcome-kit buy button adds nothing to the cart — `/cart.js` reports 0 items after the press | All | Confirmed. It opens a bundle builder rather than adding a line |
 | Two products in the kit configuration had been renamed on the store | — | Caught by the `canonical_title` backstop |
 
