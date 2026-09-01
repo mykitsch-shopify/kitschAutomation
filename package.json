@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Kitsch QA automation suite \u2014 locale parity (content + render), web specs, mobile smoke",
+  "description": "Kitsch QA automation suite — locale parity (content + render), web specs, mobile smoke",
   "engines": {
     "node": ">=22"
   },
@@ -19,6 +19,7 @@
     "audit:health-check": "tsx tools/health-check-audit.ts",
     "audit:top-products": "tsx tools/top-products-audit.ts",
     "audit:translation-backlog": "tsx tools/translation-backlog-audit.ts",
+    "brief": "tsx tools/render-brief.ts",
     "compare-at:fixture": "tsx fixtures/compare-at/server.ts",
     "daily": "tsx tools/daily.ts",
     "gate:release": "tsx tools/release-gate.ts",
