@@ -1,7 +1,12 @@
 name: translation-gate
 
-# Replaces the recurring manual translation pass for all seven locales
-# (en/fr/de/it/es/ko/ja).
+# Replaces the recurring manual translation pass for every locale the store
+# serves: en plus fr/de/it/es.
+#
+# The contract narrowed from seven in config/i18n.yaml — ko and ja were removed
+# because the store does not serve those markets, and checking them produced
+# sixty-odd failures a run about routes that 404. They are unverified, not
+# passing.
 #
 # Nightly run is informational and trend-tracked. The launch invocation is
 # blocking: a localized market surface with missing strings at launch is a

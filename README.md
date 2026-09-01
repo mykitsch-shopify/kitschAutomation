@@ -3,9 +3,13 @@
 QA automation for the Kitsch storefront — **Playwright + TypeScript**, mobile-first,
 with locale parity as the flagship suite.
 
-The suite validates that all seven supported languages (en, fr, de, it, es, ko, ja)
-are correctly implemented across navigation, footer, homepage, product pages, cart,
+The suite validates that every language the store serves (en, plus fr, de, it, es)
+is correctly implemented across navigation, footer, homepage, product pages, cart,
 checkout and meta content — replacing a recurring manual translation pass.
+
+Korean and Japanese were in the original test plan and are **not** covered: the
+store does not serve those markets, so the routes 404. They are recorded as
+unverified rather than passing, in `config/i18n.yaml`.
 
 | | |
 |---|---|
@@ -535,7 +539,7 @@ edit to this file, not a code change.**
 | `source_locale` | The baseline everything compares against (`en`) |
 | `locales.<code>.market` / `.currency` | Market and currency for the locale |
 | `locales.<code>.price_pattern` | Regex the rendered price must match |
-| `locales.<code>.expect_script` | Unicode script the copy must contain (ko, ja) |
+| `locales.<code>.expect_script` | Unicode script the copy must contain. No configured locale declares one today — it exists for a non-Latin market |
 | `locales.<code>.expect_diacritics` / `.diacritics` | Accented characters that must appear somewhere |
 | `locales.<code>.font_families` | Families the theme must declare for this script |
 | `routes` | Paths the render layer visits, with tags |

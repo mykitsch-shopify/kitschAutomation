@@ -13,6 +13,7 @@ import {
   type AxeViolation,
   type PageScan,
 } from './a11y.js';
+import { loadI18nConfig } from '../../i18n/lib/config.js';
 
 const config = (over: Partial<A11yConfig> = {}): A11yConfig => ({
   locales: [
@@ -65,12 +66,27 @@ const kinds = (findings: readonly { readonly kind: string }[]): readonly string[
 
 // ── the shipped config ───────────────────────────────────────────────────
 
-void test('config: the shipped a11y.yaml covers every market we sell in', () => {
+void test('config: a11y.yaml scans exactly the markets the locale contract declares', () => {
+  // Asserted against config/i18n.yaml rather than a hardcoded list, because a
+  // hardcoded list is what let these two drift.
+  //
+  // The locale contract narrowed to ES/DE/IT/FR when KO and JA were removed —
+  // the store does not serve those markets — and this file kept scanning `/ja/`
+  // and `/ko/` for weeks afterwards. `judgePage` reported those honestly, as
+  // `not_scanned` harness findings rather than passes, so nothing was falsely
+  // clean. What they cost was eight harness findings a run about markets we do
+  // not sell in, which is the noise that trains people to skim the section the
+  // real "could not check" findings live in.
+  //
+  // Pinning them to each other means adding a market is one edit and removing
+  // one cannot be half-done.
   const loaded = loadA11yConfig();
-  assert.equal(loaded.locales.length, 7);
+  const contracted = loadI18nConfig().locales.map((locale) => locale.market).sort();
+
   assert.deepEqual(
     loaded.locales.map((locale) => locale.market).sort(),
-    ['DE', 'ES', 'FR', 'IT', 'JP', 'KR', 'US'],
+    contracted,
+    'config/a11y.yaml and config/i18n.yaml must cover the same markets',
   );
   assert.ok(loaded.routes.length >= 4);
   assert.ok(loaded.wcagTags.includes('wcag22aa'));

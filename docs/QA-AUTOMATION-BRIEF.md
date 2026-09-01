@@ -16,7 +16,7 @@
 The automation framework exists as working code in the organisation's repository, it has been run
 against the live storefront, and — contrary to the previous version of this brief — **continuous
 integration is already enabled and passing.** Thirty consecutive green runs since 26 August gate every
-push: types, lint, review, 324 unit tests and all nine detection controls, in about four minutes.
+push: types, lint, review, 327 unit tests and all nine detection controls, in about four minutes.
 
 What has never happened is a single scheduled run against the store. The nightly job has been skipped
 thirty times out of thirty, and the reason is narrow and fixable: **`main` is the default branch and
@@ -92,7 +92,7 @@ preserved in version history if either market goes live.
 
 | Area | State |
 |---|---|
-| Unit tests | 324 across 16 files |
+| Unit tests | 327 across 16 files |
 | Daily audits | Ad-traffic landing pages, top-10 sellers, compare-at removal, translation backlog, accessibility by market, locale render specs — one command, one report |
 | Accessibility | **Built** — WCAG 2.2 AA per market, 21 unit tests, detection control. The previous brief deferred this |
 | Visual regression | **Built** — 10 committed baselines, masks that each require a written reason, separate fixture and live baseline trees, detection control. The previous brief deferred this |
@@ -116,7 +116,7 @@ has been green for a week — but only the half of it that never touches the sto
 
 | Job | Contents | Result |
 |---|---|---|
-| `guardrails` | TypeScript, ESLint and the custom Kitsch rules, offline reviewer, 324 unit tests | Passing, ~40 seconds |
+| `guardrails` | TypeScript, ESLint and the custom Kitsch rules, offline reviewer, 327 unit tests | Passing, ~40 seconds |
 | `controls` | All nine detection controls — every suite proven to fail against a knowingly broken fixture | Passing, ~3.5 minutes |
 
 Thirty runs since 26 August, every one successful. The harness itself is genuinely gated.
@@ -239,7 +239,6 @@ those controls are green.
 
 | Run | Frequency | Blocking |
 |---|---|---|
-| Reconciliation — price, compare-at, inventory, status | Twice daily | Alerts on breach |
 | Ad-traffic landing pages | Daily, ahead of the working day | Alerts |
 | Top-10 sellers | Daily | Alerts |
 | Translation parity — every translatable string, four locales | Nightly | No, trend-tracked |
@@ -250,6 +249,16 @@ those controls are green.
 | Real-device smoke | Nightly | No |
 | Pull-request gate — lint, types, smoke | Every pull request | Yes, under Option B |
 | Launch gate | Before each launch | Yes |
+
+Every row above is a workflow that exists and is configured. None of them has run.
+
+**Reconciliation is deliberately not in that table.** The previous brief listed it as a twice-daily run
+and described a Python engine underneath this framework proving that price, inventory and status agree
+across the systems of record. No such engine is in this repository: `core/` contains a 52-line
+propagation-timing helper used by one specification, and there is no Python. The roadmap refers to a
+pre-existing system elsewhere, and nothing here can confirm what it covers or whether it is scheduled.
+Claiming it as coverage in this brief would be exactly the error the rest of the framework is built to
+prevent. Someone who owns that system should confirm its state separately.
 
 | Cost item | Per month |
 |---|---|
@@ -290,7 +299,7 @@ matched nothing; the list reaching empty is the definition of done.
 
 | Priority | Item | Size |
 |---|---|---|
-| P0 | Config drift — `translation-gate.yml` and `config/a11y.yaml` still carry seven locales | Half a day |
+| ~~P0~~ | ~~Config drift — seven locales in `translation-gate.yml`, `config/a11y.yaml` and the README~~ | **Done** |
 | P0 | Failure routing to Slack and the ticketing system | Two days |
 | P1 | Money and purchase path — bundles, cart, checkout, discount codes, subscription | ~14 specifications |
 | P1 | Page-object and fixture libraries, before the specification count grows | Two days |
@@ -298,7 +307,22 @@ matched nothing; the list reaching empty is the definition of done.
 | P3 | Marketplace channel synchronisation, further application flows | ~6 checks |
 
 A finding that is produced and never routed is worse than no finding, because it creates the appearance
-of coverage. That is why routing sits at P0 alongside the drift fix.
+of coverage. That is why routing sits at P0.
+
+The drift fix is done, and clearing it turned up something worth recording. `config/a11y.yaml` still
+listed Japan and Korea, and its Product route still pointed at `self-draining-soap-dish` — a handle
+`config/top-products.yaml` had already recorded as 404ing, with the live one carrying a trailing `-1`.
+So the accessibility scan of the product page, on the conversion path, had been hitting a dead URL in
+every locale for weeks.
+
+The audit reported that honestly rather than as a pass: a non-200 page becomes a `not_scanned` harness
+finding, never a clean result. That is the design working. What it could not do was make anyone notice,
+because the message sat in the "could not check" section alongside eight more about markets we do not
+sell in.
+
+The two configs are now pinned to each other by a unit test, so a market cannot be added to one and
+missed in the other. The stale handle is the harder half — nothing offline can know a handle 404s, and
+the answer there is the scheduled live run this brief is asking for.
 
 ---
 
