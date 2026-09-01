@@ -60,6 +60,11 @@ const config: I18nConfig = {
   routes: [{ path: '/', name: 'home', tags: ['@smoke'] }],
   resources: ['PRODUCT'],
   doNotTranslate: ['Kitsch'],
+  // The comparator does not read either of these; they are here because the
+  // config type carries them for the render layer. A test fixture that drifts
+  // from the real shape stops catching real shape changes.
+  selectors: {},
+  hreflangAtLeast: 1,
   exemptions: [{ key: 'policy.terms', locales: ['de'], reason: 'pending counsel review' }],
   consistencyExemptions: [{ source: 'Checkout', reason: 'CTA versus heading' }],
   severities,

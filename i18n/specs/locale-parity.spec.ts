@@ -95,7 +95,26 @@ const visit = async (
   path: string,
 ): Promise<Awaited<ReturnType<Page['goto']>>> => {
   try {
-    return await page.goto(path);
+    const response = await page.goto(path);
+
+    // 429 is us, not the store.
+    //
+    // A seven-locale × six-route sweep with the audits running alongside asked
+    // mykitsch.com for several hundred pages in an hour, and it started
+    // rate-limiting — which surfaced as `Expected: 200 / Received: 429` on the
+    // checkout route in every locale, indistinguishable in the report from a
+    // checkout that is down. Reporting our own traffic as a store defect is
+    // the same collapse as reporting an unmapped selector as a missing
+    // translation.
+    if (response?.status() === 429) {
+      throw new Error(
+        `COULD NOT CHECK — ${path} returned HTTP 429 (rate limited).\n` +
+          'This is our own traffic, not a defect: nothing on the page was read. ' +
+          'Re-run with fewer workers, or run the locale suite on its own rather ' +
+          'than alongside the daily audits.',
+      );
+    }
+    return response;
   } catch (cause) {
     throw new Error(
       `COULD NOT CHECK — ${path} did not load, so nothing on it was examined.\n` +
@@ -105,6 +124,73 @@ const visit = async (
       { cause },
     );
   }
+};
+
+/**
+ * A theme selector by role, or a harness failure naming the role.
+ *
+ * Roles used to be `data-testid` strings written into this file. The fixture
+ * carries them and mykitsch.com does not, so ~90 specs failed with
+ * "element(s) not found" and were counted as translation defects — when in
+ * fact no copy had been read at all, because the container was never located.
+ *
+ * Both failure shapes below are harness problems and say so. Neither is a
+ * statement about the store's translations.
+ */
+const selectorFor = (role: string): string => {
+  const selector = config.selectors[role] ?? '';
+  if (selector === '') {
+    throw new Error(
+      `COULD NOT CHECK — no selector is mapped for "${role}".\n` +
+        `Nothing was read, so this is not a finding about the ${role} copy.\n` +
+        `Map it in config/i18n.yaml under "selectors", or delete the check if ` +
+        `this theme has no such element. To find it:\n` +
+        `  node scratch-report/discover.mjs ${process.env.KITSCH_BASE_URL ?? 'http://127.0.0.1:4173'}/`,
+    );
+  }
+  return selector;
+};
+
+/**
+ * Reads a container's text, refusing to confuse "not found" with "empty".
+ *
+ * A container that matched nothing yields `''`, and every "is this string
+ * translated?" assertion over `''` reports every string as missing — ninety
+ * defects from one unmapped selector.
+ */
+const readContainer = async (page: Page, role: string, where: string): Promise<string> => {
+  const selector = selectorFor(role);
+  const count = await page.locator(selector).count();
+  if (count === 0) {
+    throw new Error(
+      `COULD NOT CHECK — "${selector}" (role: ${role}) matched nothing on ${where}.\n` +
+        'No copy was read, so nothing here is a translation defect. Either the ' +
+        'selector does not fit this theme, or the element is absent from this ' +
+        'page. Remap it in config/i18n.yaml under "selectors".',
+    );
+  }
+  return page.locator(selector).first().innerText();
+};
+
+/**
+ * Clicks a control by role, saying which selector missed rather than timing out.
+ *
+ * `locator.click()` on an unmatched selector spends thirty seconds and then
+ * reports `waiting for getByTestId('newsletter-open')` — accurate, and it reads
+ * as a broken page. It is a control this theme does not have under that name,
+ * and nothing was read either way.
+ */
+const clickRole = async (page: Page, role: string, where: string): Promise<void> => {
+  const selector = selectorFor(role);
+  if ((await page.locator(selector).count()) === 0) {
+    throw new Error(
+      `COULD NOT CHECK — "${selector}" (role: ${role}) matched nothing on ${where}, ` +
+        'so the overlay was never opened and its copy was never read. This is a ' +
+        'selector that does not fit this theme, not a translation defect. Remap ' +
+        'it in config/i18n.yaml under "selectors".',
+    );
+  }
+  await page.locator(selector).first().click();
 };
 
 /** Contracted fragments for `keys` that are absent from `text`. */
@@ -157,17 +243,23 @@ test.describe('locale shell', () => {
         // alternate per market (en-US, en-CA, en-GB…), and `hreflang^="en"`
         // counts every one of them — so a large number here is a question
         // about this assertion, not a discovery defect on the page.
-        const wrong = counts
-          .filter((entry) => entry.count !== 1)
-          .map((entry) =>
-            entry.count === 0
-              ? `${entry.code}: no alternate declared`
-              : `${entry.code}: ${String(entry.count)} alternates, expected exactly 1`,
-          );
+        // At least one, not exactly one.
+        //
+        // The contract was "exactly one per market", and against the live store
+        // that reported `en: 74 alternates, expected exactly 1` on every single
+        // page. Shopify emits one alternate per market × language, so a store
+        // selling into many countries correctly has dozens of `hreflang="en-*"`.
+        // The assertion was wrong; the page was right. Reporting it as a
+        // discovery defect on every route buried the one that IS a defect —
+        // `no alternate declared`, which is a localized page search engines
+        // cannot associate with its market.
+        const missing = counts
+          .filter((entry) => entry.count < config.hreflangAtLeast)
+          .map((entry) => `${entry.code}: no alternate declared`);
 
         expect(
-          wrong,
-          `hreflang alternates are not one-per-market on the ${locale.code} ${route.name}`,
+          missing,
+          `a market we sell in has no hreflang alternate on the ${locale.code} ${route.name} — that localized page is invisible to search in that market`,
         ).toEqual([]);
       });
 
@@ -190,7 +282,7 @@ test.describe('locale shell', () => {
         page,
       }) => {
         await visit(page, localizedPath(locale.code, route.path));
-        await expect(page.getByTestId('site-header')).toBeVisible();
+        await expect(page.locator(selectorFor('site_header')).first()).toBeVisible();
 
         const overflowPx = await page.evaluate(
           () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -209,7 +301,7 @@ test.describe('locale price formatting @i18n @launch', () => {
     test(`${locale.code} — PDP price uses ${locale.market} convention`, async ({ page }) => {
       await visit(page, localizedPath(locale.code, `/products/${resolveLaunchHandle()}`));
 
-      const priceText = await page.getByTestId('pdp-price').innerText();
+      const priceText = await readContainer(page, 'pdp_price', `the ${locale.code} PDP`);
 
       // Format only. Whether the amount agrees with NetSuite is the
       // reconciliation engine's claim, not this spec's.
@@ -240,7 +332,7 @@ const SURFACES = [
   {
     name: 'primary navigation',
     route: '/',
-    container: 'site-header',
+    container: 'site_header',
     keys: [
       'nav.hair',
       'nav.sleep',
@@ -262,7 +354,7 @@ const SURFACES = [
   {
     name: 'footer',
     route: '/',
-    container: 'site-footer',
+    container: 'site_footer',
     keys: [
       'footer.heading_help',
       'footer.heading_shop',
@@ -341,7 +433,7 @@ test.describe('localized content renders', () => {
         page,
       }) => {
         await visit(page, localizedPath(locale.code, surface.route));
-        const text = await page.getByTestId(surface.container).innerText();
+        const text = await readContainer(page, surface.container, `the ${locale.code} ${surface.name}`);
 
         // A surface where every key resolved to nothing would pass this test
         // without examining the page at all. That is the failure mode worth
@@ -448,7 +540,7 @@ test.describe('character integrity', () => {
       page,
     }) => {
       await visit(page, localizedPath(locale.code, '/'));
-      const heading = await page.getByTestId('hero-heading').innerText();
+      const heading = await readContainer(page, 'hero_heading', `the ${locale.code} homepage`);
 
       const script = locale.expectScript;
       expect(script, 'locale declares an expected script').toBeDefined();
@@ -480,7 +572,7 @@ test.describe('character integrity', () => {
       page,
     }) => {
       await visit(page, localizedPath(locale.code, '/'));
-      const heading = page.getByTestId('hero-heading');
+      const heading = page.locator(selectorFor('hero_heading')).first();
 
       const stack = await heading.evaluate((node) => getComputedStyle(node).fontFamily);
       const normalized = stack.toLowerCase().replace(/["']/gu, '');
@@ -511,14 +603,14 @@ test.describe('character integrity', () => {
 test.describe('dynamic content', () => {
   const overlays = [
     {
-      opener: 'newsletter-open',
-      panel: 'newsletter-modal',
+      opener: 'newsletter_open',
+      panel: 'newsletter_panel',
       name: 'newsletter modal',
       keys: ['footer.newsletter_heading', 'footer.newsletter_cta', 'modal.close'],
     },
     {
-      opener: 'language-open',
-      panel: 'language-popup',
+      opener: 'language_open',
+      panel: 'language_panel',
       name: 'language popup',
       keys: ['modal.language_heading', 'modal.close'],
     },
@@ -526,8 +618,8 @@ test.describe('dynamic content', () => {
     // while the menu behind the hamburger is not — they are separate template
     // fragments, and only one of them is visible without a click.
     {
-      opener: 'mobile-nav-toggle',
-      panel: 'mobile-nav',
+      opener: 'mobile_nav_toggle',
+      panel: 'mobile_nav_panel',
       name: 'mobile nav',
       keys: ['nav.hair', 'nav.sleep', 'nav.accessories', 'nav.sale', 'nav.hair_quiz', 'nav.rewards'],
     },
@@ -540,10 +632,10 @@ test.describe('dynamic content', () => {
       }) => {
         await visit(page, localizedPath(locale.code, '/'));
 
-        const panel = page.getByTestId(overlay.panel);
+        const panel = page.locator(selectorFor(overlay.panel)).first();
         await expect(panel, 'overlay must start hidden, or the scan proves nothing').toBeHidden();
 
-        await page.getByTestId(overlay.opener).click();
+        await clickRole(page, overlay.opener, `the ${locale.code} ${overlay.name}`);
         await expect(panel).toBeVisible();
 
         const text = await panel.innerText();
@@ -641,11 +733,11 @@ test.describe('checkout translation @i18n @launch', () => {
     test(`${locale.code} — checkout form labels are localized`, async ({ page }) => {
       await visit(page, localizedPath(locale.code, '/checkout'));
 
-      const labels = page.getByTestId('checkout-field-label');
+      const labels = page.locator(selectorFor('checkout_field_label'));
       await expect(labels.first()).toBeVisible();
       expect(await labels.count(), 'checkout form must render its field labels').toBeGreaterThan(0);
 
-      const text = await page.getByTestId('checkout-form').innerText();
+      const text = await readContainer(page, 'checkout_form', `the ${locale.code} checkout`);
       const leaked = englishSentinels(locale.code)
         .filter((sentinel) => sentinel.key.startsWith('checkout.'))
         .filter((sentinel) => showsEnglish(text, sentinel.english));
@@ -658,9 +750,9 @@ test.describe('checkout translation @i18n @launch', () => {
 
     test(`${locale.code} — checkout validation errors are localized`, async ({ page }) => {
       await visit(page, localizedPath(locale.code, '/checkout'));
-      await page.getByTestId('checkout-continue').click();
+      await clickRole(page, 'checkout_continue', `the ${locale.code} checkout`);
 
-      const errors = page.getByTestId('checkout-error');
+      const errors = page.locator(selectorFor('checkout_error'));
       await expect(errors.first()).toBeVisible();
 
       const message = (await errors.first().innerText()).trim();
@@ -706,10 +798,10 @@ test.describe('order confirmation', () => {
     }) => {
       await visit(page, localizedPath(locale.code, orderPath ?? '/checkout/confirmation'));
 
-      const heading = page.getByTestId('confirmation-heading');
+      const heading = page.locator(selectorFor('confirmation_heading')).first();
       await expect(heading).toBeVisible();
 
-      const text = await page.getByTestId('main').innerText();
+      const text = await readContainer(page, 'main', 'the order confirmation');
 
       const leaked = englishSentinels(locale.code)
         .filter((sentinel) => sentinel.key.startsWith('confirmation.'))
@@ -727,8 +819,8 @@ test.describe('order confirmation', () => {
       // The order number and customer email are interpolated; a dropped
       // binding here means the customer is told about someone else's order,
       // or about "{{ email }}".
-      await expect(page.getByTestId('confirmation-order')).not.toContainText('{{');
-      await expect(page.getByTestId('confirmation-email')).toContainText('@');
+      await expect(page.locator(selectorFor('confirmation_order')).first()).not.toContainText('{{');
+      await expect(page.locator(selectorFor('confirmation_email')).first()).toContainText('@');
     });
   }
 });

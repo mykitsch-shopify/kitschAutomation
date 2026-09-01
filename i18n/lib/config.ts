@@ -121,6 +121,17 @@ export type I18nConfig = {
   readonly severities: Readonly<Record<FindingKind, Severity>>;
   readonly thresholds: Thresholds;
   readonly placeholderPatterns: readonly RegExp[];
+  /**
+   * Theme selectors for the render layer, by role.
+   *
+   * An empty string means the role is UNMAPPED, and that is a real state
+   * rather than a missing key: the specs that need it report a harness
+   * failure naming this file instead of guessing at markup and reporting
+   * whatever they find as a translation defect.
+   */
+  readonly selectors: Readonly<Record<string, string>>;
+  /** Minimum hreflang alternates a locale must declare. Zero is the defect. */
+  readonly hreflangAtLeast: number;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -298,6 +309,15 @@ export const loadI18nConfig = (path = 'config/i18n.yaml'): I18nConfig => {
     resources: stringList(root.resources, 'resources'),
     doNotTranslate: stringList(root.do_not_translate, 'do_not_translate'),
     exemptions: parseExemptions(root.exemptions),
+    selectors: Object.fromEntries(
+      Object.entries(isRecord(root.selectors) ? root.selectors : {}).map(([role, value]) => [
+        role,
+        typeof value === 'string' ? value.trim() : '',
+      ]),
+    ),
+    hreflangAtLeast: isRecord(root.hreflang)
+      ? requireNumber(root.hreflang.require_at_least, 'hreflang.require_at_least')
+      : 1,
     consistencyExemptions: parseConsistencyExemptions(root.consistency_exemptions),
     severities: parseSeverities(root.severities),
     thresholds: parseThresholds(root.thresholds),

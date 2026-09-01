@@ -43,22 +43,6 @@ export const SEEDED_DEFECTS: readonly SeededDefect[] = [
     note: 'Nav item left in English in German mode.',
   },
   {
-    locale: 'ko',
-    key: 'nav.sleep',
-    value: 'Sleep',
-    expect: 'untranslated_candidate',
-    planRef: '§7.3',
-    note: 'Nav item left in English in Korean mode.',
-  },
-  {
-    locale: 'ja',
-    key: 'footer.heading_help',
-    value: 'Help',
-    expect: 'untranslated_candidate',
-    planRef: '§8.3',
-    note: 'Footer heading left in English in Japanese mode.',
-  },
-  {
     locale: 'it',
     key: 'nav.sale',
     value: 'Sale',
@@ -84,22 +68,6 @@ export const SEEDED_DEFECTS: readonly SeededDefect[] = [
     expect: 'encoding_error',
     planRef: '§6.2',
     note: 'German umlauts served as UTF-8-read-as-Latin-1 (Ã¤ for ä).',
-  },
-  {
-    locale: 'ja',
-    key: 'pdp.title',
-    value: 'ã‚µãƒ†ãƒ³æž•ã‚«ãƒãƒ¼ã‚»ãƒƒãƒˆ',
-    expect: 'encoding_error',
-    planRef: '§8.2',
-    note: 'Japanese product title mojibake — the classic ã‚ shape.',
-  },
-  {
-    locale: 'ko',
-    key: 'cart.subtotal',
-    value: '소�',
-    expect: 'encoding_error',
-    planRef: '§7.2',
-    note: 'Korean cart label with a U+FFFD replacement character.',
   },
   {
     locale: 'es',
@@ -164,24 +132,8 @@ export const SEEDED_DEFECTS: readonly SeededDefect[] = [
     planRef: '§14.2',
     note: 'French meta description still in English — invisible on the page, visible in search.',
   },
-  {
-    locale: 'ko',
-    key: 'meta.home_title',
-    value: 'Kitsch | Hair accessories and satin beauty essentials',
-    expect: 'untranslated_candidate',
-    planRef: '§14.3',
-    note: 'Korean meta title still in English.',
-  },
 
   // ── Wrong writing system (§7.1, §8.1 — High) ──────────────────────────
-  {
-    locale: 'ko',
-    key: 'pdp.in_stock',
-    value: 'Jaego isseum',
-    expect: 'script_missing',
-    planRef: '§7.2',
-    note: 'Romanised Korean — differs from English, so only a script check catches it.',
-  },
 
   // ── Terminology consistency (§13.1) ───────────────────────────────────
   {

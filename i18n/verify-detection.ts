@@ -63,6 +63,34 @@ const verifyContentLayer = async (): Promise<boolean> => {
   write(
     `  ${String(SEEDED_DEFECTS.length - missed)}/${String(SEEDED_DEFECTS.length)} planted defects detected`,
   );
+
+  // ── Finding kinds nothing can currently produce ─────────────────────────
+  //
+  // Narrowing the contract to ES/DE/IT/FR removed the only locales that
+  // declare `expect_script`, so `script_missing` is now unreachable: no
+  // configured locale can produce it, and nothing plants it.
+  //
+  // Reported rather than deleted. A comparator kind with no seeded defect is
+  // indistinguishable from a comparator kind that has quietly stopped working,
+  // and this control exists precisely to tell those apart. Saying "not
+  // exercised, and here is why" keeps the gap visible; deleting the kind would
+  // hide it, and silently missing it would fail the gate for a reason that is
+  // not a regression.
+  const exercised = new Set(SEEDED_DEFECTS.map((defect) => defect.expect));
+  const scriptAware = targetLocales(config).some((locale) => locale.expectScript !== undefined);
+  const unreachable = [
+    ...(exercised.has('script_missing') || scriptAware
+      ? []
+      : [
+          'script_missing — no configured locale declares expect_script. ' +
+            'It became unreachable when KO and JA left the contract; it is not broken.',
+        ]),
+  ];
+
+  for (const note of unreachable) {
+    write('');
+    write(`  not exercised   ${note}`);
+  }
   write('');
   return missed === 0;
 };

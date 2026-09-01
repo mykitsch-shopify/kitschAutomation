@@ -524,7 +524,12 @@ const render = (route: Route): Rendered => {
   if (path === '/' || path === '/index.html') {
     return { status: 200, body: page(locale, 'meta.home_title', 'meta.home_description', homeMain(locale)) };
   }
-  if (path === '/collections/hair-tools') {
+  // `/collections/all` is the path that exists on mykitsch.com;
+  // `/collections/hair-tools` was a guess and 404s there, which surfaced as a
+  // translation failure in every locale on a page nobody had opened. Both are
+  // served here so one config route can name the live path without the
+  // fixture's own nav links going dead.
+  if (path === '/collections/hair-tools' || path === '/collections/all') {
     return { status: 200, body: page(locale, 'meta.home_title', 'meta.home_description', collectionMain(locale)) };
   }
   const kitOnPdp = path.startsWith('/products/')

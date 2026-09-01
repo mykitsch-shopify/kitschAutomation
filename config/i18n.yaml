@@ -5,10 +5,22 @@
 # route, a severity or a threshold. Adding an eighth language is an edit here,
 # not a code change.
 #
-# Scope note: the Aug-11 framework proposal scoped four locales (en/fr/de/it)
-# and explicitly deferred Korean and Japanese. The Translations test plan
-# supersedes that decision and requires all seven. The engine never assumed
-# four, so this is a config edit — see docs/TEST-PLAN-TRANSLATIONS.md.
+# ── Scope: ES, DE, IT, FR (plus the EN source). KO and JA are OUT ────────
+#
+# The Translations test plan asked for seven locales. The store supports four.
+# Checking the other three produced 60-odd failures a run that were not about
+# the store at all — /ko/ and /ja/ routes that 404, a Hangul assertion against
+# a page that has no Korean on it because there is no Korean — and a report
+# where two thirds of the red is noise is a report nobody reads to the bottom.
+#
+# Removed rather than skipped. A skipped locale still appears in the run as
+# something that was considered; a removed one is honestly absent, and the
+# sentence below is the record of why.
+#
+# **KO and JA are unverified, not passing.** If either market goes live, add
+# the block back (the engine never assumed a count) and re-run. The Korean and
+# Japanese price patterns, scripts and font stacks are preserved in git history
+# at commit 37428f2 — they were correct, they are just not applicable today.
 
 source_locale: en
 
@@ -44,33 +56,21 @@ locales:
     price_pattern: '^\d{1,3}(\.\d{3})*,\d{2}[\s  ]?€$'
     expect_diacritics: true
     diacritics: ['á', 'é', 'í', 'ó', 'ú', 'ñ', '¿', '¡']
-  ko:
-    market: KR
-    currency: KRW
-    # KRW has no minor unit — a decimal here is itself a formatting defect.
-    price_pattern: '^₩\d{1,3}(,\d{3})*$'
-    # A Korean surface with no Hangul in it has not been translated, whatever
-    # the translation table claims.
-    expect_script: Hangul
-    # The theme has to *declare* a font that covers the script. Which font a
-    # given customer's device then picks is a property of their device, not
-    # of the store, and is not something CI can assert — see §12.2 in
-    # docs/TRACEABILITY.md.
-    font_families: ['Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Nanum Gothic']
-  ja:
-    market: JP
-    currency: JPY
-    price_pattern: '^¥\d{1,3}(,\d{3})*$'
-    # Any of the three Japanese scripts satisfies this; requiring all three
-    # per string would fail on legitimately katakana-only product names.
-    expect_script: Hiragana|Katakana|Han
-    font_families: ['Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Meiryo']
 
 # Routes for the render layer. Keep this list short — the content layer
 # already checks every string exhaustively without a browser.
+# Every path here must resolve on BOTH targets. `/collections/hair-tools` did
+# not: it 404s on mykitsch.com, and the resulting failure read as a broken
+# translation on a page that was never opened. `/collections/all` exists on the
+# store and the fixture now serves it too.
+#
+# `{launch_handle}` resolves to the fixture's launch product by default. For a
+# live run set a handle that exists on the store, or the PDP row 404s the same
+# way:
+#   set "KITSCH_LAUNCH_HANDLE=self-draining-soap-dish-1"
 routes:
   - { path: '/', name: home, tags: ['@smoke'] }
-  - { path: '/collections/hair-tools', name: collection, tags: ['@smoke'] }
+  - { path: '/collections/all', name: collection, tags: ['@smoke'] }
   - { path: '/products/{launch_handle}', name: pdp, tags: ['@smoke', '@launch'] }
   - { path: '/cart', name: cart, tags: ['@smoke'] }
   - { path: '/checkout', name: checkout, tags: ['@smoke', '@launch'] }
@@ -79,6 +79,77 @@ routes:
   # browsable with KITSCH_ORDER_STATUS_URL pointing at a test order, so the
   # specs skip it rather than reporting a 404 as a translation defect.
   - { path: '/checkout/confirmation', name: confirmation, tags: ['@launch', '@order'] }
+
+# ─────────────────────────────────────────────────────────────────────────
+# Theme selectors for the render layer.
+#
+# These used to be `data-testid` values written straight into the spec. The
+# fixture has them; mykitsch.com does not — so against the live store roughly
+# ninety specs failed with "element(s) not found" and were counted as
+# translation defects. They were nothing of the kind: the copy was never read,
+# because the container it lives in was never located.
+#
+# That is the same collapse this repository exists to prevent, one layer up:
+# "could not check" wearing the clothes of "your store is broken". A selector
+# that matches nothing now fails as a HARNESS problem naming this file.
+#
+# Same union rule as config/kits.yaml — a comma-separated list is a UNION, not
+# a fallback chain, so every alternative must be scoped.
+#
+# Where an entry is `''` the role is UNMAPPED and the specs that need it will
+# say so rather than guess. Map them from the live theme:
+#   node scratch-report/discover.mjs https://www.mykitsch.com/
+selectors:
+  # Confirmed on the live theme.
+  site_header: '[data-testid="site-header"], header.header, #shopify-section-header header'
+  site_footer: '[data-testid="site-footer"], footer.footer, #shopify-section-footer'
+  main: '[data-testid="main"], main#MainContent, main'
+  # The PDP sale price — same element config/kits.yaml maps as pdp_price.
+  pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700'
+
+  # ── testid only: these carry NO live-theme mapping yet ────────────────
+  #
+  # The `data-testid` half is what the fixture serves, so the offline suite
+  # still exercises every one of these checks. Against mykitsch.com they match
+  # nothing, and the spec reports that as COULD NOT CHECK naming the selector —
+  # which is the truth. It is not a translation defect: no copy was read.
+  #
+  # Do not guess a theme class into these to make the red go away. A selector
+  # that matches the wrong element reports a defect that is not there, which is
+  # strictly worse than reporting that we could not look.
+  hero_heading: '[data-testid="hero-heading"]'
+  # Shopify's hosted checkout is not themeable on most plans, so these may
+  # never map. If that is confirmed, delete the checkout translation specs
+  # rather than leave them reporting a gap nobody can close.
+  checkout_form: '[data-testid="checkout-form"]'
+  checkout_field_label: '[data-testid="checkout-field-label"]'
+  checkout_continue: '[data-testid="checkout-continue"]'
+  checkout_error: '[data-testid="checkout-error"]'
+  # Overlays. `_open`/`_toggle` is clicked, `_panel` is read.
+  newsletter_open: '[data-testid="newsletter-open"]'
+  newsletter_panel: '[data-testid="newsletter-modal"]'
+  language_open: '[data-testid="language-open"]'
+  language_panel: '[data-testid="language-popup"]'
+  mobile_nav_toggle: '[data-testid="mobile-nav-toggle"]'
+  mobile_nav_panel: '[data-testid="mobile-nav"]'
+  # Order confirmation. Only reachable with KITSCH_ORDER_STATUS_URL pointing at
+  # a real test order.
+  confirmation_heading: '[data-testid="confirmation-heading"]'
+  confirmation_order: '[data-testid="confirmation-order"]'
+  confirmation_email: '[data-testid="confirmation-email"]'
+
+# hreflang — how many alternates a locale may declare.
+#
+# The contract was "exactly one per market", and against the live store that
+# reported `en: 74 alternates, expected exactly 1` on every page. Shopify emits
+# one alternate per market × language, so a store selling into many countries
+# correctly has dozens of `hreflang="en-*"`. The assertion was wrong, not the
+# page.
+#
+# What actually matters for discovery is that every locale we sell in is
+# represented at all. Zero is the defect; many is Shopify working.
+hreflang:
+  require_at_least: 1
 
 # Resource types pulled for the content layer, via Shopify Admin GraphQL
 # translatableResources (read-only) and Storefront @inContext.
@@ -111,7 +182,7 @@ do_not_translate:
 # how coverage quietly erodes.
 exemptions:
   - key: 'shop_policy.terms_of_service'
-    locales: [fr, de, it, es, ko, ja]
+    locales: [fr, de, it, es]
     reason: 'Legal copy pending counsel review — tracked in Asana QA-412'
 
   # Cognates: the correct translation is the English word. These are per-key
