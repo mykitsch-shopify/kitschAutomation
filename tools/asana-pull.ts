@@ -208,7 +208,14 @@ writeFileSync(
     {
       captured: new Date().toISOString(),
       source: project !== '' ? `project:${project}` : `workspace:${workspace} assignee:${assignee}`,
-      tasks: open.map((task) => ({
+      // Only the translation tasks.
+      //
+      // The export used to carry every open task in the project, and the audit
+      // then filtered. That produced "100 open task(s)" followed by "product
+      // tasks 3" one command later — two true numbers whose pair reads like a
+      // working pipeline and means the opposite. The export is the artifact
+      // somebody reads, so it holds what it claims to hold.
+      tasks: translationish.map((task) => ({
         gid: task.gid,
         name: task.name,
         notes: task.notes ?? '',

@@ -19,6 +19,7 @@ import {
   uncheckableLocales,
 } from './translation-backlog.js';
 import { loadI18nConfig } from '../../i18n/lib/config.js';
+import { loadTopProductsConfig } from './top-products.js';
 
 /** The auto-created shape: explicit handle line, lowercase locale list. */
 const AUTO_NOTES = `Bucket: Missing all 6 locales
@@ -110,6 +111,30 @@ void test('config: the checked locales match config/i18n.yaml, not the board', (
     .filter((code) => code !== loadI18nConfig().sourceLocale)
     .sort();
   assert.deepEqual([...CHECKED_LOCALES].sort(), contracted);
+});
+
+void test('config: the backlog audit reads the same PDP selectors as the top-10 audit', () => {
+  // The reason nothing could ever be closed. tools/translation-backlog-audit.ts
+  // hardcoded `h1.product__title` and `.product__description` — generic Shopify
+  // classes this theme does not use — while config/top-products.yaml already
+  // held `.main-product h1.font-heading` and `.main-product .product__excerpt`,
+  // resolved against the live store and confirmed by preflight at 1 match on
+  // all ten products.
+  //
+  // So every task reported `unverified — could not read copy`, on every locale,
+  // and the automation looked like it was running while answering nothing.
+  //
+  // Both files describe the same two elements on the same theme. Pinning them
+  // is what stops the audit silently going blind again.
+  const selectors = loadTopProductsConfig().selectors;
+  for (const role of ['title', 'description']) {
+    const value = selectors[role] ?? '';
+    assert.notEqual(value, '', `config/top-products.yaml must map "${role}"`);
+    assert.ok(
+      value.includes('.main-product'),
+      `"${role}" must be scoped to this theme's product wrapper, got: ${value}`,
+    );
+  }
 });
 
 void test('a task may NAME a locale we cannot check, and that is not a failure', () => {

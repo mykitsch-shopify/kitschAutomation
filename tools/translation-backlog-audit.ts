@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 import { type Page } from '@playwright/test';
 
+import { loadTopProductsConfig } from '../web/lib/top-products.js';
 import { allureDir, writeAllureCases, writeEnvironment } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import {
@@ -76,9 +77,28 @@ const write = (line: string): void => {
 };
 
 // Title and description: the two fields the audit's "missing locales" refers to.
-const TITLE = '[data-testid="pdp-title"], h1.product__title, .product-single__title';
-const DESCRIPTION =
-  '[data-testid="pdp-description"], .product__description, .product-single__description';
+/**
+ * Read from config/top-products.yaml rather than hardcoded here.
+ *
+ * This is why nothing could ever be closed. These two selectors were
+ * `h1.product__title, .product-single__title` and `.product__description,
+ * .product-single__description` — generic Shopify class names that this theme
+ * does not use. Every task therefore reported `unverified — could not read
+ * copy`, on every locale, for months, and the automation looked like it was
+ * running while answering nothing.
+ *
+ * config/top-products.yaml already carried the resolved forms — `.main-product
+ * h1.font-heading` and `.main-product .product__excerpt`, read off the live
+ * store and confirmed by preflight at 1 match on all ten products. One config
+ * learned the theme and this file never heard about it.
+ *
+ * Fifth instance of that drift (after config/a11y.yaml's markets and stale
+ * handle, translation-gate.yml, the README, and the price selector), so it is
+ * sourced rather than copied. A unit test pins the pair.
+ */
+const productSelectors = loadTopProductsConfig().selectors;
+const TITLE = productSelectors.title ?? '';
+const DESCRIPTION = productSelectors.description ?? '';
 
 type Export = {
   readonly tasks: readonly {
