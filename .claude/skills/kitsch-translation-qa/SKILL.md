@@ -55,6 +55,34 @@ npm run audit:translation-backlog -- --limit 20
 Twenty tasks proves the selectors read copy at all. Only widen once that comes
 back with real verdicts rather than `unverified`.
 
+**Then shard, rather than running 523 in one go.** Eight shards of ~66 tasks are
+~16 minutes each, and a shard that dies costs sixteen minutes rather than three
+hours:
+
+```bash
+npm run audit:translation-backlog -- --shard 1/8
+npm run asana:close -- --confirm
+```
+
+Shards are taken by index, not by slice, so each is a spread across the whole
+board. One shard failing leaves no contiguous block of the catalogue unchecked,
+and any single shard is a fair sample rather than whatever sorts first.
+
+`asana:close` acts on the last report, so each shard is a safe batch: audit,
+read, close, next.
+
+### First real measurement — 2 September
+
+Twenty tasks: **17 closeable, 2 still open, 1 unverified.** The first time this
+pipeline produced a verdict other than "could not check", after the blind
+selectors were fixed.
+
+85% done is higher than the untranslated navigation would suggest, and both can
+be true: product copy lives in Shopify's PRODUCT resources while the nav lives
+in theme locale content — different surfaces, different workflows. Treat it as
+plausible but unproven until a shard covering the whole board agrees, and
+spot-check a couple of PDPs by hand before any bulk close.
+
 ```bash
 npm run asana:pull                REM needs ASANA_TOKEN
 npm run audit:translation-backlog

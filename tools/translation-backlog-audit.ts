@@ -33,6 +33,7 @@ import {
  * Options:
  *   --tasks <path>     Asana export, default data/asana/translation-tasks.json (npm run asana:pull)
  *   --limit <n>        check at most n tasks (a smoke run)
+ *   --shard <n>/<t>    one slice of the board, spread across it (see below)
  *   --locale-prefix    URL shape for a locale, default "/{locale}"
  *   --out <dir>        report directory, default translation-backlog-report
  *   plus the shared browser flags: --browser / --headed / --slow-mo / --viewport
@@ -125,7 +126,40 @@ if (products.length === 0) {
   process.exit(2);
 }
 
-const selected = limit === undefined ? products : products.slice(0, limit);
+/**
+ * A slice of the board, so 523 tasks can be covered across a week rather than
+ * in one three-hour run.
+ *
+ *   --shard 1/8    the first eighth, --shard 2/8 the second, and so on
+ *
+ * Every product task times five page loads is ~2,700 requests against a store
+ * that already answers 429 under load, and a single run that dies at task 400
+ * currently starts over. Sharding by index rather than by slice keeps each
+ * shard a spread across the whole board — so one shard failing does not leave a
+ * contiguous block of the catalogue unchecked, and any single shard is a fair
+ * sample rather than whatever happens to sort first.
+ */
+const shardText = flags.get('shard');
+const shard = ((): { readonly index: number; readonly total: number } | undefined => {
+  if (shardText === undefined) return undefined;
+  const match = /^(\d+)\/(\d+)$/u.exec(shardText.trim());
+  const index = Number(match?.[1] ?? Number.NaN);
+  const total = Number(match?.[2] ?? Number.NaN);
+  if (!Number.isInteger(index) || !Number.isInteger(total) || total < 1 || index < 1 || index > total) {
+    write('');
+    write(`  --shard "${shardText}" is not usable. Use --shard <n>/<total>, as in --shard 1/8.`);
+    write('');
+    process.exit(2);
+  }
+  return { index, total };
+})();
+
+const sharded =
+  shard === undefined
+    ? products
+    : products.filter((_task, position) => position % shard.total === shard.index - 1);
+
+const selected = limit === undefined ? sharded : sharded.slice(0, limit);
 
 write('');
 write(`Translation backlog — ${String(allTasks.length)} open task(s)`);
@@ -134,6 +168,11 @@ write(`  build         ${describeBuild()}`);
 write(`  target        ${baseURL}`);
 write(`  export        ${tasksPath}${parsed.captured === undefined ? '' : ` (captured ${parsed.captured})`}`);
 write(`  product tasks ${String(products.length)}`);
+if (shard !== undefined) {
+  write(
+    `  shard         ${String(shard.index)} of ${String(shard.total)} — ${String(sharded.length)} task(s), spread across the whole board`,
+  );
+}
 write(`  no handle     ${String(unresolved.length)} — named a translation but no product URL`);
 write(`  checking      ${String(selected.length)} task(s), ` +
   `${String(selected.reduce((n, task) => n + checkableLocales(task.locales).length, 0))} handle x locale`);
