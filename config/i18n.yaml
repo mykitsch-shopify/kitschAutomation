@@ -143,19 +143,19 @@ selectors:
   # element on the same store, so they are now asserted equal rather than
   # maintained in parallel.
   #
-  # Every alternative here is a SALE price, which is the open problem: the
-  # element exists on every PDP and is empty on a product that is not
-  # discounted. That produced `price "" does not match the EUR pattern` in four
-  # locales — a formatting verdict on a string nobody read — and now correctly
-  # reports COULD NOT CHECK instead.
+  # It used to be sale-price-only, which was the open problem: those elements
+  # exist on every PDP and are EMPTY on a product that is not discounted. That
+  # produced `price "" does not match the EUR pattern` in four locales — a
+  # formatting verdict on a string nobody read. `span.price-item` closes it.
   #
-  # The regular price still has no scoped selector. `.price-item--regular` was
-  # tried and removed on evidence: unscoped it matched 13 and 21 elements on
-  # two live PDPs, pulling in every recommendation card. Finding the element
-  # that carries the price whether or not the product is on sale needs a
-  # discovery run against a PDP that is NOT discounted:
-  #   node scratch-report/discover.mjs https://www.mykitsch.com/products/<handle>
-  pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700, .main-product .price-item--sale, .main-product .product__price--sale'
+  # The regular price now HAS a selector: `span.price-item`, found by a
+  # discovery run that listed the theme's price-bearing leaves. See the note in
+  # config/top-products.yaml for the evidence and its one caveat.
+  #
+  # `.price-item--regular` remains excluded, and that is not the same class:
+  # unscoped it matched 13 and 21 elements on two live PDPs by pulling in every
+  # recommendation card.
+  pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700, .main-product span.price-item, .main-product .product__price--sale'
 
   # ── testid only: these carry NO live-theme mapping yet ────────────────
   #

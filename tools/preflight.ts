@@ -211,6 +211,18 @@ type Role = {
    */
   readonly excusedBy?: string;
   /**
+   * This role's value IS its rendered text, so a match that renders nothing is
+   * a miss however good the count looks.
+   *
+   * Added after a live run. Preflight printed `price 1 match(es)` and passed;
+   * the locale suite then read that same element and got `""`, because
+   * `span.text-red-700` is the SALE price and the product was not discounted.
+   * Preflight's whole job is to catch that before a run is spent, and it could
+   * not, because it only ever read text for roles carrying a `minChars`
+   * threshold. A count is not a reading.
+   */
+  readonly carriesText?: boolean;
+  /**
    * A content threshold the audit will apply to this role's text.
    *
    * A selector can fit perfectly and still be the wrong one. `description` was
@@ -226,14 +238,14 @@ type Role = {
 
 const KIT_ROLES: readonly Role[] = [
   { name: 'pdp_title', required: true, singular: true },
-  { name: 'pdp_price', required: true, singular: true },
-  { name: 'pdp_compare_at', required: true, singular: true },
+  { name: 'pdp_price', required: true, singular: true, carriesText: true },
+  { name: 'pdp_compare_at', required: true, singular: true, carriesText: true },
   { name: 'add_to_cart', required: true, singular: true },
 ];
 
 const PRODUCT_ROLES: readonly Role[] = [
-  { name: 'title', required: true, singular: true },
-  { name: 'price', required: true, singular: true },
+  { name: 'title', required: true, singular: true, carriesText: true },
+  { name: 'price', required: true, singular: true, carriesText: true },
   {
     name: 'description',
     required: true,
@@ -252,6 +264,7 @@ const PRODUCT_ROLES: readonly Role[] = [
     name: 'compare_at',
     required: false,
     singular: true,
+    carriesText: true,
     whenAbsent: 'expected when the product is not on sale',
   },
   { name: 'video', required: false, singular: false, whenAbsent: 'most of these have none' },
@@ -420,6 +433,32 @@ const checkProductPage = async (
     // Measure the text the audit will measure, on the element it will read.
     // A selector that matches but whose content cannot clear the bar produces
     // a defect report about the store for a decision made in this config.
+    if (role.carriesText === true && role.minChars === undefined && count > 0) {
+      const text = await page
+        .locator(selector)
+        .first()
+        .innerText()
+        .then((value) => value.trim())
+        .catch(() => '');
+      if (text === '') {
+        found += 1;
+        write(`        first match renders NO TEXT — the audit would read ""`);
+        write(
+          `    → ${role.name} matched ${String(count)} element(s) and the first is empty, so a run`,
+        );
+        write(
+          `      would report a malformed or missing value on evidence it never collected.`,
+        );
+        write(
+          `      Usual cause: the selector names a slot this page leaves blank — a sale price`,
+        );
+        write(`      on a product that is not discounted. Scope it to the element that always`);
+        write(`      carries the value.`);
+      } else {
+        write(`        first match reads "${text.length > 40 ? `${text.slice(0, 40)}…` : text}"`);
+      }
+    }
+
     if (role.minChars !== undefined && count > 0) {
       const text = await page
         .locator(selector)
