@@ -1,6 +1,6 @@
 # Translation backlog — verification
 
-The Asana board carries ~93 open "Translate Product" tasks, auto-created from a
+The Asana board carries **541** open "Translate Product" tasks, auto-created from a
 translation audit on **2026-05-27**. This checks whether each is still true.
 
 Contract: [`data/translation-backlog/asana-tasks.json`](../data/translation-backlog/asana-tasks.json) (snapshot, see §5).
@@ -17,7 +17,7 @@ generates or applies copy.
 task is closed, commented on or reassigned — those are decisions for a person,
 and an automated close on a wrong verdict is worse than no check at all.
 
-**Does** answer the question the board cannot: of the 93 open tasks, which are
+**Does** answer the question the board cannot: of the 541 open tasks, which are
 already done? The audit that created them is three months old. The backlog's
 real problem is not that the work is unknown — it is that nobody knows which of
 the ninety-three are stale.

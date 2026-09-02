@@ -28,9 +28,32 @@ npm run test:detection
 
 ## Closing the Asana backlog
 
-93 open "Translate Product" tasks, auto-created from a translation audit. The
+**541** open "Translate Product" tasks, across 1047 open tasks in the project
+(measured 2 September, 11 pages). The board is far larger than the ~93 the
+earlier snapshot suggested — that number came from a truncated export. The
 backlog audit asks the live storefront whether each is still true; `asana:close`
 acts on that and nothing else.
+
+**Check the export before spending a run on it:**
+
+```bash
+npm run asana:doctor
+```
+
+No network, instant. It names the four ways an export goes wrong — truncated at
+one page, holding a whole project rather than the translation board, tasks
+present but carrying no handle, or written by an older build. Every audit also
+prints the commit it ran from, so a pasted transcript answers "is this current?"
+
+**541 tasks x 5 page loads is ~2,700 requests and two to four hours**, against a
+store that already rate-limits. Never start there:
+
+```bash
+npm run audit:translation-backlog -- --limit 20
+```
+
+Twenty tasks proves the selectors read copy at all. Only widen once that comes
+back with real verdicts rather than `unverified`.
 
 ```bash
 npm run asana:pull                REM needs ASANA_TOKEN

@@ -78,7 +78,7 @@ recurring manual pass outright.
 | Content-layer parity engine | Built. 60 unit tests | Compares every translatable string across locales without a browser. Severities, exemptions, protected terms and thresholds all declared in `config/i18n.yaml`, never compiled in |
 | Shopify translations collector | **Built**, never run | Read-only Admin GraphQL `translatableResources`. Paginates, and distinguishes "fetch failed" from "value absent" — collapsing those two turns an outage into a green run. Needs a token; see §8 |
 | Render-layer locale suite | Built. 244 generated test cases | What the DOM shows that the API cannot: locale routing, `html[lang]`, hreflang, price format, meta tags, encoding integrity, layout overflow at 390px |
-| Translation backlog audit | Built. 29 unit tests | Takes the 93 open "Translate Product" tasks and asks the live storefront whether each is still true |
+| Translation backlog audit | Built. 29 unit tests | Takes the 541 open "Translate Product" tasks and asks the live storefront whether each is still true |
 | Asana pull and close | Built | `asana:pull` reads the board; `asana:close` closes only the tasks the audit proved done. Dry-run by default. Refuses partial, unverified and stale-product tasks |
 | Detection control | Built | 13 planted defects, 13 caught. 59 render specs fail against a knowingly broken storefront, as they must |
 
@@ -242,7 +242,7 @@ those controls are green.
 | Ad-traffic landing pages | Daily, ahead of the working day | Alerts |
 | Top-10 sellers | Daily | Alerts |
 | Translation parity — every translatable string, four locales | Nightly | No, trend-tracked |
-| Translation backlog — the 93 open tasks | Nightly | No |
+| Translation backlog — the 541 open tasks | Nightly, sharded | No |
 | Accessibility by market | Nightly | No |
 | Full browser matrix | Nightly | No |
 | Visual regression | Nightly | No, until the flake rate is known |
