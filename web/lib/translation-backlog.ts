@@ -290,12 +290,40 @@ export const judgeTask = (
   }
   const verdicts = Object.values(byLocale);
 
+  // Locales the task asked for that this store does not serve.
+  //
+  // ── Declared policy: a task is judged on the contract, not on its ask ───
+  //
+  // The board's auto-created tasks name es/fr/de/it/ja/ko, because the May
+  // translation audit asked for six. The store sells in four. A task whose four
+  // supported locales are all translated is DONE — Japanese and Korean copy for
+  // markets that do not exist is not outstanding work, and holding a task open
+  // for it would keep ninety-odd tasks permanently un-closeable for a reason
+  // nobody can act on.
+  //
+  // So ja/ko are excluded from the verdict. What they are NOT is invisible:
+  // every note below names them, because closing a task that asked for six
+  // locales on the strength of four is a judgement the reader is entitled to
+  // see. If either market launches, they re-enter config/i18n.yaml and these
+  // tasks legitimately reopen.
+  const ignored = uncheckableLocales(task.locales);
+  const aside =
+    ignored.length === 0
+      ? ''
+      : ` ${ignored.join(' and ')} ${ignored.length === 1 ? 'was' : 'were'} not checked — ` +
+        'this store does not serve those markets (config/i18n.yaml).';
+
   if (verdicts.length === 0) {
     return {
       task,
       verdict: 'unverified',
       byLocale,
-      note: 'no locale was checked, so the task was not verified either way',
+      note:
+        ignored.length > 0
+          ? `this task asks only for ${ignored.join(' and ')}, which this store does not ` +
+            'serve, so there is nothing here to verify. Closing it is a person\'s call: the ' +
+            'work is not outstanding today and would be if those markets launch.'
+          : 'no locale was checked, so the task was not verified either way',
     };
   }
   if (verdicts.every((verdict) => verdict === 'product_gone')) {
@@ -333,8 +361,8 @@ export const judgeTask = (
       verdict: 'closeable',
       byLocale,
       note:
-        `all ${String(verdicts.length)} locale(s) now show localized copy — the work in ` +
-        'this task appears done and it can be closed',
+        `all ${String(verdicts.length)} supported locale(s) now show localized copy — the ` +
+        `work in this task appears done and it can be closed.${aside}`,
     };
   }
   if (missing.length === verdicts.length) {
@@ -342,7 +370,8 @@ export const judgeTask = (
       task,
       verdict: 'still_open',
       byLocale,
-      note: `still English in ${missing.join(', ')} — nothing has changed since the audit`,
+      note:
+        `still English in ${missing.join(', ')} — nothing has changed since the audit.${aside}`,
     };
   }
   return {
@@ -351,7 +380,7 @@ export const judgeTask = (
     byLocale,
     note:
       `done in ${String(verdicts.length - missing.length)} of ${String(verdicts.length)} ` +
-      `locale(s); still English in ${missing.join(', ')}`,
+      `supported locale(s); still English in ${missing.join(', ')}.${aside}`,
   };
 };
 

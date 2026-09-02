@@ -98,6 +98,54 @@ const seenFields = (
 
 // ── the contract, and the vocabulary that is not the contract ────────────
 
+// ── the four-locale policy ───────────────────────────────────────────────
+
+const sixLocaleTask: BacklogTask = {
+  gid: '1',
+  name: 'Translate Product: Example',
+  handle: 'example',
+  locales: ['es', 'fr', 'de', 'it', 'ja', 'ko'],
+  dueOn: undefined,
+};
+
+/** A locale whose copy is genuinely translated — differs from the English. */
+const translated = (locale: string): LocaleObservation => ({
+  locale,
+  status: 200,
+  fields: {
+    title: { localized: `Titre localisé ${locale}`, english: 'English title' },
+    description: { localized: `Description localisée ${locale}`, english: 'English description' },
+  },
+});
+
+void test('a task asking for six locales is closeable when the four supported ones are done', () => {
+  // Declared policy: the store sells in four markets. Japanese and Korean copy
+  // for markets that do not exist is not outstanding work, and holding ninety
+  // tasks open for it gives nobody anything to act on.
+  const result = judgeTask(
+    sixLocaleTask,
+    ['es', 'fr', 'de', 'it'].map(translated),
+  );
+  assert.equal(result.verdict, 'closeable');
+});
+
+void test('...and the note says which locales were not checked', () => {
+  // Closing a task that asked for six on the strength of four is a judgement
+  // the reader is entitled to see. A bare "closeable" hides it.
+  const result = judgeTask(sixLocaleTask, ['es', 'fr', 'de', 'it'].map(translated));
+  assert.match(result.note, /ja and ko were not checked/u);
+  assert.match(result.note, /does not serve those markets/u);
+});
+
+void test('a task asking ONLY for unsupported locales is not silently closed', () => {
+  // Zero observations must never read as "nothing missing, therefore done".
+  // The work is not outstanding today and would be if those markets launch, so
+  // it stays for a person.
+  const result = judgeTask({ ...sixLocaleTask, locales: ['ja', 'ko'] }, []);
+  assert.equal(result.verdict, 'unverified');
+  assert.match(result.note, /nothing here to verify/u);
+});
+
 void test('config: the checked locales match config/i18n.yaml, not the board', () => {
   // Fourth place the locale contract had drifted. config/a11y.yaml kept JP and
   // KR, translation-gate.yml said seven, the README said seven, and this file

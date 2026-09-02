@@ -43,6 +43,33 @@ npm run asana:close -- --confirm  REM actually closes
 moves work off a board other people plan against; undoing it is not the same as
 never having done it.
 
+### The four-locale policy
+
+The board's auto-created tasks name **es/fr/de/it/ja/ko**, because the May
+translation audit asked for six. The store sells in four.
+
+**A task is judged on the contract, not on its ask.** All four supported
+locales translated means the task is `closeable`. Japanese and Korean copy for
+markets that do not exist is not outstanding work, and holding ninety tasks
+open for it gives nobody anything to act on.
+
+They are excluded, not hidden — every verdict note names them:
+
+```
+all 4 supported locale(s) now show localized copy — the work in this task
+appears done and it can be closed. ja and ko were not checked — this store
+does not serve those markets (config/i18n.yaml).
+```
+
+A task asking **only** for ja/ko is `unverified`, never silently closed: zero
+observations must not read as "nothing missing, therefore done". The work is
+not outstanding today and would be if those markets launch.
+
+If either market goes live, they re-enter `config/i18n.yaml` and these tasks
+legitimately reopen.
+
+### What close refuses
+
 It refuses four verdicts, and each refusal is the point:
 
 | Verdict | Why it is not closed |
