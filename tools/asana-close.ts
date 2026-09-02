@@ -13,6 +13,9 @@ import { describeBuild } from './lib/build-stamp.js';
  *
  *   npm run asana:close                 dry run — prints what it WOULD close
  *   npm run asana:close -- --confirm    actually closes them
+ *   npm run asana:close -- --comment    also comments on the ones it will NOT
+ *                                       close, so the investigation is on the
+ *                                       task rather than in a terminal
  *
  * ── Why dry-run is the default ───────────────────────────────────────────
  * Closing somebody's task is outward-facing: it notifies watchers, it moves
@@ -39,6 +42,7 @@ const write = (line: string): void => {
 
 const argv = process.argv.slice(2);
 const confirm = argv.includes('--confirm');
+const comment = argv.includes('--comment');
 const flag = (name: string): string | undefined => {
   const at = argv.indexOf(name);
   return at === -1 ? undefined : argv[at + 1];
@@ -46,13 +50,16 @@ const flag = (name: string): string | undefined => {
 
 const reportPath = flag('--report') ?? 'translation-backlog-report/report.json';
 
+type Entry = {
+  readonly task: { readonly gid: string; readonly name: string };
+  readonly verdict: string;
+  readonly note: string;
+  readonly byLocale?: Readonly<Record<string, string>>;
+};
+
 type Report = {
   readonly target?: string;
-  readonly results?: readonly {
-    readonly task: { readonly gid: string; readonly name: string };
-    readonly verdict: string;
-    readonly note: string;
-  }[];
+  readonly results?: readonly Entry[];
 };
 
 let report: Report;
@@ -115,6 +122,100 @@ for (const entry of held) {
   write(`           ${entry.verdict} — ${entry.note}`);
 }
 if (held.length > 0) write('');
+
+/**
+ * What a held task's comment says.
+ *
+ * The audit already knows why it is holding the task; leaving that in a
+ * terminal means the next person to look at the board learns nothing. This puts
+ * the finding where the work is.
+ *
+ * The marker line is load-bearing. A nightly run would otherwise post the same
+ * paragraph every morning until somebody muted the task, and a task with thirty
+ * identical comments is worse than one with none.
+ */
+const MARKER = 'kitsch-qa/translation-backlog';
+
+const commentFor = (entry: Entry): string => {
+  const locales = Object.entries(entry.byLocale ?? {})
+    .map(([locale, verdict]) => `  ${locale}: ${verdict}`)
+    .join('\n');
+  return (
+    `Automated translation check — ${entry.verdict}\n\n` +
+    `${entry.note}\n\n` +
+    (locales === '' ? '' : `Per locale:\n${locales}\n\n`) +
+    `Checked against ${target} on the four markets this store sells in ` +
+    `(es, fr, de, it). Japanese and Korean are named by this task but not ` +
+    `served by the store, so they are not checked and do not hold it open.\n\n` +
+    `If this looks wrong, the page may have changed since — or the check may ` +
+    `be reading the wrong element, which is a bug in the automation rather ` +
+    `than the translation.\n\n` +
+    `${MARKER} verdict=${entry.verdict}`
+  );
+};
+
+/** Has this exact verdict already been posted? */
+const alreadySaid = async (gid: string, verdict: string, token: string): Promise<boolean> => {
+  const response = await fetch(
+    `https://app.asana.com/api/1.0/tasks/${gid}/stories?opt_fields=text&limit=100`,
+    { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
+  ).catch(() => undefined);
+  if (response?.ok !== true) return false;
+  const body = (await response.json()) as { readonly data?: readonly { readonly text?: string }[] };
+  return (body.data ?? []).some((story) =>
+    (story.text ?? '').includes(`${MARKER} verdict=${verdict}`),
+  );
+};
+
+if (comment && held.length > 0) {
+  write(`  ${confirm ? 'commenting on' : 'would comment on'} ${String(held.length)} held task(s)`);
+  write('');
+  if (confirm) {
+    const token = process.env.ASANA_TOKEN ?? '';
+    if (token === '') {
+      write('  No ASANA_TOKEN, so nothing was posted.');
+      write('');
+      process.exit(2);
+    }
+    let posted = 0;
+    let skipped = 0;
+    for (const entry of held) {
+      if (await alreadySaid(entry.task.gid, entry.verdict, token)) {
+        skipped += 1;
+        write(`  said     ${entry.task.name} — same verdict already on the task`);
+        continue;
+      }
+      const response = await fetch(
+        `https://app.asana.com/api/1.0/tasks/${entry.task.gid}/stories`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ data: { text: commentFor(entry) } }),
+        },
+      ).catch(() => undefined);
+      if (response?.ok === true) {
+        posted += 1;
+        write(`  posted   ${entry.task.name}`);
+      } else {
+        write(
+          `  FAILED   ${entry.task.name} — ${response === undefined ? 'no response' : `HTTP ${String(response.status)}`}`,
+        );
+      }
+    }
+    write('');
+    write(`  comments posted ${String(posted)} | already said ${String(skipped)}`);
+    write('');
+  } else {
+    write('  DRY RUN — no comment was posted. Example, for the first held task:');
+    write('');
+    for (const line of commentFor(held[0] as Entry).split('\n')) write(`    ${line}`);
+    write('');
+  }
+}
 
 if (closeable.length === 0) {
   write('  Nothing to close. Every task still has work in it.');

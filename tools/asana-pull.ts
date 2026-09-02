@@ -184,6 +184,45 @@ write(`  fetched  ${String(data.length)} task(s), ${String(open.length)} still o
 // project, and 97 of those tasks have nothing to do with translation. The
 // export is the right place to say so, because it is the thing that decided.
 const translationish = open.filter((task) => /translate/iu.test(task.name));
+
+/**
+ * Narrow to one person's tasks.
+ *
+ * The project query returns the whole board — 541 translation tasks across
+ * several assignees — and "the translation tasks assigned to me" is the
+ * question somebody actually asks each morning. Applied client-side because
+ * the project endpoint has no assignee filter, and because it must work on the
+ * paginated result rather than on one page of it.
+ *
+ * `--assignee me` resolves through the token's own user, so nobody has to look
+ * up a gid.
+ */
+const wantAssignee = flags.get('assignee') ?? process.env.ASANA_ASSIGNEE;
+const myName =
+  wantAssignee === undefined || wantAssignee === ''
+    ? undefined
+    : wantAssignee === 'me'
+      ? await api('/users/me')
+          .then((page) => (page as unknown as { readonly data?: { readonly name?: string } }).data?.name)
+          .catch(() => undefined)
+      : wantAssignee;
+
+const mine =
+  myName === undefined
+    ? translationish
+    : translationish.filter(
+        (task) => (task.assignee?.name ?? '').toLowerCase() === myName.toLowerCase(),
+      );
+
+if (myName !== undefined) {
+  write(`  assignee  ${myName} — ${String(mine.length)} of ${String(translationish.length)} translation task(s)`);
+  if (mine.length === 0) {
+    write('');
+    write(`  No translation task on this board is assigned to "${myName}". Check the`);
+    write('  spelling against Asana, or drop --assignee to pull the whole board.');
+    write('');
+  }
+}
 write(
   `  of those  ${String(translationish.length)} name a translation; ${String(open.length - translationish.length)} are other work in this project`,
 );
@@ -219,7 +258,7 @@ writeFileSync(
       // tasks 3" one command later — two true numbers whose pair reads like a
       // working pipeline and means the opposite. The export is the artifact
       // somebody reads, so it holds what it claims to hold.
-      tasks: translationish.map((task) => ({
+      tasks: mine.map((task) => ({
         gid: task.gid,
         name: task.name,
         notes: task.notes ?? '',

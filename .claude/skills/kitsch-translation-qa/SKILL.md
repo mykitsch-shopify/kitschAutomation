@@ -90,6 +90,31 @@ npm run asana:close               REM DRY RUN — prints what it would close
 npm run asana:close -- --confirm  REM actually closes
 ```
 
+### The daily loop, on your own tasks
+
+```bash
+set "ASANA_TOKEN=<token>"
+npm run asana:pull -- --project 1209073782503680 --assignee me
+npm run asana:doctor
+set "KITSCH_BASE_URL=https://www.mykitsch.com"
+npm run audit:translation-backlog
+npm run asana:close -- --comment
+npm run asana:close -- --comment --confirm
+```
+
+`--assignee me` resolves through the token's own user. Without it the pull
+returns the whole board — 541 tasks across several people.
+
+`--comment` posts the finding on every task it will NOT close, so the
+investigation lands on the task instead of in a terminal. Each comment carries
+the verdict, the per-locale result, and the note that ja/ko were deliberately
+not checked. A repeat run does not re-post the same verdict — a task with
+thirty identical comments is worse than one with none.
+
+The comment says plainly that a wrong-looking result may be the automation
+reading the wrong element rather than a translation defect, because on this
+codebase that has been true more often than not.
+
 **Dry run is the default on purpose.** Closing a task notifies watchers and
 moves work off a board other people plan against; undoing it is not the same as
 never having done it.
