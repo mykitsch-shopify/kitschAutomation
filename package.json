@@ -12,6 +12,7 @@
     "a11y:fixture": "tsx fixtures/a11y/server.ts",
     "ad-landing:fixture": "tsx fixtures/ad-landing/server.ts",
     "asana:close": "tsx tools/asana-close.ts",
+    "asana:doctor": "tsx tools/asana-doctor.ts",
     "asana:pull": "tsx tools/asana-pull.ts",
     "audit:a11y": "tsx tools/a11y-audit.ts",
     "audit:ad-landing": "tsx tools/ad-landing-audit.ts",

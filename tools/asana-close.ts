@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 
+import { describeBuild } from './lib/build-stamp.js';
+
 /**
  * Closes the translation tasks the audit proved are done.
  *
@@ -100,6 +102,8 @@ const held = results.filter((entry) => entry.verdict !== 'closeable');
 
 write('');
 write('Asana — close verified translation tasks');
+write('');
+write(`  build    ${describeBuild()}`);
 write('');
 write(`  report   ${reportPath}`);
 write(`  target   ${target === '' ? '(not recorded)' : target}`);

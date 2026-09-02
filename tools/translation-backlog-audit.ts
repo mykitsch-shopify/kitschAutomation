@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { type Page } from '@playwright/test';
 
 import { loadTopProductsConfig } from '../web/lib/top-products.js';
+import { describeBuild } from './lib/build-stamp.js';
 import { allureDir, writeAllureCases, writeEnvironment } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import {
@@ -129,6 +130,7 @@ const selected = limit === undefined ? products : products.slice(0, limit);
 write('');
 write(`Translation backlog — ${String(allTasks.length)} open task(s)`);
 write('');
+write(`  build         ${describeBuild()}`);
 write(`  target        ${baseURL}`);
 write(`  export        ${tasksPath}${parsed.captured === undefined ? '' : ` (captured ${parsed.captured})`}`);
 write(`  product tasks ${String(products.length)}`);

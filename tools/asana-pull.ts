@@ -1,6 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { describeBuild } from './lib/build-stamp.js';
+
 /**
  * Pulls the open translation tasks off the Asana board into the export the
  * backlog audit reads.
@@ -153,6 +155,8 @@ const query =
 
 write('');
 write('Asana — pull open translation tasks');
+write('');
+write(`  build    ${describeBuild()}`);
 write('');
 write(`  ${project !== '' ? `project  ${project}` : `workspace ${workspace}  assignee ${assignee}`}`);
 
