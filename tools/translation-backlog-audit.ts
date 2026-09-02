@@ -5,11 +5,13 @@ import { type Page } from '@playwright/test';
 import { allureDir, writeAllureCases, writeEnvironment } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import {
+  checkableLocales,
   isProductTask,
   judgeTask,
   needsHandle,
   parseTask,
   summarize,
+  uncheckableLocales,
   type BacklogTask,
   type LocaleObservation,
   type LocaleVerdict,
@@ -112,7 +114,22 @@ write(`  export        ${tasksPath}${parsed.captured === undefined ? '' : ` (cap
 write(`  product tasks ${String(products.length)}`);
 write(`  no handle     ${String(unresolved.length)} — named a translation but no product URL`);
 write(`  checking      ${String(selected.length)} task(s), ` +
-  `${String(selected.reduce((n, task) => n + task.locales.length, 0))} handle x locale`);
+  `${String(selected.reduce((n, task) => n + checkableLocales(task.locales).length, 0))} handle x locale`);
+
+// Locales the board asks for that this store does not serve.
+//
+// Reported once, here, rather than as a per-task failure. Every task used to
+// read `could not read copy in es, fr, de, it, ja` — four real failures and one
+// market that was never going to answer, in one undifferentiated list.
+const outOfContract = [
+  ...new Set(selected.flatMap((task) => uncheckableLocales(task.locales))),
+].sort();
+if (outOfContract.length > 0) {
+  write(
+    `  not checked   ${outOfContract.join(', ')} — named by these tasks, not served by this store`,
+  );
+  write('                (config/i18n.yaml is the contract; these are unverified, not passing)');
+}
 
 const { browser, context } = await launchFromArgs(flags, bare, write, 'browser      ');
 const page = await context.newPage();
@@ -152,7 +169,7 @@ for (const [index, task] of selected.entries()) {
   if (english.status === 200) reachedAny = true;
 
   const observations: LocaleObservation[] = [];
-  for (const locale of task.locales) {
+  for (const locale of checkableLocales(task.locales)) {
     const prefix = localePrefix.replace('{locale}', locale);
     const localized = await read(`${baseURL}${prefix}/products/${handle}`);
     if (localized.status === 200) reachedAny = true;

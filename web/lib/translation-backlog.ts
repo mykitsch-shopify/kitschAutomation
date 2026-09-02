@@ -87,13 +87,45 @@ export type TaskResult = {
 // ── parsing Asana task notes ─────────────────────────────────────────────
 
 /**
- * The six non-source locales this store sells in. Used when a task names a
- * product but no locales — several hand-written tasks do, and defaulting to
- * "all six" matches what the auto-created ones say.
+ * Locale codes a task may NAME. Not the same as the ones we can check.
+ *
+ * The board's auto-created tasks list "es fr de it ja ko", because that is what
+ * the May translation audit asked for. This set is the reading vocabulary: a
+ * task that says `ja` must still parse as naming `ja`, or it falls through to
+ * the default and we lose what the task actually asked for.
  */
-export const DEFAULT_LOCALES: readonly string[] = ['es', 'fr', 'de', 'it', 'ja', 'ko'];
+const PARSEABLE_LOCALES: readonly string[] = ['es', 'fr', 'de', 'it', 'ja', 'ko'];
 
-const KNOWN = new Set(DEFAULT_LOCALES);
+/**
+ * Locale codes we can actually verify — the store's live markets, matching
+ * config/i18n.yaml. Pinned to it by a unit test.
+ *
+ * The distinction is not pedantic. Before it existed, every task reported
+ * `unverified — could not read copy in es, fr, de, it, ja`, which reads as five
+ * failures of the same kind. Four of those were a real failure to read; the
+ * fifth was a market this store does not serve and never will report anything.
+ * Mixing them means the day `es` starts working, the task still says
+ * "unverified" and nobody knows why.
+ */
+export const CHECKED_LOCALES: readonly string[] = ['es', 'fr', 'de', 'it'];
+
+/**
+ * What a task asks for, narrowed to what we can answer.
+ *
+ * A task naming only `ja` and `ko` narrows to nothing, and the audit reports it
+ * as out of contract rather than as unverified work.
+ */
+export const checkableLocales = (asked: readonly string[]): readonly string[] =>
+  asked.filter((code) => CHECKED_LOCALES.includes(code));
+
+/** Locales a task named that are outside the contract, for the report. */
+export const uncheckableLocales = (asked: readonly string[]): readonly string[] =>
+  asked.filter((code) => !CHECKED_LOCALES.includes(code));
+
+/** Backwards-compatible alias — the default when a task names no locale. */
+export const DEFAULT_LOCALES: readonly string[] = PARSEABLE_LOCALES;
+
+const KNOWN = new Set(PARSEABLE_LOCALES);
 
 /**
  * Pulls the handle out of a task's notes.

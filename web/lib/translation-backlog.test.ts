@@ -14,7 +14,11 @@ import {
   summarize,
   type BacklogTask,
   type LocaleObservation,
+  CHECKED_LOCALES,
+  checkableLocales,
+  uncheckableLocales,
 } from './translation-backlog.js';
+import { loadI18nConfig } from '../../i18n/lib/config.js';
 
 /** The auto-created shape: explicit handle line, lowercase locale list. */
 const AUTO_NOTES = `Bucket: Missing all 6 locales
@@ -90,6 +94,38 @@ const seenFields = (
 });
 
 // ── parsing ──────────────────────────────────────────────────────────────
+
+// ── the contract, and the vocabulary that is not the contract ────────────
+
+void test('config: the checked locales match config/i18n.yaml, not the board', () => {
+  // Fourth place the locale contract had drifted. config/a11y.yaml kept JP and
+  // KR, translation-gate.yml said seven, the README said seven, and this file
+  // hardcoded six. Each was found by a live run reporting work about markets
+  // the store does not serve.
+  //
+  // Asserted against the contract file rather than a literal, so the next
+  // market change is one edit and cannot be half-applied.
+  const contracted = loadI18nConfig()
+    .locales.map((locale) => locale.code)
+    .filter((code) => code !== loadI18nConfig().sourceLocale)
+    .sort();
+  assert.deepEqual([...CHECKED_LOCALES].sort(), contracted);
+});
+
+void test('a task may NAME a locale we cannot check, and that is not a failure', () => {
+  // The board's auto-created tasks list es/fr/de/it/ja/ko because the May audit
+  // asked for them. Parsing has to understand `ja` or the task falls through to
+  // the default and we lose what it actually asked for — but checking it would
+  // report a market this store does not serve as unread copy.
+  const asked = ['es', 'fr', 'de', 'it', 'ja', 'ko'];
+  assert.deepEqual(checkableLocales(asked), ['es', 'fr', 'de', 'it']);
+  assert.deepEqual(uncheckableLocales(asked), ['ja', 'ko']);
+});
+
+void test('a task naming only unsupported locales narrows to nothing', () => {
+  // It must not silently become "all locales" — that would invent work.
+  assert.deepEqual(checkableLocales(['ja', 'ko']), []);
+});
 
 void test('parseHandle: reads the explicit handle line', () => {
   assert.equal(parseHandle(AUTO_NOTES), 'coconut-oil-shampoo-conditioner-combo-for-dry-damaged-hair');

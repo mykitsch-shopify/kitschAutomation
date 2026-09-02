@@ -85,7 +85,12 @@ type AsanaTask = {
   readonly assignee?: { readonly gid: string; readonly name: string } | null;
 };
 
-const api = async (path: string): Promise<{ readonly data: readonly AsanaTask[] }> => {
+type Page = {
+  readonly data: readonly AsanaTask[];
+  readonly next_page?: { readonly offset: string } | null;
+};
+
+const api = async (path: string): Promise<Page> => {
   const response = await fetch(`https://app.asana.com/api/1.0${path}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
   });
@@ -100,7 +105,44 @@ const api = async (path: string): Promise<{ readonly data: readonly AsanaTask[] 
             : ''),
     );
   }
-  return (await response.json()) as { readonly data: readonly AsanaTask[] };
+  return (await response.json()) as Page;
+};
+
+/**
+ * Every page, not the first one.
+ *
+ * This used to issue a single `limit=100` request and read `data`. Asana
+ * returns `next_page.offset` when there is more, and ignoring it silently
+ * truncates the board — which is precisely the failure
+ * collectors/shopify-translations.ts was written to avoid ("sampling the first
+ * page and calling the catalogue clean is the failure mode that makes a
+ * translation gate worthless"). The same mistake was sitting here.
+ *
+ * A live pull made it visible: 100 tasks fetched, exactly the page size, and
+ * only 3 of them translation tasks. A number equal to the limit is never a
+ * count — it is a truncation until proven otherwise.
+ */
+const allPages = async (base: string): Promise<readonly AsanaTask[]> => {
+  const collected: AsanaTask[] = [];
+  let path: string | undefined = base;
+  let pages = 0;
+
+  while (path !== undefined) {
+    const page: Page = await api(path);
+    collected.push(...page.data);
+    pages += 1;
+    const offset = page.next_page?.offset;
+    path = offset === undefined ? undefined : `${base}&offset=${encodeURIComponent(offset)}`;
+    // A board cannot reasonably be this large, and an unbounded loop against a
+    // paginated API is worse than a truncated read.
+    if (pages >= 50) {
+      write('  WARNING  stopped after 50 pages — the export may still be short.');
+      break;
+    }
+  }
+
+  write(`  pages    ${String(pages)}`);
+  return collected;
 };
 
 const fields = 'gid,name,notes,completed,due_on,assignee.name';
@@ -114,7 +156,7 @@ write('Asana — pull open translation tasks');
 write('');
 write(`  ${project !== '' ? `project  ${project}` : `workspace ${workspace}  assignee ${assignee}`}`);
 
-const { data } = await api(query).catch((error: Error) => {
+const data = await allPages(query).catch((error: Error) => {
   write('');
   write(`  FAILED   ${error.message}`);
   write('');
@@ -128,6 +170,28 @@ const { data } = await api(query).catch((error: Error) => {
 const open = data.filter((task) => task.completed !== true);
 
 write(`  fetched  ${String(data.length)} task(s), ${String(open.length)} still open`);
+
+// Say how many of them the backlog audit will actually look at, HERE, rather
+// than leaving it to be discovered one command later.
+//
+// A live pull reported "100 open task(s)" and the audit then reported
+// "product tasks 3". Both numbers were true and the pair reads as a working
+// pipeline; what it actually meant was that this query returns the whole
+// project, and 97 of those tasks have nothing to do with translation. The
+// export is the right place to say so, because it is the thing that decided.
+const translationish = open.filter((task) => /translate/iu.test(task.name));
+write(
+  `  of those  ${String(translationish.length)} name a translation; ${String(open.length - translationish.length)} are other work in this project`,
+);
+
+if (translationish.length === 0 && open.length > 0) {
+  write('');
+  write('  NONE of the tasks pulled are translation tasks. This query returns every');
+  write('  task in the project, so the translation board is either elsewhere or');
+  write('  past the pages fetched. Narrow it with --project <the translation board>');
+  write('  before reading the audit that follows as "the backlog is clear".');
+  write('');
+}
 
 if (open.length === 0) {
   write('');
