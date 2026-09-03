@@ -34,12 +34,27 @@ export default tseslint.config(
   // Matches the rule in tools/report-clean.ts. Pinned by
   // tools/lib/report-dirs.test.ts, which asks eslint itself rather than
   // reading this list.
+  //
+  // Dot-directories are ignored wholesale for the same reason, one platform
+  // further out. Heroku's Node buildpack drops
+  // `.heroku/metrics/metrics_collector.cjs` into the app directory during the
+  // build; `eslint .` found it, type-aware linting had no tsconfig entry for a
+  // file that does not exist in the repository, and a CI run failed on
+  // "Parsing error: ... was not found by the project service" — a file we did
+  // not write, cannot fix, and should never have read.
+  //
+  // Not a special case for `.heroku/`: no tracked .js or .ts file in this
+  // repository lives under a dot-directory, so descending into them can only
+  // ever find somebody else's runtime. report-dirs.test.ts asserts that stays
+  // true, so the day someone puts real source in one, they are told rather
+  // than silently unlinted.
   {
     ignores: [
       'node_modules/',
       '*-report*/',
       '*-results*/',
       'allure-*/',
+      '.*/',
       'fixtures/catalog/*.json',
     ],
   },

@@ -17,3 +17,7 @@ node_modules/
 *-report*/
 *-results*/
 allure-*/
+
+# Injected by the build platform, not by us. Heroku's Node buildpack writes
+# .heroku/metrics/metrics_collector.cjs into the app directory during a build.
+.heroku/

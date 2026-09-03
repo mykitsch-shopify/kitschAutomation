@@ -124,6 +124,43 @@ void test('eslint ignores every report directory this repo can generate', async 
   }
 });
 
+void test('eslint ignores what the build platform injects', async () => {
+  // Heroku's Node buildpack writes .heroku/metrics/metrics_collector.cjs into
+  // the app directory during the build. A CI run failed on it — "Parsing
+  // error: ... was not found by the project service" — which is type-aware
+  // linting complaining, correctly, that a file absent from the repository is
+  // absent from tsconfig. Three gates passed and the run was still red over
+  // somebody else's runtime.
+  const eslint = new ESLint();
+  for (const path of [
+    '.heroku/metrics/metrics_collector.cjs',
+    '.heroku/node/bin/whatever.js',
+    '.cache/some-tool/index.js',
+  ]) {
+    assert.ok(await eslint.isPathIgnored(path), `eslint.config.js must ignore ${path}`);
+  }
+});
+
+void test('no source of ours hides inside a dot-directory', () => {
+  // The blanket dot-directory ignore above is only safe while this holds. If
+  // somebody adds real code under one, it would silently stop being linted —
+  // so the check is that they cannot do so without this failing first.
+  const tracked = spawnSync('git', ['ls-files', '-z'], { encoding: 'utf8' });
+  if (tracked.error !== undefined || tracked.status !== 0) {
+    // No repository to ask; the eslint assertions above still ran.
+    return;
+  }
+  const hidden = tracked.stdout
+    .split('\0')
+    .filter((path) => path.startsWith('.') && /\.(?:[cm]?js|tsx?)$/u.test(path));
+  assert.deepEqual(
+    hidden,
+    [],
+    'these are tracked source files inside a dot-directory, which eslint no longer reads. ' +
+      'Either move them, or narrow the ".*/" ignore to the platform directories it is for.',
+  );
+});
+
 void test('eslint still lints the source tree', async () => {
   const eslint = new ESLint();
   for (const dir of SOURCE) {
