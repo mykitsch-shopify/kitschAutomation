@@ -1,18 +1,19 @@
 node_modules/
-test-results/
-playwright-report/
-blob-report/
-i18n-report/
 .env
 *.log
-review-report/
-compare-at-report/
-top-products-report/
-ad-landing-report/
-translation-backlog-report/
-a11y-report/
-health-check-report/
-scratch-report/
-release-gate-report/
-allure-results/
-allure-report/
+
+# Generated report directories.
+#
+# Globs rather than names. Every audit takes a free-form `--out`, so the set of
+# directory names this repo can produce is open-ended: enumerating them meant
+# `allure-report-live/` and `allure-report-selftest/` were neither ignored nor
+# linted-around, and a local `git commit` reported 7,184 errors from a minified
+# Allure vendor bundle.
+#
+# The rule is the one tools/report-clean.ts already enforces before it will
+# delete anything: starts with "allure", or ends in "-report"/"-results", with
+# any suffix. tools/lib/report-dirs.test.ts holds this file and
+# eslint.config.js to it.
+*-report*/
+*-results*/
+allure-*/

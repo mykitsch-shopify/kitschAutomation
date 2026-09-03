@@ -128,6 +128,22 @@ void test('explainNotStart: a signal kill is reported as not-run, and names the 
   assert.match(reason ?? '', /SIGKILL/u);
 });
 
+void test('explainNotStart: an overflowing command is not reported as one that never started', () => {
+  // A real Windows run printed "npm could not be started: spawnSync
+  // C:\WINDOWS\system32\cmd.exe ENOBUFS" for the reviewer gate. npm had
+  // started — it ran and wrote past `maxBuffer`, and Node killed it. The
+  // verdict is genuinely unknown either way, so this stays a not-run reason;
+  // what it must not do is blame the machine's setup for the harness having
+  // asked a question whose answer did not fit.
+  const enobufs = Object.assign(new Error('spawnSync cmd.exe ENOBUFS'), { code: 'ENOBUFS' });
+  for (const platform of ['win32', 'linux'] as const) {
+    const reason = explainNotStart('npm', { error: enobufs, status: null }, platform) ?? '';
+    assert.match(reason, /ran, but produced more output/u);
+    assert.doesNotMatch(reason, /could not be started/u);
+    assert.doesNotMatch(reason, /npm ci/u, 'reinstalling dependencies would not help');
+  }
+});
+
 void test('buildLaunch: on Windows everything is quoted into one line, with no args array', () => {
   // Passing an args array alongside `shell: true` makes Node concatenate them
   // unescaped — DEP0190 — and that warning printed on every Windows run.

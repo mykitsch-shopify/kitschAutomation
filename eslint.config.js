@@ -20,16 +20,26 @@ import kitsch from './tools/eslint-plugin-kitsch/index.js';
 const SPECS = ['web/specs/**/*.spec.ts', 'i18n/specs/**/*.spec.ts'];
 
 export default tseslint.config(
-  // `*-report/` rather than a list of names: every audit writes one, and the
-  // Allure report ships a JS bundle. Naming them individually meant a new
-  // report directory silently entered the lint run — the Allure one added
-  // 1,800 errors from a minified vendor bundle before this became a glob.
+  // Globs rather than a list of names: every audit writes a report directory,
+  // and the Allure one ships a minified JS bundle. Naming them individually
+  // meant a new report directory silently entered the lint run — the Allure
+  // one added 1,800 errors before this became a glob.
+  //
+  // The trailing `*` is the second half of that lesson. `--out` is free-form on
+  // every audit, so `npm run report -- --out allure-report-live` produces a
+  // directory `*-report/` does not match; a local commit linted
+  // `allure-report-live/` and `allure-report-selftest/` and reported 7,184
+  // errors, every one of them about vendor code this repository did not write.
+  //
+  // Matches the rule in tools/report-clean.ts. Pinned by
+  // tools/lib/report-dirs.test.ts, which asks eslint itself rather than
+  // reading this list.
   {
     ignores: [
       'node_modules/',
-      'test-results/',
-      '*-report/',
-      'allure-results/',
+      '*-report*/',
+      '*-results*/',
+      'allure-*/',
       'fixtures/catalog/*.json',
     ],
   },

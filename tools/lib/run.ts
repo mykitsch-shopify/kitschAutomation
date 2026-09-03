@@ -57,6 +57,20 @@ export type RunResult = {
 /** Windows defaults, used when the environment does not say. */
 const DEFAULT_PATHEXT = '.COM;.EXE;.BAT;.CMD';
 
+/**
+ * How much a captured command is allowed to say.
+ *
+ * Node's default is 1 MiB, which a lint gate over this repository can exceed
+ * without anything being wrong — and when it does, `spawnSync` kills the child
+ * and reports ENOBUFS, which the caller can only render as a gate that did not
+ * run. That is a real verdict replaced by a harness artefact, so the ceiling is
+ * raised to somewhere no honest gate reaches.
+ *
+ * Not unbounded: this is read into a string in one piece, and a runaway child
+ * should hit a limit rather than the machine's memory.
+ */
+const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
+
 const isFile = (path: string): boolean => statSync(path, { throwIfNoEntry: false })?.isFile() === true;
 
 /**
@@ -257,6 +271,7 @@ export const runSync = (
     encoding: 'utf8',
     shell: spec.shell,
     stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: MAX_OUTPUT_BYTES,
     ...(options.env === undefined ? {} : { env }),
   });
 
@@ -323,6 +338,27 @@ const describe = (command: string, error: Error): string => {
     return (
       `${command} could not be started on this platform. On Windows a .cmd ` +
       'launcher needs a shell; this is a harness bug, not a problem with your setup.'
+    );
+  }
+  if (code === 'ENOBUFS') {
+    // The opposite of not starting, and the previous wording said so anyway:
+    // "npm could not be started: spawnSync cmd.exe ENOBUFS" on a Windows
+    // machine where npm had started, run, and written more than `maxBuffer`.
+    // Node kills the child at that point and discards the tail, so there is no
+    // trustworthy exit code left to read — the verdict really is unknown, but
+    // the reason is the reverse of what was printed.
+    //
+    // It is worth reading as a symptom rather than only raising the ceiling.
+    // The run that produced it was linting a generated Allure bundle: 7,184
+    // errors, megabytes of output, from vendor code. A gate that suddenly
+    // overflows is usually a gate that has been pointed at the wrong files.
+    return (
+      `${command} ran, but produced more output than could be captured ` +
+      `(${String(MAX_OUTPUT_BYTES / 1024 / 1024)} MB), so it was stopped before ` +
+      'finishing and its result is unknown. Nothing here is a statement about ' +
+      'your code. Run it directly to see the output in full — and check what it ' +
+      'is reading, because this much output usually means generated files have ' +
+      'entered a check that should not see them.'
     );
   }
   return `${command} could not be started: ${error.message}`;
