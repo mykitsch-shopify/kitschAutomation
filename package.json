@@ -14,6 +14,7 @@
     "asana:close": "tsx tools/asana-close.ts",
     "asana:doctor": "tsx tools/asana-doctor.ts",
     "asana:pull": "tsx tools/asana-pull.ts",
+    "asana:reopen": "tsx tools/asana-reopen.ts",
     "audit:a11y": "tsx tools/a11y-audit.ts",
     "audit:ad-landing": "tsx tools/ad-landing-audit.ts",
     "audit:compare-at": "tsx tools/compare-at-audit.ts",

@@ -34,6 +34,7 @@ import {
  *   --tasks <path>     Asana export, default data/asana/translation-tasks.json (npm run asana:pull)
  *   --limit <n>        check at most n tasks (a smoke run)
  *   --shard <n>/<t>    one slice of the board, spread across it (see below)
+ *   --delay <ms>       pause between page loads, default 250 (see below)
  *   --locale-prefix    URL shape for a locale, default "/{locale}"
  *   --out <dir>        report directory, default translation-backlog-report
  *   plus the shared browser flags: --browser / --headed / --slow-mo / --viewport
@@ -108,13 +109,20 @@ type Export = {
     readonly name: string;
     readonly notes: string;
     readonly due_on?: string | null;
+    readonly assignee?: string | null;
   }[];
   readonly captured?: string;
 };
 
 const parsed: Export = JSON.parse(readFileSync(tasksPath, 'utf8')) as Export;
 const allTasks: readonly BacklogTask[] = parsed.tasks.map((entry) =>
-  parseTask(entry.gid, entry.name, entry.notes, entry.due_on ?? undefined),
+  parseTask(
+    entry.gid,
+    entry.name,
+    entry.notes,
+    entry.due_on ?? undefined,
+    entry.assignee ?? undefined,
+  ),
 );
 const products = allTasks.filter(isProductTask);
 const unresolved = allTasks.filter(needsHandle);
@@ -203,11 +211,38 @@ const textOf = async (target: Page, css: string): Promise<string | undefined> =>
 
 type Fields = { readonly status: number; readonly title?: string; readonly description?: string };
 
+/**
+ * Pace between page loads.
+ *
+ * There was none, and a 506-task run is ~2,500 navigations issued back to back.
+ * The result was a cliff: the first twenty tasks returned real verdicts and the
+ * rest came back `unverified — could not read copy`, not because those products
+ * differ but because the store stopped answering.
+ *
+ * A slow page and a refused page both land in `.catch(() => 0)`, become
+ * `not_observed`, and are reported as "status unknown" — so throttling wears
+ * the clothes of 380 individually mysterious products. That is the exact
+ * collapse this repository exists to refuse, and it was in our own request
+ * pattern rather than in a selector.
+ *
+ * 250ms is about four pages a second, which is well inside what a person
+ * browsing quickly would generate.
+ */
+const delayMs = Number(flags.get('delay') ?? '250');
+const pause = async (): Promise<void> => {
+  if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+};
+
+/** Every HTTP status this run saw, so throttling is visible as a number. */
+const statusCounts = new Map<number, number>();
+
 const read = async (url: string): Promise<Fields> => {
+  await pause();
   const status = await page
     .goto(url, { timeout: 30_000, waitUntil: 'domcontentloaded' })
     .then((response) => response?.status() ?? 0)
     .catch(() => 0);
+  statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
   if (status !== 200) return { status };
   return {
     status,
@@ -269,6 +304,56 @@ await browser.close();
 const blind = selected.length > 0 && !reachedAny;
 
 const counts = summarize(results);
+
+/**
+ * Did the run get throttled part-way through?
+ *
+ * 380 tasks reporting "status unknown" is not 380 findings about 380 products.
+ * If the unverified rate climbs sharply between the first quarter of the run
+ * and the last, the store stopped answering and everything after that point
+ * says nothing — which is one harness finding, not hundreds.
+ *
+ * Reported as its own paragraph because the per-task notes cannot say it: each
+ * one is individually true and collectively misleading.
+ */
+const unverifiedRate = (slice: readonly TaskResult[]): number =>
+  slice.length === 0 ? 0 : slice.filter((r) => r.verdict === 'unverified').length / slice.length;
+
+const quarter = Math.max(1, Math.floor(results.length / 4));
+const early = unverifiedRate(results.slice(0, quarter));
+const late = unverifiedRate(results.slice(-quarter));
+const throttled = results.length >= 40 && late > 0.5 && late > early * 2;
+
+write('');
+if (statusCounts.size > 0) {
+  const shown = [...statusCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([status, n]) => `${status === 0 ? 'timeout/refused' : String(status)}=${String(n)}`)
+    .join('  ');
+  write(`  http          ${shown}`);
+}
+
+if (throttled) {
+  write('');
+  write('  THROTTLED — this run stopped being able to read the store part-way through.');
+  write('');
+  write(
+    `                unverified was ${String(Math.round(early * 100))}% in the first quarter of the run and ` +
+      `${String(Math.round(late * 100))}% in the last.`,
+  );
+  write('                Products do not become unreadable in the order they were checked;');
+  write('                the store did. Everything after the cliff says nothing about');
+  write('                translation, and none of it is a finding.');
+  write('');
+  write('                Re-run the unread ones in smaller batches, more slowly:');
+  write('                  npm run audit:translation-backlog -- --shard 1/8 --delay 750');
+  write('');
+  write('                What is NOT affected: anything already reported closeable.');
+  write('                A throttled read yields "unverified", never "closeable", so a');
+  write('                task closed on this run was closed on copy that was actually read.');
+  write('');
+}
+
 mkdirSync(outDir, { recursive: true });
 
 const section = (verdict: string, title: string, why: string): readonly string[] => {

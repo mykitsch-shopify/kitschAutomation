@@ -1,0 +1,20 @@
+{
+  "name": "kitsch-automation",
+  "description": "QA harness for mykitsch.com. Heroku CI runs the offline gates on every push; the browser and live-store tiers stay on GitHub Actions. See docs/HEROKU-CI.md.",
+  "repository": "https://github.com/mykitsch-shopify/kitschAutomation",
+  "keywords": ["qa", "playwright", "shopify", "i18n", "accessibility"],
+  "stack": "heroku-24",
+  "environments": {
+    "test": {
+      "buildpacks": [{ "url": "heroku/nodejs" }],
+      "env": {
+        "NODE_ENV": "test",
+        "NPM_CONFIG_PRODUCTION": "false",
+        "KITSCH_BASE_URL": "http://127.0.0.1:4173"
+      },
+      "scripts": {
+        "test": "npm run precommit"
+      }
+    }
+  }
+}

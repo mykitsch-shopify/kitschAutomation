@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  belongsTo,
   DEFAULT_LOCALES,
   isProductTask,
   needsHandle,
@@ -60,6 +61,7 @@ const task = (over: Partial<BacklogTask> = {}): BacklogTask => ({
   gid: '1',
   name: 'Translate Product: Something',
   handle: 'a-product',
+  assignee: 'Dinesh',
   locales: ['es', 'fr'],
   dueOn: '2026-08-14',
   ...over,
@@ -104,6 +106,7 @@ const sixLocaleTask: BacklogTask = {
   gid: '1',
   name: 'Translate Product: Example',
   handle: 'example',
+  assignee: 'Dinesh',
   locales: ['es', 'fr', 'de', 'it', 'ja', 'ko'],
   dueOn: undefined,
 };
@@ -434,4 +437,35 @@ void test('summarize: counts every verdict', () => {
   assert.equal(counts.closeable, 1);
   assert.equal(counts.still_open, 1);
   assert.equal(counts.unverified, 1);
+});
+
+// ── whose task is it ─────────────────────────────────────────────────────
+
+void test('belongsTo: matches the assignee regardless of case or padding', () => {
+  assert.equal(belongsTo(task({ assignee: 'Dinesh' }), 'dinesh'), true);
+  assert.equal(belongsTo(task({ assignee: '  Dinesh ' }), 'Dinesh'), true);
+});
+
+void test('belongsTo: a colleague\'s task is not ours to close', () => {
+  // The whole finding, in one assertion. On 2026-09-03 the closer completed
+  // 116 tasks assigned to Ricardo Suin because nothing in the chain compared
+  // these two strings — the export knew the assignee and the report had
+  // dropped it one step earlier.
+  assert.equal(belongsTo(task({ assignee: 'Ricardo Suin' }), 'Dinesh'), false);
+});
+
+void test('belongsTo: an unassigned task belongs to nobody', () => {
+  // Not "belongs to whoever is asking". An absent assignee is a real state and
+  // the safe reading of it is no.
+  assert.equal(belongsTo(task({ assignee: undefined }), 'Dinesh'), false);
+});
+
+void test('parseTask: carries the assignee through, because the closer needs it', () => {
+  // This is the field that was thrown away. It travels task -> report.json ->
+  // asana-close, and every step that drops it re-arms the same accident.
+  assert.equal(
+    parseTask('1', 'Translate Product: X', 'handle: x', undefined, 'Ricardo Suin').assignee,
+    'Ricardo Suin',
+  );
+  assert.equal(parseTask('1', 'Translate Product: X', 'handle: x').assignee, undefined);
 });
