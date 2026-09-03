@@ -1,0 +1,42 @@
+# System libraries Chromium links against, for the heroku-community/apt buildpack.
+#
+# Heroku dynos have no root, so `npx playwright install --with-deps chromium`
+# cannot do this itself — the `--with-deps` half shells out to apt-get and
+# fails. This file is that half, done at build time by a buildpack that can.
+#
+# Not hand-assembled. This is Playwright's own dependency list for
+# ubuntu24.04-x64 Chromium, read out of the installed playwright-core bundle
+# (lib/coreBundle.js, the `chromium:` array under the 24.04 table) rather than
+# copied off a blog post. Heroku-24 IS Ubuntu 24.04, which is why the t64
+# variants are the right ones: 24.04 renamed these packages during the 64-bit
+# time_t transition, and the pre-t64 names simply do not resolve there.
+#
+# When Playwright is upgraded, re-read that array rather than trusting this
+# file. tools/lib/ci-parity.test.ts compares the two and fails if they drift.
+libasound2t64
+libatk-bridge2.0-0t64
+libatk1.0-0t64
+libatspi2.0-0t64
+libcairo2
+libcups2t64
+libdbus-1-3
+libdrm2
+libgbm1
+libglib2.0-0t64
+libnspr4
+libnss3
+libpango-1.0-0
+libx11-6
+libxcb1
+libxcomposite1
+libxdamage1
+libxext6
+libxfixes3
+libxkbcommon0
+libxrandr2
+
+# Fonts. Not in Playwright's list, because its own CI image already has them.
+# A dyno does not: without these Chromium falls back to whatever it can find,
+# text metrics shift, and every rendered-page assertion becomes a coin flip.
+fonts-liberation
+fonts-noto-color-emoji
