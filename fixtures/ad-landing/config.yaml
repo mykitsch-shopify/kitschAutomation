@@ -1,0 +1,77 @@
+# Config the ad-landing detection control points the audit at.
+#
+# Separate from config/ad-landing.yaml so the real daily scope stays the real
+# scope: pointing the control at production config would make it pass or fail
+# for reasons unrelated to the code under test.
+
+welcome_kits:
+  clean:
+    - spring-welcome-kit
+    - winter-welcome-kit-combos
+  seeded:
+    - seed-bad-compare-at
+    - seed-autoship-flat
+    - seed-autoship-offrate
+  thermal:
+    - thermal-in-stock
+    - seed-oos-stranded
+    - seed-oos-misrouted
+
+byob:
+  - handle: byob-healthy
+  - handle: seed-byob-empty
+  - handle: seed-byob-static
+
+traffic:
+  # Carries the fixed code for the non-stacking pairing. It must be a normal
+  # product page: a BYOB page has no add-to-cart, so the cart stayed empty and
+  # every code read as refused for reasons unrelated to stacking.
+  - handle: cart-carrier
+    fixed_discount_code: SEEDFIXED
+  - title: Deliberately unresolved item
+    note: 'Exercises the unresolved-scope reporting path.'
+
+discount_redirects:
+  - code: SEEDOK
+    expect_handle: winter-welcome-kit-combos
+  - code: SEEDWRONG
+    expect_handle: winter-welcome-kit-combos
+  - code: SEEDDEAD
+    expect_handle: winter-welcome-kit-combos
+
+oos_redirects:
+  - handle: seed-oos-stranded
+    expect_handle: thermal-substitute
+  - handle: seed-oos-misrouted
+    expect_handle: thermal-substitute
+  - handle: thermal-in-stock
+    expect_handle: thermal-substitute
+
+non_stacking:
+  fixed_codes: [SEEDFIXED]
+  site_wide_codes: [SEEDWIDE]
+
+autoship:
+  expected_discount_percent: 15
+  required_on: []
+
+thresholds:
+  max_load_ms: 15000
+  min_byob_options: 2
+
+selectors:
+  title: '[data-testid="pdp-title"]'
+  price: '[data-testid="pdp-price"]'
+  compare_at: '[data-testid="pdp-compare-at"]'
+  sold_out: '[data-testid="sold-out"]'
+  add_to_cart: '[data-testid="add-to-cart"]'
+  byob_option: '[data-testid="byob-option"]'
+  byob_price: '[data-testid="byob-price"]'
+  autoship_toggle: '[data-testid="autoship"]'
+  autoship_price: '[data-testid="autoship-price"]'
+  cart_line: '[data-testid="cart-line-item"]'
+  cart_subtotal: '[data-testid="cart-subtotal"]'
+  cart_total: '[data-testid="cart-total"]'
+  cart_discount: '[data-testid="cart-discount"]'
+  discount_input: '[data-testid="discount-input"]'
+  discount_apply: '[data-testid="discount-apply"]'

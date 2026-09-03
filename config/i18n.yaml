@@ -1,0 +1,313 @@
+# Locale parity contract — mykitsch.com
+#
+# This file is the single declaration of what "translated correctly" means.
+# The parity engine reads it; nothing in the engine hardcodes a locale, a
+# route, a severity or a threshold. Adding an eighth language is an edit here,
+# not a code change.
+#
+# ── Scope: ES, DE, IT, FR (plus the EN source). KO and JA are OUT ────────
+#
+# The Translations test plan asked for seven locales. The store supports four.
+# Checking the other three produced 60-odd failures a run that were not about
+# the store at all — /ko/ and /ja/ routes that 404, a Hangul assertion against
+# a page that has no Korean on it because there is no Korean — and a report
+# where two thirds of the red is noise is a report nobody reads to the bottom.
+#
+# Removed rather than skipped. A skipped locale still appears in the run as
+# something that was considered; a removed one is honestly absent, and the
+# sentence below is the record of why.
+#
+# **KO and JA are unverified, not passing.** If either market goes live, add
+# the block back (the engine never assumed a count) and re-run. The Korean and
+# Japanese price patterns, scripts and font stacks are preserved in git history
+# at commit 37428f2 — they were correct, they are just not applicable today.
+
+source_locale: en
+
+locales:
+  en:
+    market: US
+    currency: USD
+    price_pattern: '^\$\d{1,3}(,\d{3})*\.\d{2}$'
+  fr:
+    market: FR
+    currency: EUR
+    # French uses a group separator that may be a plain, non-breaking, or
+    # narrow non-breaking space. Accepting only U+0020 fails on real Shopify
+    # output, which emits U+202F.
+    price_pattern: '^\d{1,3}([\s  ]\d{3})*,\d{2}[\s  ]?€$'
+    expect_diacritics: true
+    diacritics: ['é', 'è', 'ê', 'à', 'ç', 'ù', 'â', 'î', 'ô', 'œ']
+  de:
+    market: DE
+    currency: EUR
+    price_pattern: '^\d{1,3}(\.\d{3})*,\d{2}[\s  ]?€$'
+    expect_diacritics: true
+    diacritics: ['ü', 'ö', 'ä', 'ß', 'Ü', 'Ö', 'Ä']
+  it:
+    market: IT
+    currency: EUR
+    price_pattern: '^\d{1,3}(\.\d{3})*,\d{2}[\s  ]?€$'
+    expect_diacritics: true
+    diacritics: ['à', 'è', 'é', 'ì', 'ò', 'ù']
+  es:
+    market: ES
+    currency: EUR
+    price_pattern: '^\d{1,3}(\.\d{3})*,\d{2}[\s  ]?€$'
+    expect_diacritics: true
+    diacritics: ['á', 'é', 'í', 'ó', 'ú', 'ñ', '¿', '¡']
+
+# Routes for the render layer. Keep this list short — the content layer
+# already checks every string exhaustively without a browser.
+# Every path here must resolve on BOTH targets. `/collections/hair-tools` did
+# not: it 404s on mykitsch.com, and the resulting failure read as a broken
+# translation on a page that was never opened. `/collections/all` exists on the
+# store and the fixture now serves it too.
+#
+# `{launch_handle}` resolves to the fixture's launch product by default. For a
+# live run set a handle that exists on the store, or the PDP row 404s the same
+# way:
+#   set "KITSCH_LAUNCH_HANDLE=self-draining-soap-dish-1"
+routes:
+  - { path: '/', name: home, tags: ['@smoke'] }
+  - { path: '/collections/all', name: collection, tags: ['@smoke'] }
+  - { path: '/products/{launch_handle}', name: pdp, tags: ['@smoke', '@launch'] }
+  - { path: '/cart', name: cart, tags: ['@smoke'] }
+  # @cart-required — not browsable without a cart.
+  #
+  # On the fixture this is a static page and the specs run against it. On
+  # mykitsch.com every request for it came back HTTP 429: 68 of them in one
+  # run, across all five locales, while every other route in the same run
+  # answered 200. That distribution rules out our own request volume — it is
+  # Shopify's checkout throttle refusing a session with an empty cart.
+  #
+  # So the render specs exclude it off-fixture rather than filling half the
+  # report with COULD NOT CHECK on a page that was never going to open.
+  # **Live checkout is unverified, not passing.** Closing the gap needs a
+  # seeded cart before the navigation, which this theme's buy button cannot
+  # produce today — see docs/WELCOME-KIT-COVERAGE.md.
+  - { path: '/checkout', name: checkout, tags: ['@smoke', '@launch', '@cart-required'] }
+  - { path: '/pages/about', name: content_page, tags: [] }
+  # Needs a real order to exist. Against a live store this route is only
+  # browsable with KITSCH_ORDER_STATUS_URL pointing at a test order, so the
+  # specs skip it rather than reporting a 404 as a translation defect.
+  - { path: '/checkout/confirmation', name: confirmation, tags: ['@launch', '@order'] }
+
+# ─────────────────────────────────────────────────────────────────────────
+# Theme selectors for the render layer.
+#
+# These used to be `data-testid` values written straight into the spec. The
+# fixture has them; mykitsch.com does not — so against the live store roughly
+# ninety specs failed with "element(s) not found" and were counted as
+# translation defects. They were nothing of the kind: the copy was never read,
+# because the container it lives in was never located.
+#
+# That is the same collapse this repository exists to prevent, one layer up:
+# "could not check" wearing the clothes of "your store is broken". A selector
+# that matches nothing now fails as a HARNESS problem naming this file.
+#
+# Same union rule as config/kits.yaml — a comma-separated list is a UNION, not
+# a fallback chain, so every alternative must be scoped.
+#
+# Where an entry is `''` the role is UNMAPPED and the specs that need it will
+# say so rather than guess. Map them from the live theme:
+#   node scratch-report/discover.mjs https://www.mykitsch.com/
+selectors:
+  # Confirmed on the live theme: a live run read copy through these.
+  site_footer: '[data-testid="site-footer"], footer.footer, #shopify-section-footer'
+  main: '[data-testid="main"], main#MainContent, main'
+
+  # ── Demoted back to testid-only, on evidence ──────────────────────────
+  #
+  # site_header carried `header.header, #shopify-section-header header`. Those
+  # were guesses at a Dawn-shaped theme and this store is not one: across a
+  # full live run they matched nothing, on 27 page loads, on every route. The
+  # note above says not to guess a theme class in here, and this is what it
+  # costs — 27 red specs that read as broken pages and were nothing of the
+  # kind. site_footer in the line above is the contrast: it was guessed too,
+  # and it happens to match, which is luck rather than method.
+  #
+  # Unmapped is the honest state until somebody runs the discovery script
+  # against the store and reads what the header actually is:
+  #   node scratch-report/discover.mjs https://www.mykitsch.com/
+  site_header: '[data-testid="site-header"]'
+
+  # The PDP price. Kept identical to `selectors.price` in
+  # config/top-products.yaml, and pinned to it by a unit test.
+  #
+  # This file carried a narrower version — `[data-testid="pdp-price"],
+  # .main-product span.text-red-700` — while top-products.yaml already held two
+  # more alternatives resolved against the live theme on 2026-08-28/31. Same
+  # drift as the stale handle in config/a11y.yaml: one config learns something
+  # about the theme and the others never hear about it. They describe the same
+  # element on the same store, so they are now asserted equal rather than
+  # maintained in parallel.
+  #
+  # It used to be sale-price-only, which was the open problem: those elements
+  # exist on every PDP and are EMPTY on a product that is not discounted. That
+  # produced `price "" does not match the EUR pattern` in four locales — a
+  # formatting verdict on a string nobody read. `span.price-item` closes it.
+  #
+  # The regular price now HAS a selector: `span.price-item`, found by a
+  # discovery run that listed the theme's price-bearing leaves. See the note in
+  # config/top-products.yaml for the evidence and its one caveat.
+  #
+  # `.price-item--regular` remains excluded, and that is not the same class:
+  # unscoped it matched 13 and 21 elements on two live PDPs by pulling in every
+  # recommendation card.
+  pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700, .main-product span.price-item, .main-product .product__price--sale'
+
+  # ── testid only: these carry NO live-theme mapping yet ────────────────
+  #
+  # The `data-testid` half is what the fixture serves, so the offline suite
+  # still exercises every one of these checks. Against mykitsch.com they match
+  # nothing, and the spec reports that as COULD NOT CHECK naming the selector —
+  # which is the truth. It is not a translation defect: no copy was read.
+  #
+  # Do not guess a theme class into these to make the red go away. A selector
+  # that matches the wrong element reports a defect that is not there, which is
+  # strictly worse than reporting that we could not look.
+  hero_heading: '[data-testid="hero-heading"]'
+  # Shopify's hosted checkout is not themeable on most plans, so these may
+  # never map. If that is confirmed, delete the checkout translation specs
+  # rather than leave them reporting a gap nobody can close.
+  checkout_form: '[data-testid="checkout-form"]'
+  checkout_field_label: '[data-testid="checkout-field-label"]'
+  checkout_continue: '[data-testid="checkout-continue"]'
+  checkout_error: '[data-testid="checkout-error"]'
+  # Overlays. `_open`/`_toggle` is clicked, `_panel` is read.
+  newsletter_open: '[data-testid="newsletter-open"]'
+  newsletter_panel: '[data-testid="newsletter-modal"]'
+  language_open: '[data-testid="language-open"]'
+  language_panel: '[data-testid="language-popup"]'
+  mobile_nav_toggle: '[data-testid="mobile-nav-toggle"]'
+  mobile_nav_panel: '[data-testid="mobile-nav"]'
+  # Order confirmation. Only reachable with KITSCH_ORDER_STATUS_URL pointing at
+  # a real test order.
+  confirmation_heading: '[data-testid="confirmation-heading"]'
+  confirmation_order: '[data-testid="confirmation-order"]'
+  confirmation_email: '[data-testid="confirmation-email"]'
+
+# hreflang — how many alternates a locale may declare.
+#
+# The contract was "exactly one per market", and against the live store that
+# reported `en: 74 alternates, expected exactly 1` on every page. Shopify emits
+# one alternate per market × language, so a store selling into many countries
+# correctly has dozens of `hreflang="en-*"`. The assertion was wrong, not the
+# page.
+#
+# What actually matters for discovery is that every locale we sell in is
+# represented at all. Zero is the defect; many is Shopify working.
+hreflang:
+  require_at_least: 1
+
+# Resource types pulled for the content layer, via Shopify Admin GraphQL
+# translatableResources (read-only) and Storefront @inContext.
+resources:
+  - PRODUCT
+  - PRODUCT_OPTION
+  - PRODUCT_OPTION_VALUE
+  - COLLECTION
+  - ONLINE_STORE_THEME_LOCALE_CONTENT
+  - ONLINE_STORE_MENU
+  - SHOP_POLICY
+  - METAFIELD
+  - EMAIL_TEMPLATE
+  - ONLINE_STORE_PAGE
+
+# Terms that must stay identical across locales. A string equal to the
+# English source is only a finding if it is NOT covered here.
+do_not_translate:
+  - Kitsch
+  - Satin
+  - Eco-Friendly
+  - Pro
+  - XL
+  - TikTok
+  - Ulta
+  - Target
+
+# Strings a locale is allowed to leave in English (legal, regulatory, or
+# untranslatable). Each entry needs a reason — an unexplained exemption is
+# how coverage quietly erodes.
+exemptions:
+  - key: 'shop_policy.terms_of_service'
+    locales: [fr, de, it, es]
+    reason: 'Legal copy pending counsel review — tracked in Asana QA-412'
+
+  # Cognates: the correct translation is the English word. These are per-key
+  # and per-locale rather than glossary entries, because the same word is a
+  # real defect elsewhere — "Shop" is right in German and wrong in French,
+  # where it should be "Boutique".
+  - key: 'nav.collections'
+    locales: [fr]
+    reason: 'Cognate — "Collections" is the correct French term. Confirmed against the FR nav.'
+  - key: 'footer.heading_shop'
+    locales: [de]
+    reason: 'Cognate — "Shop" is standard German retail usage.'
+  - key: 'nav.account'
+    locales: [it]
+    reason: 'Cognate — Italian storefronts use "Account" rather than "Conto".'
+  - key: 'checkout.contact_email'
+    locales: [it]
+    reason: 'Cognate — "Email" is the standard Italian checkout label.'
+  - key: 'cart.subtotal'
+    locales: [es]
+    reason: 'Cognate — "Subtotal" is identical in Spanish.'
+
+# English strings that are allowed to translate differently in different
+# places (test plan §13.1). Without these, the consistency check reports
+# correct copy as a defect — which is how a check gets switched off.
+consistency_exemptions:
+  - source: 'Checkout'
+    reason: >-
+      Cart CTA ("Zur Kasse", "Passer la commande") versus checkout page
+      heading ("Kasse", "Commande"). A verb phrase and a noun; correctly
+      different in 5 of 6 locales.
+
+# Severity is declared, not compiled in. The Translations test plan grades an
+# untranslated string in a non-English mode as High, where the Aug-11
+# framework graded it minor-by-volume; that disagreement is settled here in
+# one place rather than by forking the engine.
+#
+#   test-plan High   -> major     test-plan Medium -> minor
+severities:
+  missing_translation: major
+  empty_translation: major
+  placeholder_drift: major
+  untranslated_candidate: major
+  encoding_error: major
+  script_missing: major
+  protected_term_translated: minor
+  length_overflow_risk: minor
+  diacritic_absent: minor
+  meta_untranslated: minor
+  inconsistent_translation: minor
+
+thresholds:
+  # German runs long. Anything past this against the English source is
+  # flagged for a visual check, not failed outright.
+  length_ratio_warn: 1.45
+  # …but only for strings long enough for the ratio to mean anything. A
+  # three-character nav label routinely triples in translation and still fits;
+  # applying the ratio to those produced 62 findings against a clean
+  # catalogue, which is how a check teaches people to ignore it.
+  length_ratio_min_source_chars: 20
+  # Horizontal overflow tolerance in CSS px at 390px viewport width.
+  overflow_px: 2
+  # Content-layer gate. Exceeding either count fails the run.
+  #
+  # `max_minor` is set against a measured baseline, not picked: a clean
+  # catalogue currently produces 7 length-ratio flags, all of them French and
+  # Spanish expansion on headings and product titles (1.5–1.8x). Those are
+  # advisory by design — the render layer's 390px overflow spec is what
+  # confirms or clears them — so the budget has to sit above the known-good
+  # floor or the gate fails on a clean store and gets switched off.
+  max_major: 0
+  max_minor: 10
+
+placeholder_syntaxes:
+  - '\{\{\s*[\w.]+\s*\}\}'   # Liquid / i18n interpolation
+  - '\{\s*[\w.]+\s*\}'       # ICU-style
+  - '%\{[\w.]+\}'            # Ruby-style
+  - '%[sd]'                  # printf-style

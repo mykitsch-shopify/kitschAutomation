@@ -1,0 +1,33 @@
+# Config the a11y detection control points the audit at. Separate from
+# config/a11y.yaml so the control cannot pass or fail for reasons unrelated to
+# the code under test.
+locales:
+  - { code: en, lang: en, market: US, source: true }
+  - { code: fr, lang: fr, market: FR }
+  - { code: de, lang: de, market: DE }
+  - { code: ja, lang: ja, market: JP }
+  - { code: ko, lang: ko, market: KR }
+
+routes:
+  - { path: /, name: Home }
+
+wcag:
+  tags: [wcag2a, wcag2aa]
+
+severities:
+  critical: critical
+  serious: major
+  moderate: minor
+  minor: minor
+  html_lang_mismatch: major
+  untranslated_alt: major
+  untranslated_aria_label: minor
+  locale_only_violation: major
+
+thresholds:
+  max_critical: 0
+  max_major: 0
+  max_minor: 25
+  min_alt_chars_to_compare: 12
+
+exemptions: []

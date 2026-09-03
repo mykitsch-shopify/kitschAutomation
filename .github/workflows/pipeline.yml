@@ -1,0 +1,228 @@
+name: pipeline
+
+# The CI spine: what runs on every push, what runs nightly, and what runs
+# before a release.
+#
+# Three jobs, matching the three questions people actually ask:
+#
+#   guardrails  did this commit break the harness?          every push and PR
+#   nightly     is the store still correct this morning?    03:00 UTC + manual
+#   release     is it safe to ship?                         tags and manual
+#
+# The daily ad-landing and top-products workflows still own their own early
+# schedules, because a broken landing page costs ad budget from the moment the
+# working day starts and should not wait for a 03:00 batch. This file is the
+# spine those hang off, not a replacement for them.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  schedule:
+    # 03:00 UTC nightly — late enough that a deploy the previous evening has
+    # settled, early enough that a finding is on a desk before the US wakes.
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'Which tier to run'
+        type: choice
+        options: [guardrails, nightly, release]
+        default: nightly
+      base_url:
+        description: 'Storefront for the live tier'
+        required: false
+        default: 'https://www.mykitsch.com'
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── every push and PR: the same gates the pre-commit hook runs ──────────
+  # Identical to `npm run precommit` on purpose. A CI gate that checks
+  # something different from the local one teaches people the local one is
+  # decorative.
+  guardrails:
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event.inputs.tier == 'guardrails'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: TypeScript, ESLint, reviewer + bugbot, unit tests
+        run: npm run precommit
+
+  # ── every push and PR: the controls ────────────────────────────────────
+  # Separate job because it needs a browser and takes longer. A suite that
+  # cannot fail is not evidence, so the controls gate merges alongside lint.
+  controls:
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event.inputs.tier == 'guardrails'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Detection controls — every suite must fail on a broken store
+        run: |
+          npm run test:detection
+          npm run test:compare-at-detection
+          npm run test:top-products-detection
+          npm run test:ad-landing-detection
+          npm run test:translation-backlog-detection
+          npm run test:a11y-detection
+
+  # ── nightly: the store itself ──────────────────────────────────────────
+  nightly:
+    if: github.event_name == 'schedule' || github.event.inputs.tier == 'nightly'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      # One market's accessibility failing must not cancel the others: the
+      # report is per-market and a partial run hides which countries are fine.
+      fail-fast: false
+      matrix:
+        check: [ad-landing, top-products, a11y, translation-backlog]
+    env:
+      KITSCH_BASE_URL: ${{ github.event.inputs.base_url || 'https://www.mykitsch.com' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # The matching control runs first. A nightly result from a check that has
+      # quietly stopped working is worse than no result, because someone acts
+      # on it.
+      - name: Control for this check
+        run: npm run test:${{ matrix.check }}-detection
+        continue-on-error: ${{ matrix.check == 'ad-landing' }}
+
+      - name: Run
+        id: run
+        continue-on-error: true
+        run: npm run audit:${{ matrix.check }} -- --allure
+
+      - name: Summary
+        if: always()
+        run: |
+          for f in */report.md; do
+            [ -f "$f" ] && cat "$f" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-${{ matrix.check }}-${{ github.run_id }}
+          path: |
+            *-report/
+          retention-days: 30
+
+      # Kept separate from the markdown reports above so the assembling job can
+      # download only these, without hauling every audit's screenshots with it.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-${{ matrix.check }}-${{ github.run_id }}
+          path: allure-results/
+          retention-days: 7
+
+  # ── nightly: one report out of the four matrix jobs ────────────────────
+  # The matrix runs each check on its own runner, so four partial result sets
+  # come back and have to be merged before they mean anything. A reader given
+  # four separate reports cannot tell "three clean, one broken" from "one
+  # report is missing" — and those are very different mornings.
+  nightly-report:
+    needs: nightly
+    # `always()` because the audits above use continue-on-error and a red
+    # nightly is exactly when the report is worth having.
+    if: always() && (github.event_name == 'schedule' || github.event.inputs.tier == 'nightly')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Collect results from every matrix job
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*-${{ github.run_id }}
+          path: collected
+          merge-multiple: true
+
+      - name: Build the report
+        id: report
+        # Exit 2 means "could not build" — surfaced below rather than swallowed.
+        continue-on-error: true
+        run: npm run report -- --results collected --out allure-report
+
+      - name: Say so if the report did not build
+        if: steps.report.outcome != 'success'
+        run: |
+          echo "### Allure report did NOT build" >> "$GITHUB_STEP_SUMMARY"
+          echo "The nightly ran but produced no readable report. Treat tonight as" >> "$GITHUB_STEP_SUMMARY"
+          echo "unchecked, not as clean. See the job log." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ github.run_id }}
+          path: allure-report/
+          retention-days: 30
+
+      # Exit 1 is findings, exit 2 is "could not check". Both fail; the report
+      # says which, so an incomplete run is never read as a clean one.
+      - name: Fail on findings or an incomplete run
+        if: steps.run.outcome == 'failure'
+        run: |
+          echo "See the summary and artifact for ${{ matrix.check }}."
+          exit 1
+
+  # ── release: the full gate ─────────────────────────────────────────────
+  release:
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.tier == 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      KITSCH_BASE_URL: ${{ github.event.inputs.base_url || 'https://www.mykitsch.com' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Release gate — offline tier, then live
+        run: npm run gate:release -- --live
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-gate-${{ github.run_id }}
+          path: release-gate-report/
+          retention-days: 90
+
+      - name: Summary
+        if: always()
+        run: cat release-gate-report/report.md >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,606 @@
+{
+  "captured": "2026-08-24",
+  "source": "Asana search: \"Translate Product\", incomplete",
+  "tasks": [
+    {
+      "gid": "1209914073400008",
+      "name": "\u2705Translate to French",
+      "notes": "",
+      "due_on": "2025-04-07"
+    },
+    {
+      "gid": "1210062005516325",
+      "name": "Translate Pillowcase Aura 2 Pack",
+      "notes": "Translate all copy for the new product to each language \n\nProduct page:\nhttps://www.mykitsch.com/products/satin-pillowcase-in-aura-2-pack\n\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2025-04-27"
+    },
+    {
+      "gid": "1210062005516328",
+      "name": "Translate Pillowcase Aura 4 Pack",
+      "notes": "Translate all copy for the new product to each language \nhttps://www.mykitsch.com/products/satin-pillowcase-in-aura-4-pack\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2025-04-27"
+    },
+    {
+      "gid": "1210062007153751",
+      "name": "Translate Pillowcase Leopard 4 Pack",
+      "notes": "Translate all copy for the new product to each language \n\nProduct page:\nhttps://www.mykitsch.com/products/satin-pillowcase-in-leopard-4-pack?srsltid=AfmBOooUNtdFUoJpz-QpALORpwWtoe0o4hTS5EdCPHrry29IBE6tp10Z&shpxid=f1cd17d4-a4b7-4197-a076-9a06f62dff24",
+      "due_on": "2025-04-27"
+    },
+    {
+      "gid": "1210062007153757",
+      "name": "Translate Pillowcase Haze Blue 4 Pack",
+      "notes": "Translate all copy for the new product to each language \n\nProduct page:\nhttps://www.mykitsch.com/products/satin-pillowcase-in-haze-blue-4-pack-bundle\n\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2025-04-27"
+    },
+    {
+      "gid": "1210181672972198",
+      "name": "\u2705 Translate the Updated Product Description",
+      "notes": "",
+      "due_on": "2025-05-08"
+    },
+    {
+      "gid": "1210181672972201",
+      "name": "\u2705Translate the Updated Product Description",
+      "notes": "Products that needs to be updated: \n    Moisturizing Argan Milk Leave-In Conditioner\n    Leave-In Conditioner & Brush Bundle\n    Leave-In Conditioner & FREE Detangling Brush\n    Leave In Conditioner & Rice Water Shampoo + Conditioner Bundle\n    Satin Heatless Curling Set + Leave-In Conditioner Bundle\n    Repairing Argan Oil Shampoo & Conditioner + Leave In Conditioner Bundle\n",
+      "due_on": "2025-05-08"
+    },
+    {
+      "gid": "1215165694606201",
+      "name": "Translate Product: Kitsch Pre & Post Wash Hair Oil",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: kitsch-pre-post-wash-hair-oil\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10445054705845\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-06-23"
+    },
+    {
+      "gid": "1215165467149945",
+      "name": "Translate Product: Summer Bundle Gift Box",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: summer-bundle-gift-box\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10442962403509\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-06-23"
+    },
+    {
+      "gid": "1215165672998710",
+      "name": "Translate Product: Recycled Plastic Banana Clips 2pc Set - Black & Tort",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: recycled-plastic-banana-clips-2pc-set-black-tort\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10450679431349\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-06-24"
+    },
+    {
+      "gid": "1215165694696827",
+      "name": "Translate Product: Kitsch Wild Strawberry Hair Perfume",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: kitsch-wild-strawberry-hair-perfume\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10441712009397\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-06-24"
+    },
+    {
+      "gid": "1215165476015475",
+      "name": "Translate Product: Kitsch Anti-Dandruff Bar",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: kitsch-anti-dandruff-bar\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10445054738613\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-06-24"
+    },
+    {
+      "gid": "1215165476583674",
+      "name": "Translate Product: Recycled Plastic Elastic Cutters 3pc Set - Black",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: recycled-plastic-elastic-cutters-3pc-set-black\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10441782952117\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-06-25"
+    },
+    {
+      "gid": "1215165476466870",
+      "name": "Translate Product: Kitsch Orchard Pear Hair Perfume",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: kitsch-orchard-pear-hair-perfume\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10441712042165\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-06-25"
+    },
+    {
+      "gid": "1215165467957642",
+      "name": "Translate Product: Kitsch Garden Honeycomb Hair Perfume",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: kitsch-garden-honeycomb-hair-perfume\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10441712074933\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-06-25"
+    },
+    {
+      "gid": "1216131924972827",
+      "name": "404 Errors",
+      "notes": "    go to shopify admin > Ablestar Link Manager\n    check if we have any broken links and create redirects if applicable (mostly related to products that were recently archived)\nPlease add screenshots showing before and after audit",
+      "due_on": "2026-06-30"
+    },
+    {
+      "gid": "1215165675224564",
+      "name": "Translate Product: Kitsch x elf Glitter Claw Clip",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: elf-x-kitsch-glitter-claw-clip\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7467148378293\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\nProduct page:\nhttps://www.mykitsch.com/products/elf-x-kitsch-glitter-claw-clip",
+      "due_on": "2026-07-09"
+    },
+    {
+      "gid": "1215165853961042",
+      "name": "Translate Product: Kitsch x elf Scrunchies 2pc Set",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: elf-x-kitsch-scrunchies-2pc-set\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7467149394101\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/elf-x-kitsch-scrunchies-2pc-set",
+      "due_on": "2026-07-09"
+    },
+    {
+      "gid": "1215165675242286",
+      "name": "Translate Product: Kitsch x elf Satin Pillowcase in Periwinkle Christmas - King",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: elf-x-kitsch-king-satin-pillowcase-periwinkle-christmas\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7468149309621\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/elf-x-kitsch-king-satin-pillowcase-periwinkle-christmas",
+      "due_on": "2026-07-10"
+    },
+    {
+      "gid": "1215165736913333",
+      "name": "Translate Product: Shampoo + Conditioner 4pc Sampler Set",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bottle-free-beauty-4pc-sampler-set\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7467146707125\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/bottle-free-beauty-4pc-sampler-set",
+      "due_on": "2026-07-10"
+    },
+    {
+      "gid": "1215165737162369",
+      "name": "Translate Product: XL Thermal Rollers 4pc Set",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: xl-thermal-rollers-4pc-set-terracotta\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7467141922997\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/xl-thermal-rollers-4pc-set-terracotta",
+      "due_on": "2026-07-10"
+    },
+    {
+      "gid": "1215165674885726",
+      "name": "Translate Product: Strengthening Bond Repair Solid Hair Mask",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bond-repair-solid-treatment\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7462818152629\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/bond-repair-solid-treatment",
+      "due_on": "2026-07-13"
+    },
+    {
+      "gid": "1215165815046256",
+      "name": "Translate Product: Assorted Rectangle Claw Clips 3pc Set",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: recycled-plastic-assorted-claw-clips-3pc-rectangle-open-shape\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7467130454197\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/recycled-plastic-assorted-claw-clips-3pc-rectangle-open-shape",
+      "due_on": "2026-07-13"
+    },
+    {
+      "gid": "1215165735980202",
+      "name": "Translate Product: XL Terracotta Checker Creaseless Clips 2pc Set",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: recycled-plastic-xl-creaseless-clips-2pc-set-terracotta-checker\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7452625010869\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/recycled-plastic-xl-creaseless-clips-2pc-set-terracotta-checker",
+      "due_on": "2026-07-14"
+    },
+    {
+      "gid": "1215165815027780",
+      "name": "Translate Product: 2-Compartment Travel Case - Terracotta",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bottle-free-beauty-travel-case\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7457653096629\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/bottle-free-beauty-travel-case",
+      "due_on": "2026-07-14"
+    },
+    {
+      "gid": "1215165854122019",
+      "name": "Translate Product: Terracotta Checker XL Hair Towel Wrap",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: extra-large-quick-dry-hair-towel-wrap-terracotta-checker\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7429903712437\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/extra-large-quick-dry-hair-towel-wrap-terracotta-checker",
+      "due_on": "2026-07-14"
+    },
+    {
+      "gid": "1215165736987360",
+      "name": "Translate Product: Zig Zag Headband 2pc- Black & Tort",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: zig-zag-headband-2pc-black-and-tort\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7300335894709\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/zig-zag-headband-2pc-black-and-tort",
+      "due_on": "2026-07-15"
+    },
+    {
+      "gid": "1215165737280027",
+      "name": "Translate Product: Volumizing Roller Clips",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: volumizing-roller-clips\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7362834956469\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/volumizing-roller-clips",
+      "due_on": "2026-07-15"
+    },
+    {
+      "gid": "1215165815701265",
+      "name": "Translate Product: Assorted Textured Scrunchies 5pc Set - Terracotta",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: assorted-textured-scrunchies-5pc-set-terracotta\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7404725895349\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/assorted-textured-scrunchies-5pc-set-terracotta",
+      "due_on": "2026-07-15"
+    },
+    {
+      "gid": "1215165815259293",
+      "name": "Translate Product: Banana Clip 2pc- Black & Tort",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: banana-clip-2pc-black-and-tort\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7285783429301\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\nProduct page:\nhttps://www.mykitsch.com/products/banana-clip-2pc-black-and-tort",
+      "due_on": "2026-07-16"
+    },
+    {
+      "gid": "1215165854396410",
+      "name": "Translate Product: Flat Lay Claw Clip 3pc Flat  - Terracotta",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: flat-lay-claw-clip-3pc-flat-terracotta\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7300327932085\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\nProduct page:\nhttps://www.mykitsch.com/products/flat-lay-claw-clip-3pc-flat-terracotta",
+      "due_on": "2026-07-16"
+    },
+    {
+      "gid": "1215166031296033",
+      "name": "Translate Product: Recycled Plastic Assorted Claw Clip 3pc - Octopus Claw Clip",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: sage-assorted-claw-clip-3pc-set-octopus-claw-clip\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7387985019061\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/sage-assorted-claw-clip-3pc-set-octopus-claw-clip",
+      "due_on": "2026-07-16"
+    },
+    {
+      "gid": "1215165737763751",
+      "name": "Translate Product: Glazey - Blush",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: glazey-blush\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7260038070453\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nhttps://www.mykitsch.com/products/glazey-blush",
+      "due_on": "2026-07-17"
+    },
+    {
+      "gid": "1215165854710612",
+      "name": "Translate Product: Recycled Chiffon Polka Dot Bow Barrette",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: recycled-chiffon-polka-dot-bow-barrette\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7260038037685\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/recycled-chiffon-polka-dot-bow-barrette",
+      "due_on": "2026-07-17"
+    },
+    {
+      "gid": "1215166031455093",
+      "name": "Translate Product: Frizz-Free Blowout Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: frizz-free-blowout-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10415413592245\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/frizz-free-blowout-bundle",
+      "due_on": "2026-07-17"
+    },
+    {
+      "gid": "1215165815428519",
+      "name": "Translate Product: Cameo Satin Sleep Scrunchies 5pc Set",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: satin-sleep-scrunchies-5pk-cameo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7260031254709\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/satin-sleep-scrunchies-5pk-cameo",
+      "due_on": "2026-07-20"
+    },
+    {
+      "gid": "1215165854604716",
+      "name": "Translate Product: Neutral Chain Claw Clips 3pc Set",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: eco-friendly-chain-claw-clip-3pc-set-neutral\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7009516880053\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/eco-friendly-chain-claw-clip-3pc-set-neutral",
+      "due_on": "2026-07-20"
+    },
+    {
+      "gid": "1215166064083169",
+      "name": "Translate Product: Terracotta Conditioner Bar Bag",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bottle-free-beauty-bar-bag-coral\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/4617093611554\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/bottle-free-beauty-bar-bag-coral",
+      "due_on": "2026-07-20"
+    },
+    {
+      "gid": "1215165854285674",
+      "name": "Translate Product: Volume Control Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: volume-control-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10415399370933\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/volume-control-bundle",
+      "due_on": "2026-07-21"
+    },
+    {
+      "gid": "1215165854923412",
+      "name": "Translate Product: Moisturizing Coconut Oil Terracotta Self Draining Soap Dish Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: moisturizing-coconut-oil-black-self-draining-soap-dish-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10412617400501\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\nProduct page:\nhttps://www.mykitsch.com/products/moisturizing-coconut-oil-black-self-draining-soap-dish-bundle",
+      "due_on": "2026-07-21"
+    },
+    {
+      "gid": "1215165815747864",
+      "name": "Translate Product: Nourishing Castor Oil Self Draining Terracotta Soap Dish Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: nourishing-castor-oil-self-draining-black-soap-dish-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10412579487925\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nhttps://www.mykitsch.com/products/nourishing-castor-oil-self-draining-black-soap-dish-bundle",
+      "due_on": "2026-07-22"
+    },
+    {
+      "gid": "1215165855234280",
+      "name": "Translate Product: Curl-to-Straight Frizz Control Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: curl-to-straight-frizz-control-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10415393767605\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nhttps://www.mykitsch.com/products/curl-to-straight-frizz-control-bundle",
+      "due_on": "2026-07-22"
+    },
+    {
+      "gid": "1215166031583263",
+      "name": "Translate Product: Volumizing Rosemary Black Self Draining Soap Dish Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: volumizing-rosemary-black-self-draining-soap-dish-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10412593742005\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nhttps://www.mykitsch.com/products/volumizing-rosemary-black-self-draining-soap-dish-bundle",
+      "due_on": "2026-07-22"
+    },
+    {
+      "gid": "1215166031823629",
+      "name": "Translate Product: Curler Hair De-Frizz Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: curler-hair-de-frizz-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10411532320949\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProducr page:\nhttps://www.mykitsch.com/products/curler-hair-de-frizz-bundle",
+      "due_on": "2026-07-23"
+    },
+    {
+      "gid": "1215181622559111",
+      "name": "Translate Product: Volumizing Rosemary Terracotta Self Draining Soap Dish Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: rosemary-self-draining-soap-dish-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10408374141109\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nhttps://www.mykitsch.com/products/rosemary-self-draining-soap-dish-bundle",
+      "due_on": "2026-07-23"
+    },
+    {
+      "gid": "1215166086171998",
+      "name": "Translate Product: Hair Growth Shampoo Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: hair-growth-shampoo-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10411476287669\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\nProduct page\nhttps://www.mykitsch.com/products/hair-growth-shampoo-bundle",
+      "due_on": "2026-07-24"
+    },
+    {
+      "gid": "1215166031601193",
+      "name": "Translate Product: Nourishing Castor Oil Self Draining Terracotta Soap Dish Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: nourishing-castor-oil-self-draining-soap-dish-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10408378990773\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/nourishing-castor-oil-self-draining-soap-dish-bundle",
+      "due_on": "2026-07-24"
+    },
+    {
+      "gid": "1215166032337352",
+      "name": "Translate Product: Moisturizing Coconut Oil Terracotta Self Draining Soap Dish Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: moisturizing-coconut-oil-self-draining-soap-dish-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10408376369333\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/moisturizing-coconut-oil-self-draining-soap-dish-bundle",
+      "due_on": "2026-07-24"
+    },
+    {
+      "gid": "1215165816398687",
+      "name": "Translate Product: Strengthening Rice Water Terracotta Self Draining Soap Dish Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: strengthening-rice-water-combo-free-soap-dish\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10403234742453\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nproduct page:\nhttps://www.mykitsch.com/products/strengthening-rice-water-combo-free-soap-dish",
+      "due_on": "2026-07-27"
+    },
+    {
+      "gid": "1215165855482564",
+      "name": "Translate Product: Build Your Own Shampoo & Conditioner with FREE Wet/Dry Brush",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: build-your-own-free-wet-dry-brush\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10397453582517\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/build-your-own-free-wet-dry-brush",
+      "due_on": "2026-07-28"
+    },
+    {
+      "gid": "1215165855599968",
+      "name": "Translate Product: Strengthening Rice Water Trio & Terracotta Soap Dish Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: strengthening-rice-water-trio-terracotta-soap-dish-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10407748501685\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/strengthening-rice-water-trio-terracotta-soap-dish-bundle",
+      "due_on": "2026-07-28"
+    },
+    {
+      "gid": "1215166032785943",
+      "name": "Translate Product: Winter Welcome Kit Rosemary & Biotin Volumizing Shampoo & Conditioner Bar Combo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: winter-welcome-kit-rosemary-biotin-volumizing-shampoo-conditioner-bar-combo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10393756991669\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/winter-welcome-kit-rosemary-biotin-volumizing-shampoo-conditioner-bar-combo",
+      "due_on": "2026-07-28"
+    },
+    {
+      "gid": "1215165738114901",
+      "name": "Translate Product: Winter Welcome Kit Castor Oil Nourishing Shampoo & Conditioner Bar Combo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: winter-welcome-kit-castor-oil-nourishing-shampoo-conditioner-bar-combo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10393757089973\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-07-29"
+    },
+    {
+      "gid": "1215166032167230",
+      "name": "Translate Product: Winter Welcome Kit Rice Water Shampoo & Conditioner Bar Combo for Hair Growth",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: winter-welcome-kit-rice-water-shampoo-conditioner-bar-combo-for-hair-growth\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10393758597301\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/winter-welcome-kit-rice-water-shampoo-conditioner-bar-combo-for-hair-growth",
+      "due_on": "2026-07-29"
+    },
+    {
+      "gid": "1215166064984815",
+      "name": "Translate Product: Winter Welcome Kit Coconut Oil Shampoo & Conditioner Bar Combo for Dry Damaged H",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: winter-welcome-kit-coconut-oil-shampoo-conditioner-bar-combo-for-dry-damaged-hair\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10393756893365\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/winter-welcome-kit-coconut-oil-shampoo-conditioner-bar-combo-for-dry-damaged-hair",
+      "due_on": "2026-07-29"
+    },
+    {
+      "gid": "1215165856214172",
+      "name": "Translate Product: Winter Welcome kit Combos",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: winter-welcome-kit-combos\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10393756205237\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nhttps://www.mykitsch.com/products/winter-welcome-kit-combos",
+      "due_on": "2026-07-30"
+    },
+    {
+      "gid": "1215165856568256",
+      "name": "Translate Product: FREE Travel Kit with Shampoo + Conditioner combo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: free-travel-kit-with-shampoo-conditioner-combo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10376206483637\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/free-travel-kit-with-shampoo-conditioner-combo",
+      "due_on": "2026-08-03"
+    },
+    {
+      "gid": "1215165817547881",
+      "name": "Translate Product: Shampoo & Conditioner Combo with Free Welcome Kit",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: shampoo-conditioner-combo-with-free-welcome-kit\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10376200650933\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/shampoo-conditioner-combo-with-free-welcome-kit",
+      "due_on": "2026-08-04"
+    },
+    {
+      "gid": "1215165817417474",
+      "name": "Translate Product: Welcome Kit",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: welcome-kit\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10385679089845\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/welcome-kit",
+      "due_on": "2026-08-04"
+    },
+    {
+      "gid": "1215165817349458",
+      "name": "Translate Product: Smell Like A Snack: Hair & Body Mist Trio",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: smell-like-a-snack-hair-body-mist-trio\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10363984543925\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\nProduct page:\nhttps://www.mykitsch.com/products/smell-like-a-snack-hair-body-mist-trio",
+      "due_on": "2026-08-05"
+    },
+    {
+      "gid": "1217121071825957",
+      "name": "PDP promo block image delivery fix",
+      "notes": "Improve image delivery \u2014 .plp-promo-block\nPageSpeed flags this image (Collection_faecb378-e4ee-4fc5-8a86-6b2f8666ed28.jpg) inside .plp-promo-block for an est. 6.4 KiB savings on a 28.4 KiB resource. Lighthouse recommends increasing the compression factor to reduce download size, which affects LCP and FCP.\nFix: re-export/compress this image at a higher compression level (lower quality setting, ~70-80% is usually the sweet spot for JPG) without a visible quality loss. If it's served via Shopify's CDN with ?v= params, re-upload the optimized version to the same file so the srcset/sizes attributes don't need to change.\nOptionally convert to WebP/AVIF if not already, since Shopify's CDN auto-negotiates format when the source supports it.",
+      "due_on": "2026-08-07"
+    },
+    {
+      "gid": "1215165817736648",
+      "name": "Translate Product: Smooth & Protect Styling Duo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: smooth-protect-styling-duo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10353376231605\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/smooth-protect-styling-duo",
+      "due_on": "2026-08-11"
+    },
+    {
+      "gid": "1215166034235397",
+      "name": "Translate Product: Signature Scent Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: signature-scent-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10345978691765\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/signature-scent-bundle",
+      "due_on": "2026-08-12"
+    },
+    {
+      "gid": "1215166065976355",
+      "name": "Translate Product: Stay Hydrated Moisturizing Hair Duo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: stay-hydrated-moisturizing-hair-duo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10342632915125\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/stay-hydrated-moisturizing-hair-duo",
+      "due_on": "2026-08-12"
+    },
+    {
+      "gid": "1215165857097615",
+      "name": "Translate Product: Detangling Brush Trio",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: detangling-brush-trio\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10353376526517\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/detangling-brush-trio",
+      "due_on": "2026-08-12"
+    },
+    {
+      "gid": "1215166034231579",
+      "name": "Translate Product: Tea Tree & Mint Clarifying Shampoo & Conditioner Combo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: tea-tree-mint-clarifying-shampoo-conditioner-combo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10318931361973\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/tea-tree-mint-clarifying-shampoo-conditioner-combo/",
+      "due_on": "2026-08-13"
+    },
+    {
+      "gid": "1215166066088926",
+      "name": "Translate Product: The Wisteria Dream Bridgerton Collector's Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: wisteria-dream-bridgerton-collectors-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10347810160821\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/wisteria-dream-bridgerton-collectors-bundle",
+      "due_on": "2026-08-13"
+    },
+    {
+      "gid": "1215166181609501",
+      "name": "Translate Product: The Wisteria Dream Bridgerton Collector's Bundle - King",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: wisteria-dream-bridgerton-collectors-bundle-king\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10347810193589\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/wisteria-dream-bridgerton-collectors-bundle-king",
+      "due_on": "2026-08-13"
+    },
+    {
+      "gid": "1215166034231739",
+      "name": "Translate Product: Coconut Oil Shampoo & Conditioner Combo for Dry Damaged Hair",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: coconut-oil-shampoo-conditioner-combo-for-dry-damaged-hair\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10318931427509\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/coconut-oil-shampoo-conditioner-combo-for-dry-damaged-hair",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1215166065978867",
+      "name": "Translate Product: Smooth & Sleek Styling Duo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: styling-taming-wand-air-dry-cream-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10342632685749\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/styling-taming-wand-air-dry-cream-bundle",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1215166227450832",
+      "name": "Translate Product: Kitsch's Ultimate Shower Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: kitschs-ultimate-shower-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10335710216373\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/kitschs-ultimate-shower-bundle",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1217401906848963",
+      "name": "Translate Black Glitter Tulle Headband",
+      "notes": "Product page:\nhttps://www.mykitsch.com/products/velvet-glitter-tulle-headband-black",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1217413370375634",
+      "name": "Translate Product: Glitter Ghost Claw Clip",
+      "notes": "Translate product:\nhttps://www.mykitsch.com/products/recycled-plastic-glitter-claw-clip-ghosts\n\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1217415288417497",
+      "name": "Translate Ghosts & Pumpkins Ruched Satin Scrunchies 5pc Set",
+      "notes": "Product page:\nhttps://www.mykitsch.com/products/ruched-satin-scrunchies-5pc-set-ghosts-pumpkins\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1217415310184141",
+      "name": "Translate Black Glitter Satin Cat Ears Headband",
+      "notes": "Product page:\nhttps://www.mykitsch.com/products/satin-cat-ears-headband-black-glitter/\n\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1217415310184158",
+      "name": "Translate Halloween Squad Claw Clips 6pc Set - Mini",
+      "notes": "Product page:\nhttps://www.mykitsch.com/products/mini-claw-clips-6pc-set-halloween-squad?shpxid=d592a9bd-53fc-46e5-b22a-34aec30dc38d\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1217464419461968",
+      "name": "Re-enable Mystery Box Creative Once New Assets Are Ready",
+      "notes": "Product renamed on Shopify from \"Summer Mystery Box\" to \"Limited Edition Summer Box.\" Old creative (announcement bar, homepage banner, Today's Promo) still says \"Mystery Box,\" mismatched with new name, so it's currently hidden in CA, MX, and US while new assets are made.\nWhat's needed:\n    New creative assets reflecting \"Limited Edition Summer Box\" name\n    Once assets are ready, turn announcement bar, homepage banner, and Today's Promo back on in CA, MX, and US\n    QA that all three placements show correct name/creative before re-enabling live\nStatus: Blocked on new creative, temporary hide is in place until then.",
+      "due_on": "2026-08-14"
+    },
+    {
+      "gid": "1217481604453474",
+      "name": "Translate Rush On The Go Kit",
+      "notes": "Translate product:\nhttps://www.mykitsch.com/products/rush-on-the-go-kit\n\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-17"
+    },
+    {
+      "gid": "1215166034337503",
+      "name": "Translate Product: Repairing Argan Oil Shampoo & Conditioner Combo",
+      "notes": "Translation Audit - Re-Work Required\n\n    Bucket: Missing all 6 locales\n    Product: Repairing Argan Oil Shampoo & Conditioner Combo (handle: repairing-argan-oil-shampoo-conditioner-combo)\n    Shopify Admin: https://admin.shopify.com/store/mykitsch/products/10318807400629\n    Source audit: kitsch_translation_audit_2026-05-27.xlsx\n\n----------------------------------------\n\nPrior Translation Work\n\n    Completed task: https://app.asana.com/0/0/1212707171189395/f/\n    Completed: 2026-02-03 by Sufian\n    Why this is back on your plate: Prior task closed without translating all required fields (title, body, meta_title, meta_description).\n\n----------------------------------------\n\nAlready Done - Do NOT Redo\n\n    de (German): title, body\n    fr (French): title, body\n    it (Italian): title, body\n    es (Spanish): title, body\n    ko (Korean): title, body\n    ja (Japanese): title, body\n\n----------------------------------------\n\nNeeds Work\n\nMissing (never translated)\n\n    de: meta_title, meta_description\n    fr: meta_title, meta_description\n    it: meta_title, meta_description\n    es: meta_title, meta_description\n    ko: meta_title, meta_description\n    ja: meta_title, meta_description\n",
+      "due_on": "2026-08-17"
+    },
+    {
+      "gid": "1215166181276110",
+      "name": "Translate Product: Castor Oil Nourishing Shampoo & Conditioner Combo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: castor-oil-nourishing-shampoo-conditioner-combo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10318923530421\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/castor-oil-nourishing-shampoo-conditioner-combo",
+      "due_on": "2026-08-17"
+    },
+    {
+      "gid": "1215166066065804",
+      "name": "Translate Product: Satin Rosette Medium Flat Cloud Clip - Chocolate",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: satin-rosette-flat-cloud-clip-in-chocolate-medium\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10316336660661\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/satin-rosette-flat-cloud-clip-in-chocolate-medium",
+      "due_on": "2026-08-17"
+    },
+    {
+      "gid": "1216115000330617",
+      "name": "bug: PDP Console Error \u2013 Klaviyo Onsite Script Returning 403 Response",
+      "notes": "Environment:\n    Production\n    Safari Desktop\n    Product Detail Page (PDP)\n    US Storefront\n\nAffected URL:\nhttps://www.mykitsch.com/products/rice-water-protein-shampoo-bar-strengthening\n\nIssue:\nThe Product Detail Page is showing a console error because the Klaviyo onsite JavaScript file is returning a 403 Forbidden response.\n\nConsole Error:\n\nFailed to load resource: the server responded with a status of 403 ()https://static.klaviyo.com/onsite/js/onsite.js\n\nSteps to Reproduce:\n     Open Safari Desktop. \n     Navigate to:\n     https://www.mykitsch.com/products/rice-water-protein-shampoo-bar-strengthening \n     Open Developer Tools. \n     Go to the Console tab. \n     Observe the 403 error from the Klaviyo onsite script. \n\nActual Result:\n The Klaviyo onsite script fails to load and returns a 403 response.\n\nExpected Result:\n The Klaviyo onsite script should load successfully without any console errors.\n\nhttps://www.mykitsch.com/products/rice-water-protein-shampoo-bar-strengthening\n\n\nhttps://app.asana.com/app/asana/-/get_asset?asset_id=1216115000330611\n\n\n",
+      "due_on": "2026-08-17"
+    },
+    {
+      "gid": "1215166181909953",
+      "name": "Translate Product: Castor Oil Nourishing Conditioner",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: castor-oil-nourishing-conditioner\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10315739300021\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/castor-oil-nourishing-conditioner",
+      "due_on": "2026-08-18"
+    },
+    {
+      "gid": "1215166227451942",
+      "name": "Translate Product: The Ultimate Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: 60-off-ultimate-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10310508380341\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/60-off-ultimate-bundle",
+      "due_on": "2026-08-18"
+    },
+    {
+      "gid": "1217530684453210",
+      "name": "Translate product: Cream, Court Green & Navy Blue Active Headbands 3pc Set",
+      "notes": "Product page:\nhttps://www.mykitsch.com/collections/tennis-collection/products/recycled-fabric-active-headbands-3pc-set-cream-court-green-navy-blue?shpxid=863c31cb-44a3-4d22-a354-3c8fae7c6ef3\n\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-20"
+    },
+    {
+      "gid": "1215166088392819",
+      "name": "Translate Product: Holiday Duo: Rustic Vanilla + Oak & Amber",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: holiday-duo-rustic-vanilla-oak-amber-duo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10300920430773\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/holiday-duo-rustic-vanilla-oak-amber-duo",
+      "due_on": "2026-08-20"
+    },
+    {
+      "gid": "1215166182046223",
+      "name": "Translate Product: Founder's Favorites Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: cassandras-favorites-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10310016598197\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/cassandras-favorites-bundle",
+      "due_on": "2026-08-20"
+    },
+    {
+      "gid": "1217530684453195",
+      "name": "Translate product: Cream, Court Green & Navy Blue Ruched Satin Scrunchies 5pc Set",
+      "notes": "Translate Cream, Court Green & Navy Blue Ruched Satin Scrunchies 5pc Set\nProduct page:\nhttps://www.mykitsch.com/collections/tennis-collection/products/ruched-satin-scrunchies-5pc-set-cream-court-green-navy-blue?shpxid=e49c5009-814a-4fcc-a5df-27536ce302fb\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-20"
+    },
+    {
+      "gid": "1217530511736032",
+      "name": "Translate product: Cream Satin Bow Hair Clip",
+      "notes": "Product page:\nhttps://www.mykitsch.com/collections/tennis-collection/products/satin-bow-hair-clip-cream\n\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-20"
+    },
+    {
+      "gid": "1215166228712315",
+      "name": "Translate Product: Lisa Frank Collector's Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: lisa-frank-collectors-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10280507736245\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/lisa-frank-collectors-bundle",
+      "due_on": "2026-08-27"
+    },
+    {
+      "gid": "1215166444271582",
+      "name": "Translate Product: The Grinch Collector's Bundle",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: the-grinch-collectors-bundle\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10272698171573\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-08-27"
+    },
+    {
+      "gid": "1215166228207720",
+      "name": "Translate Product: Coastal Hair Perfume Trio Set - Tula Rose, Beachy Gelato, Coastal Sorbet",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: kitsch-hair-perfume-trio-set-tula-rose-beachy-gelato-coastal-sorbet\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10297643106485\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/kitsch-hair-perfume-trio-set-tula-rose-beachy-gelato-coastal-sorbet\n\n",
+      "due_on": "2026-08-27"
+    },
+    {
+      "gid": "1215166089258045",
+      "name": "Translate Product: Heat Protectant + Thermal Round Brush Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: heat-protectant-thermal-round-brush-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10300869836981\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/heat-protectant-thermal-round-brush-bundle",
+      "due_on": "2026-08-27"
+    },
+    {
+      "gid": "1215166228179331",
+      "name": "Translate Product: Bridgerton x Kitsch Satin Pillow Scrunchies\u00ae in Toile in Bloom",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bridgerton-x-kitsch-pillow-scrunchies-r-in-satin-2pc-set-toile-in-bloom\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10295571316917\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\nProduct page:\nhttps://www.mykitsch.com/products/bridgerton-x-kitsch-pillow-scrunchies-r-in-satin-2pc-set-toile-in-bloom",
+      "due_on": "2026-08-27"
+    },
+    {
+      "gid": "1215166228654875",
+      "name": "Translate Product: Bridgerton x Kitsch Satin Pillowcase in Wisteria - King",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: bridgerton-x-kitsch-king-satin-pillowcase-wisteria\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10295571120309\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-08-28"
+    },
+    {
+      "gid": "1215166228349263",
+      "name": "Translate Product: Bridgerton x Kitsch Breathable Satin Bonnet in Garden Toile",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bridgerton-x-kitsch-breathable-satin-bonnet-garden-toile\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10295571349685\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/bridgerton-x-kitsch-breathable-satin-bonnet-garden-toile",
+      "due_on": "2026-08-28"
+    },
+    {
+      "gid": "1215166388023097",
+      "name": "Translate Product: Bridgerton x Kitsch Satin-Lined Flexi Shower Cap in Wisteria",
+      "notes": "Bucket: Missing all 6 locales\n----------------------------------------\n\nProduct handle: bridgerton-x-kitsch-satin-lined-flexi-shower-cap-wisteria\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10295571284149\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n----------------------------------------\n\nLocales needing translation:    es\n    fr\n    de\n    it\n    ja\n    es-MX\nAuto-created from translation audit on 2026-05-27.",
+      "due_on": "2026-08-28"
+    },
+    {
+      "gid": "1215166444244432",
+      "name": "Translate Product: Star Wars\u2122 & Kitsch Shampoo & Conditioner Combo",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: star-wars-kitsch-shampoo-conditioner-combo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10266633371829\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/star-wars-kitsch-shampoo-conditioner-combo",
+      "due_on": "2026-08-28"
+    },
+    {
+      "gid": "1215166388577614",
+      "name": "Translate Product: Star Wars\u2122 & Kitsch Ultimate Collector\u2019s Bundle - King",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: star-wars-kitsch-ultimate-collector-s-bundle-king\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10261477884085\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/star-wars-kitsch-ultimate-collector-s-bundle-king",
+      "due_on": "2026-08-28"
+    },
+    {
+      "gid": "1217503106190367",
+      "name": "Translate Product: Heel Socks \u2013 Large (Checkered)",
+      "notes": "Product page:\nhttps://www.mykitsch.com/products/large-moisturizing-heel-socks-terracotta-checker?shpxid=80afbd44-2222-4ea9-95dd-669e1b08235b\n\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-28"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Kitsch automation pre-commit gate.
+#
+# Offline checks only: TypeScript, ESLint (with the Playwright and Kitsch
+# rules), the reviewer with bugbot triage, and the unit suite. No browser and
+# no network, so it stays fast enough not to be bypassed.
+#
+# Installed by: npm run hooks:install
+# Bypass with:  git commit --no-verify
+exec npx tsx tools/precommit.ts

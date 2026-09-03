@@ -1,0 +1,153 @@
+# Welcome-kit parity contract
+#
+# The requirement: the summer and spring welcome kits must handle free items
+# exactly like the live Winter Welcome Kit Combos.
+#
+# So this is a *differential* check, not an expectations check. Nothing here
+# declares how a free item ought to behave; the live winter kit defines that,
+# and the seasonal kits are compared against whatever it does. That matters
+# because it stays correct when merchandising changes the winter kit — the
+# reference moves and the comparison moves with it.
+#
+# Dimensions are taken from the Welcome Kit test plan §8 (free Welcome Kit
+# validation), §10 (order summary) and §12 (no MSRP leakage).
+#
+# `canonical_title` is what the storefront currently calls the product, read
+# off the page rather than copied from the brief. A handle returning HTTP 200
+# is not evidence it still points at the kit anybody meant:
+# `winter-welcome-kit-combos` resolves and serves a page titled "Shampoo &
+# Conditioner Bundle with Free Welcome Kit". The reference had been renamed and
+# nothing here said so, because nothing was checking. The same backstop in
+# config/top-products.yaml caught four wrong products.
+#
+# Where it is missing below, the live title has not been read yet — say so, do
+# not guess. `npm run preflight` against the store prints the observed title
+# for every kit; paste it in.
+
+reference:
+  name: Winter Welcome Kit Combos
+  handle: winter-welcome-kit-combos
+  canonical_title: Shampoo & Conditioner Bundle with Free Welcome Kit
+  note: 'Live kit, SKU 2. The reference every seasonal kit is measured against.'
+
+candidates:
+  # All three read off the live store by `npm run preflight` on 2026-08-31.
+  - name: Summer Welcome Kit with Shampoo & Conditioner
+    handle: summer-welcome-kit-liquid-combos
+    canonical_title: Summer Welcome Kit with Shampoo & Conditioner
+  - name: Summer Welcome Kit with Shampoo & Conditioner Bars
+    handle: summer-welcome-kit-bar-combos
+    canonical_title: Summer Welcome Kit with Shampoo & Conditioner Bars
+  # The brief calls this one "Spring Welcome Kit Combo". The storefront calls
+  # it "Spring Welcome Kit" — no "Combo". A small difference, and exactly the
+  # kind that makes a handle look confirmed when nobody checked: the name above
+  # is what we were told, the title below is what is actually being served.
+  - name: Spring Welcome Kit Combo
+    handle: shampoo-conditioner-bar-bundle-with-free-spring-welcome-kit-combo
+    canonical_title: Spring Welcome Kit
+
+# What "handled the same way" means. Each dimension is something a customer
+# can see or do, and each maps to a test case in testcaseswelcomekit.xlsx.
+#
+# All of it is read from the CART and the ORDER SUMMARY. Nothing is read from
+# the product page any more, because this theme does not render it: there is no
+# kit-contents list on a kit PDP (the only repeating structure inside
+# `.main-product` is the image gallery) and no free-gift selector. A dimension
+# nobody can observe does not fail — both kits fall to the same default, agree,
+# and the run goes green having looked at nothing. So the PDP-side dimensions
+# were removed rather than left here to be skipped in silence.
+#
+# Deliberately given up with them: the §12 MSRP-leakage check as read on the
+# PDP, the §7 badge check, and the §7 gift-selector count (WK-TC-020, 024).
+# The money questions all survive — and a price that leaks in the cart is the
+# one that takes money.
+compare:
+  # §8 — free lines in the cart after adding the qualifying product. Zero is
+  # the auto-add failing.                               WK-TC-017, 021
+  - free_line_count
+  # Read beside the above: free down and paid up means the gift is in the cart
+  # and being charged for, not missing.                 WK-TC-018, 022
+  - paid_line_count
+  # §12 — "no MSRP leakage: free items never show a non-zero price".
+  # "Free", "$0.00" and a struck-through price are three different promises.
+  #                                                     WK-TC-018, 022, 050
+  - free_line_price_label
+  # §8 — "Welcome Kit is never charged at any point".   WK-TC-018, 022
+  - counted_in_subtotal
+  # §7 — "Free gift cannot be removed or charged separately".
+  - independently_removable
+  # §8 negative case — remove the qualifying product and the free kit goes
+  # with it.                                            WK-TC-025, 026
+  - removed_with_qualifying_product
+  # §10 — "Free items remain at $0 in order summary".   WK-TC-019, 023, 050
+  - free_at_checkout
+
+# ─────────────────────────────────────────────────────────────────────────
+# Theme selectors.
+#
+# The fixture uses data-testid throughout. A real Shopify theme almost
+# certainly does not, so every selector below accepts a comma-separated list:
+# the testid first, then the theme's own class.
+#
+# NOT a fallback chain, and the file used to say it was. A comma-separated CSS
+# selector is a UNION — every alternative matches at once. So one unscoped
+# entry drags in the whole page however carefully the others are scoped, and
+# `pdp_compare_at` kept reporting 13 and 21 matches on a single PDP because
+# `.price-item--regular` was sitting at the end of the list picking up every
+# recommendation card. Preflight now prints per-alternative counts whenever a
+# total looks wrong, so this is visible rather than inferred.
+#
+# The practical rule: every alternative must be scoped, and an alternative that
+# cannot be scoped does not belong in the list.
+#
+# Mapping this suite onto the live theme is an edit here, not a code change.
+# The standing ask remains the one in FRAMEWORK-AND-ROADMAP.md §8 — a
+# data-testid set from the storefront team — because theme classes are
+# regenerated on deploy and merchandising reorders breaks positional
+# selectors weekly. Until then, these mappings are the bridge.
+# ─────────────────────────────────────────────────────────────────────────
+#
+# The mykitsch.com entries below were read off the live theme on 2026-08-28
+# (scratch-report/discover.mjs), not guessed. Two things learned doing it, both
+# of which shape how they are written:
+#
+#   1. Everything is scoped to `.main-product`. Unscoped, `pdp_compare_at`
+#      matched 13 elements on one kit PDP and 25 on another — it was reaching
+#      into the recommendation and upsell carousels, which repeat on every
+#      page. A selector that matches twenty-five things reports twenty-five
+#      defects that are not there.
+#   2. `#ProductInfo-template--279794…` is per-template and changes with the
+#      theme's section id, so it is deliberately not used.
+#
+selectors:
+  pdp_title: '[data-testid="pdp-title"], .main-product h1.font-heading'
+  # `span.text-red-700` is the sale price on this theme, read off the live
+  # bundle PDP where it renders "$41.60" beside a struck-through "$68.00".
+  pdp_price: '[data-testid="pdp-price"], .main-product span.text-red-700'
+  # `.price-item--regular` removed: unscoped, it matched 13-21 carousel cards.
+  pdp_compare_at: '[data-testid="pdp-compare-at"], .main-product s.bundle-price__compare, .main-product s.comp-price__value'
+  # `kit_item`, `kit_item_price`, `kit_item_badge` and `free_gift_input` used to
+  # sit here and are gone. Not renamed, not moved — deleted, because there is
+  # nothing on this theme for them to match. Every repeating block inside
+  # `.main-product` on a kit PDP is the image gallery: 32 zoom buttons, 8
+  # slides, 8 media wrappers. No kit-contents list, no gift selector. Leaving
+  # unmatchable selectors in place meant preflight printing "map these in
+  # config/kits.yaml", which is advice nobody on this store can follow.
+  # `.bundle-buy-button` is a DIV, not a button, and is what this theme renders
+  # on bundle and BYOB pages. Waiting for `button[name="add"]` therefore timed
+  # out and reported "buy button never appeared" on a page that has one — the
+  # element was there the whole time under a tag nobody was looking for.
+  # `.product-form__submit` is the ordinary-PDP form button, seen on the cart
+  # page's upsell forms; it renders after load, behind the A/B scripts.
+  add_to_cart: '[data-testid="add-to-cart"], .main-product .bundle-buy-button, .main-product .product-form__submit, .main-product button[name="add"]'
+  cart_line: '[data-testid="cart-line-item"], .cart-item, .cart__row'
+  cart_line_price: '[data-testid="line-price"], .cart-item__price, .cart__price'
+  cart_line_remove: '[data-testid="cart-remove"], .cart-item__remove, a[href*="/cart/change"]'
+  cart_subtotal: '[data-testid="cart-subtotal"], .totals__subtotal-value, .cart__subtotal'
+  checkout_button: '[data-testid="checkout-button"], button[name="checkout"], .cart__checkout'
+  summary_line: '[data-testid="summary-line"], .product-table .product, .order-summary__section--product-list .product'
+  summary_price: '[data-testid="summary-price"], .product__price, .order-summary__emphasis'
+
+# What counts as a free price, however the theme words it. Anything matching
+# is $0 to the customer; anything else is money.
+free_price_pattern: '^(free|gratis|\$?0(\.00)?|£0(\.00)?|€0([.,]00)?)$'

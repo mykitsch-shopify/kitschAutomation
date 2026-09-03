@@ -1,0 +1,19 @@
+node_modules/
+.env
+*.log
+
+# Generated report directories.
+#
+# Globs rather than names. Every audit takes a free-form `--out`, so the set of
+# directory names this repo can produce is open-ended: enumerating them meant
+# `allure-report-live/` and `allure-report-selftest/` were neither ignored nor
+# linted-around, and a local `git commit` reported 7,184 errors from a minified
+# Allure vendor bundle.
+#
+# The rule is the one tools/report-clean.ts already enforces before it will
+# delete anything: starts with "allure", or ends in "-report"/"-results", with
+# any suffix. tools/lib/report-dirs.test.ts holds this file and
+# eslint.config.js to it.
+*-report*/
+*-results*/
+allure-*/

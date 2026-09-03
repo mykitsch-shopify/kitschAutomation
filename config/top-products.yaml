@@ -1,0 +1,248 @@
+# Top-10 selling products — daily check contract.
+#
+# Source: the top-10 list supplied by merchandising. Titles are the source of
+# truth here because that is what the list gives; handles are the URL slugs the
+# check actually needs, and the two are not derivable from each other.
+#
+# ── Why handles are not guessed ──────────────────────────────────────────
+# A wrong handle does not fail. It loads a different product and reports it
+# green, which is worse than no check at all. Of these ten titles, only two
+# resolve unambiguously against the catalogue we hold: "Shampoo Bar Bag"
+# matches four products equally well, and the two "Combo" bundles are not in
+# our catalogue extract at all.
+#
+# So `handle` starts unset for anything unconfirmed. The audit refuses to check
+# a product with no handle and says so; it never picks one for you. Fill them
+# with:
+#
+#   KITSCH_BASE_URL=https://www.mykitsch.com npm run resolve:handles
+#
+# which queries the storefront's own search, prints what it found, and writes
+# nothing until you pass --write.
+#
+# Every check also asserts the loaded page's title matches `title` below. That
+# is the backstop: if a handle is wrong or a product is renamed or replaced,
+# the run fails naming the mismatch instead of quietly testing a neighbour.
+
+products:
+  # Handles below were resolved on 2026-08-28 from `npm run resolve:handles`
+  # against the live store, and cross-checked against the storefront titles in
+  # the 2026-04-28 Top 20 PDP health check.
+  #
+  # In four of these the resolver's top-ranked candidate was a NEIGHBOURING
+  # product while an exact title match sat below it — the Kojic Acid bundle
+  # ranked above the bar, the Bar Combo above the liquid Combo. Every handle
+  # here is the one whose storefront title matches exactly, not the one that
+  # scored highest, which is why `canonical_title` is filled in alongside: it
+  # is the backstop that fails the run if a handle ever points at a neighbour.
+  - title: Rice Water Shampoo & Conditioner Combo for Hair Growth
+    handle: rice-water-shampoo-conditioner-combo-for-hair-growth
+    canonical_title: Rice Water Shampoo & Conditioner Combo for Hair Growth
+  - title: Rice Water Shampoo Bar for Hair Growth
+    handle: rice-water-protein-shampoo-bar-strengthening
+    canonical_title: Rice Water Shampoo Bar for Hair Growth
+  - title: Self-Draining Soap Dish
+    # `self-draining-soap-dish` 404s — it was a guess and it is why this product
+    # reported FAIL 404 rather than a defect. The store sells Black and
+    # Terracotta separately; the health check's top-20 names the Terracotta.
+    handle: self-draining-soap-dish-1
+    canonical_title: Terracotta Self-Draining Soap Dish
+  - title: Shea Butter Exfoliating Body Wash
+    handle: shea-butter-solid-body-wash
+    canonical_title: Shea Butter Exfoliating Body Wash
+  - title: Kojic Acid Hyperpigmentation Face and Body Bar
+    # Unchanged, and worth keeping: the resolver ranked the "+ FREE Dermaplaner"
+    # bundle above this at 0.83 to 0.67. The bundle is a different product.
+    handle: kojic-acid-face-and-body-bar
+    canonical_title: Kojic Acid Bar for Hyperpigmentation & Dark Spots
+  - title: Bottle Free Beauty Travel Case
+    # The handle is exact; the storefront renamed the product. Scored 0.40 for
+    # that reason alone, and the health check's top-20 confirms the new name.
+    handle: bottle-free-beauty-travel-case
+    canonical_title: 2-Compartment Travel Case - Terracotta
+  - title: Rosemary Scalp & Hair Strengthening Oil With Biotin
+    # LEAST CERTAIN of the ten. The store sells this oil in 10mL, 60mL and a
+    # 3-pack, all titled alike; the health check's top-20 does not say which.
+    # 60mL is the standalone. Confirm before quoting a number from this row.
+    handle: pre-wash-scalp-hair-oil-with-rosemary-and-biotin
+    canonical_title: Strengthening Rosemary & Biotin Scalp & Hair Oil - 2fl oz./60mL
+  - title: Shampoo Bar Bag
+    handle: bottle-free-beauty-bar-bag-blush
+    canonical_title: Shampoo Bar Bag
+  - title: Rice Water Conditioner Bar for Hair Growth
+    handle: rice-water-protein-conditioner-bar-strengthening
+    canonical_title: Rice Water Conditioner Bar for Hair Growth
+  - title: Rosemary & Biotin Volumizing Shampoo & Conditioner Combo
+    # The resolver put the Bar Combo first. This is the liquid.
+    handle: rosemary-biotin-volumizing-shampoo-conditioner-combo
+    canonical_title: Rosemary & Biotin Volumizing Shampoo & Conditioner Combo
+
+# ── What to check on each product ────────────────────────────────────────
+# Each maps to a requirement in the daily brief. Turning one off here removes
+# it from the report rather than silently passing it.
+checks:
+  # "Check stock availability" — the product is purchasable, not sold out.
+  - availability
+  # "and Add to Cart functionality" — the button works and a line appears.
+  - add_to_cart
+  # "Verify product title" — against `title` above. Also the wrong-handle guard.
+  - title
+  # "descriptions" — present and not a placeholder.
+  - description
+  # "images" — at least one, and the bytes actually load.
+  - images
+  # "videos" — recorded when present. Only required where expect_video is true,
+  # because most of these products have none and a blanket requirement would
+  # report nine false failures every morning.
+  - videos
+  # "pricing" — a parseable non-zero price, and no struck-through price unless
+  # the product is genuinely on offer.
+  - pricing
+  # "specifications" — the details/ingredients block is present and non-empty.
+  - specifications
+  # "Ensure variations (e.g. size, color) function correctly" — every option
+  # can be selected, and doing so updates price and availability without error.
+  - variations
+  # "Ensure discounts are stacked on product in cart correctly" — see below.
+  - discount_stacking
+
+thresholds:
+  # A description shorter than this is a placeholder, not copy.
+  min_description_chars: 80
+  # Below this a "specifications" block is a heading with nothing under it.
+  min_specification_chars: 40
+  min_images: 1
+  # Product pages should not take longer than this to become interactive.
+  max_load_ms: 15000
+
+# ── Discount stacking ────────────────────────────────────────────────────
+# This is the one requirement that cannot be verified from the storefront
+# alone, because "correctly" is a business rule, not a page property.
+#
+# What IS checked without any rules supplied: the cart's arithmetic. Subtotal
+# minus the discounts shown must equal the total, and an applied code must
+# change the total. A cart that displays a discount it does not deduct is the
+# common failure and is caught by that alone.
+#
+# What needs rules from merchandising to check: which codes may combine, and
+# what the result should be. Add them below and each becomes an assertion.
+# Until then the audit reports `discount_rules_absent` as a minor finding
+# rather than passing silently — a stacking check with no rules asserts
+# nothing about stacking.
+discounts:
+  codes: []
+  # - code: WELCOME10
+  #   kind: percentage
+  #   value: 10
+  # - code: FREESHIP
+  #   kind: shipping
+  expected_stacking: []
+  # - codes: [WELCOME10, FREESHIP]
+  #   applies: both        # both | first_only | neither
+  #   note: 'Confirmed with merchandising 2026-08-21.'
+
+# ── Selectors ────────────────────────────────────────────────────────────
+# testid first, then the theme's own classes. Mapping this onto the live theme
+# is an edit here, not a code change. The audit reports an unmatched selector
+# as a harness finding, never as a product defect.
+#
+# NOT a fallback chain, and this file used to say it was ("first match wins").
+# A comma-separated CSS selector is a UNION — every alternative matches at
+# once. So one unscoped entry drags in the whole page however carefully the
+# others are written, and the count is the sum, not the first hit.
+#
+# That is not hypothetical here. `.price-item--regular` sat unscoped in
+# `compare_at` and matched 13 elements on one PDP of this theme and 21 on
+# another: it was picking up every recommendation and upsell card on the page.
+# A selector that matches twenty-one things reports twenty-one defects that are
+# not there.
+#
+# The practical rule: every alternative must be scoped, and an alternative that
+# cannot be scoped does not belong in the list.
+#
+# ── Where the `.main-product` entries came from ──────────────────────────
+# Read off mykitsch.com on 2026-08-28 and 2026-08-31, from the welcome-kit
+# PDPs (scratch-report/discover.mjs). `.main-product` is this theme's product
+# section wrapper and `h1.font-heading`, `span.text-red-700`,
+# `s.comp-price__value` and `.bundle-buy-button` are what it renders.
+#
+# Read that as evidence about BUNDLE pages, because that is where it was
+# taken. The ten products below are ordinary PDPs and may differ. The generic
+# Shopify classes are kept alongside rather than replaced for exactly that
+# reason — and every one of them is now scoped to `.main-product`, which cannot
+# widen a match and does stop the carousel leak above.
+#
+# Confirm the whole set in one run, before spending an audit on it:
+#
+#   KITSCH_BASE_URL=https://www.mykitsch.com npm run preflight
+selectors:
+  title: '[data-testid="pdp-title"], .main-product h1.font-heading, .main-product h1.product__title, .main-product .product-single__title'
+  # `.main-product span.price-item` added on discovery evidence, and it is the
+  # answer to the empty-read problem rather than another guess.
+  #
+  # A run of scratch-report/discover.mjs against the homepage listed the
+  # price-bearing leaves this theme actually renders:
+  #
+  #     span.a11y-price-announcement   "Price $15.00"
+  #     span.sr-only                   "Regular price $15.00"
+  #     span.price-item                "$15.00"
+  #     s.comp-price__value            "$30.00"
+  #
+  # `span.text-red-700` is the SALE price: present on every PDP and EMPTY on a
+  # product that is not discounted, which is why four locale specs read `""`
+  # from a selector that matched. `span.price-item` carries the current price
+  # either way. `.price-item--sale` is dropped — preflight measured it at 0 on
+  # all ten live products, so it was contributing nothing.
+  #
+  # Evidence caveat: those leaves were read off the HOMEPAGE, which has no
+  # `.main-product` wrapper. Scoping is kept because the union rule demands it,
+  # and the next preflight against a PDP is what confirms the scoped form
+  # matches. If it reports 0, the wrapper is wrong, not the class.
+  price: '[data-testid="pdp-price"], .main-product span.text-red-700, .main-product span.price-item, .main-product .product__price--sale'
+  # `.price-item--regular` removed, on evidence rather than suspicion. Across
+  # the ten live PDPs its matches are a strict SUPERSET of `s.comp-price__value`
+  # — 4 against 3 on the combos, 2 against 1 on the single products, with the
+  # union equal to its own count every time, so it contributes only the extra
+  # element and never a unique one. That extra is the carousel leak. Dropping it
+  # takes compare_at from 4 to 3 and from 2 to 1.
+  #
+  # The remaining 3 on combo PDPs is not yet explained — possibly a compare-at
+  # per bundled component. The audit takes `.first()`, and preflight prints the
+  # per-alternative counts, so the next run against the store says whether
+  # `.first()` is the product's own price or one of its components'.
+  compare_at: '[data-testid="pdp-compare-at"], .main-product s.comp-price__value, .main-product s.bundle-price__compare, .main-product .product__price--compare'
+  # These three matched ZERO on all ten products, on every alternative, before
+  # 2026-08-31 — not a near miss. The generic Shopify class names the config
+  # shipped with are simply not this theme's, so they are replaced rather than
+  # kept alongside: a dead alternative in a union adds nothing and implies a
+  # coverage that was never there.
+  #
+  # Read off /products/self-draining-soap-dish-1 (scratch-report/discover.mjs).
+  # One ordinary PDP is enough to map from because all ten failed identically,
+  # but that is one product — the next preflight against the store is what
+  # confirms these hold across the list.
+  #
+  # `.product__excerpt` is the only prose block on the page that is copy rather
+  # than a price or quantity widget. Whether it clears `min_description_chars`
+  # (80) is NOT yet known: the discovery preview truncates at 60 characters and
+  # the text was still running. discover.mjs now prints the full length, so the
+  # next run says. If it falls short, the honest fix is the threshold or the
+  # check, not a selector pointed at something longer and less relevant.
+  description: '[data-testid="pdp-description"], .main-product .product__excerpt'
+  # `.accordion-item` holds "Ingredients" on this theme. Deliberately not
+  # `[class*="detail"]`, which is loose enough here to match gallery images.
+  specifications: '[data-testid="pdp-specs"], .main-product .accordion-item'
+  # The gallery slides. `img.object-cover` carries the same photographs at
+  # different crops, so including it would double the count for an audit whose
+  # job is to confirm at least one image exists and that its bytes load.
+  image: '[data-testid="pdp-image"], .main-product img.object-contain'
+  video: '[data-testid="pdp-video"], .main-product .product__media video, .main-product video'
+  sold_out: '[data-testid="sold-out"], .main-product .product-form__submit[disabled], .main-product .price--sold-out'
+  add_to_cart: '[data-testid="add-to-cart"], .main-product .bundle-buy-button, .main-product .product-form__submit, .main-product button[name="add"]'
+  variant_option: '[data-testid="variant-option"], .main-product .product-form__input input, .main-product select[name="id"] option'
+  cart_line: '[data-testid="cart-line-item"], .cart-item, .cart__row'
+  cart_subtotal: '[data-testid="cart-subtotal"], .totals__subtotal-value, .cart__subtotal'
+  cart_total: '[data-testid="cart-total"], .totals__total-value, .cart__total'
+  cart_discount: '[data-testid="cart-discount"], .cart-discount, .discounts__discount'
+  discount_input: '[data-testid="discount-input"], input[name="discount"], #discount-code'
+  discount_apply: '[data-testid="discount-apply"], button[name="apply-discount"]'

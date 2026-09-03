@@ -1,0 +1,123 @@
+name: translation-gate
+
+# Replaces the recurring manual translation pass for every locale the store
+# serves: en plus fr/de/it/es.
+#
+# The contract narrowed from seven in config/i18n.yaml — ko and ja were removed
+# because the store does not serve those markets, and checking them produced
+# sixty-odd failures a run about routes that 404. They are unverified, not
+# passing.
+#
+# Nightly run is informational and trend-tracked. The launch invocation is
+# blocking: a localized market surface with missing strings at launch is a
+# discovery defect that reaches customers.
+on:
+  pull_request:
+    paths:
+      - 'i18n/**'
+      - 'collectors/**'
+      - 'config/i18n.yaml'
+      - 'fixtures/**'
+  schedule:
+    - cron: '30 9 * * *'
+  workflow_dispatch:
+    inputs:
+      launch_ref:
+        description: 'Launch reference — makes the run blocking'
+        required: false
+        type: string
+
+concurrency:
+  group: translation-gate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Fast, offline, no credentials. Runs on every PR that touches the engine
+  # and proves the comparators still fire — see the detection step below.
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # Offline review: TypeScript, ESLint, the Playwright spec standards and
+      # the four Kitsch rules, triaged through bugbot into the same four
+      # severities everything else here reports. No network, no model — the
+      # review that always runs, the same way, on every machine.
+      - name: Offline review
+        run: npm run review -- --gate
+
+      - run: npm run test:unit
+
+      # A clean catalogue must produce a passing gate. If this fails, the
+      # engine has started reporting defects that are not there, and the team
+      # will learn to ignore it within a week.
+      - name: Content parity — clean catalogue (no false positives)
+        run: npm run parity:clean
+
+      # The same claim for the render layer. Without this, a spec broken so
+      # badly that it always fails would still satisfy the detection step
+      # below — which only asks whether the specs fail on a *broken* store.
+      # Both directions are needed or neither means anything.
+      - name: Render parity — clean fixture (no false positives)
+        run: npm run test:i18n
+
+      # ...and a knowingly broken store must fail, in both layers. This is the
+      # step that keeps the gate from quietly becoming decorative.
+      - name: Detection — planted defects must be caught
+        run: npm run test:detection
+
+      - uses: actions/upload-artifact@v4
+        if: '!cancelled()'
+        with:
+          name: i18n-engine-report
+          path: |
+            i18n-report/
+            review-report/
+          retention-days: 14
+
+  parity:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+
+      # Content layer: every translatable string, no browser. Read-only Admin
+      # GraphQL — scoped token, and the collector paginates rather than
+      # sampling the first page and calling the catalogue clean.
+      - name: Content-layer parity
+        run: npm run i18n:parity -- ${{ inputs.launch_ref != '' && '--gate' || '' }}
+        env:
+          SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_READONLY_TOKEN }}
+          SHOPIFY_SHOP_DOMAIN: ${{ vars.SHOPIFY_SHOP_DOMAIN }}
+
+      # Render layer: formatting, hreflang, meta tags, encoding, overflow.
+      # Reads the English baseline the content layer just pulled, so the
+      # "no untranslated strings" scan cannot drift from the live catalogue.
+      - name: Render-layer parity
+        run: npx playwright test --project=i18n-mobile
+        env:
+          KITSCH_BASE_URL: ${{ vars.KITSCH_DEV_STORE_URL }}
+          KITSCH_BASELINE: i18n-report/parity-baseline.json
+
+      - uses: actions/upload-artifact@v4
+        if: '!cancelled()'
+        with:
+          name: i18n-report
+          path: |
+            i18n-report/
+            playwright-report/
+          retention-days: 30
+
+      # Findings route through the existing escalation path so severity
+      # counts land on the scorecard rather than in a second inbox.
+      - name: Escalate
+        if: failure()
+        run: python -m reporting.escalate --source i18n --report i18n-report/parity.json

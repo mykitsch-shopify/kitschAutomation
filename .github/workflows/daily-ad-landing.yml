@@ -1,0 +1,109 @@
+name: daily-ad-landing
+
+# Daily QA of the landing pages paid traffic lands on. A broken one spends ad
+# budget to show a customer something wrong, which is why the brief says "first
+# thing each day" and why this runs before the working day rather than when
+# somebody remembers.
+#
+# Checks: discount non-stacking, auto-ship pricing, discount redirect flows,
+# BYOB builder flows, out-of-stock redirect behaviour, compare-at accuracy.
+on:
+  schedule:
+    # 05:45 UTC — ahead of both US timezones and ahead of daily-top-products,
+    # so ad spend is protected before the broader seller check runs.
+    - cron: '45 5 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Storefront to check'
+        required: false
+        default: 'https://www.mykitsch.com'
+  pull_request:
+    paths:
+      - 'web/lib/ad-landing.ts'
+      - 'tools/ad-landing-audit.ts'
+      - 'tools/verify-ad-landing.ts'
+      - 'fixtures/ad-landing/**'
+      - 'config/ad-landing.yaml'
+
+concurrency:
+  group: daily-ad-landing-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  detection:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:unit
+      - name: Detection control — 10 planted defects, one per check in the brief
+        run: npm run test:ad-landing-detection
+
+  daily:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # The control runs first and the job stops if it fails. A daily green
+      # from a check that has quietly stopped working is worse than no check,
+      # because somebody acts on it.
+      - name: Detection control
+        run: npm run test:ad-landing-detection
+
+      - name: Daily ad-landing QA
+        id: audit
+        continue-on-error: true
+        env:
+          KITSCH_BASE_URL: ${{ github.event.inputs.base_url || 'https://www.mykitsch.com' }}
+        run: npm run audit:ad-landing
+
+      - name: Summary
+        if: always()
+        run: cat ad-landing-report/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ad-landing-${{ github.run_id }}
+          path: ad-landing-report/
+          retention-days: 30
+
+      - name: Record the run in the trend history
+        if: always()
+        run: |
+          git config user.name 'kitsch-automation'
+          git config user.email 'noreply@mykitsch.com'
+          mkdir -p docs/daily
+          cp ad-landing-report/report.md "docs/daily/ad-landing-$(date -u +%F).md"
+          git add docs/daily ad-landing-report/history.jsonl 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo 'nothing to record'
+          else
+            git commit -m "Daily ad-landing QA — $(date -u +%F)"
+            git push
+          fi
+
+      # Exit 1 is findings, exit 2 is "could not check". Both fail the run; the
+      # report says which, so nobody reads an incomplete run as a clean one.
+      - name: Fail if the QA found something or could not run
+        if: steps.audit.outcome == 'failure'
+        run: |
+          echo 'See the summary above and the uploaded report.'
+          exit 1

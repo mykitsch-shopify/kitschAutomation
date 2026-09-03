@@ -1,0 +1,24 @@
+{
+  // Use the workspace TypeScript, not the one bundled with the editor — the
+  // repo pins 6.0.3 and the type-aware lint rules depend on it.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  "eslint.useFlatConfig": true,
+  "eslint.validate": ["typescript", "javascript"],
+
+  "files.exclude": {
+    "**/test-results": true,
+    "**/playwright-report": true,
+    "**/blob-report": true,
+    "**/i18n-report": true,
+    "**/review-report": true
+  },
+
+  // The generated catalogues are build output; edit fixtures/catalog/content.ts
+  // and regenerate instead.
+  "files.readonlyInclude": {
+    "fixtures/catalog/catalog-clean.json": true,
+    "fixtures/catalog/catalog-seeded.json": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    // Run arrows beside every test(), a Test Explorer tree, and Pick Locator.
+    "ms-playwright.playwright",
+    // Surfaces the Playwright and Kitsch rules as you type, so a conditional
+    // assertion is caught before it is committed rather than in CI.
+    "dbaeumer.vscode-eslint"
+  ]
+}

@@ -1,0 +1,95 @@
+name: web-matrix
+
+# PRs run mobile only — 80% of traffic, and it keeps the signal fast enough
+# that people wait for it. The full browser matrix and real devices run
+# nightly, off-peak for US business hours.
+on:
+  pull_request:
+  schedule:
+    - cron: '0 9 * * 1-5' # 02:00 PT / 04:00 CT — outside client hours
+  workflow_dispatch:
+
+concurrency:
+  group: web-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  KITSCH_BASE_URL: ${{ vars.KITSCH_DEV_STORE_URL }}
+
+jobs:
+  pr-mobile:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: >-
+          npx playwright test
+          --project=mobile-safari --project=mobile-chrome
+          --grep @smoke
+          --shard=${{ matrix.shard }}/2
+      - uses: actions/upload-artifact@v4
+        if: '!cancelled()'
+        with:
+          name: blob-pr-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 7
+
+  nightly-full:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [mobile-safari, mobile-chrome, desktop-chrome, desktop-safari, desktop-firefox, desktop-edge]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npx playwright test --project=${{ matrix.project }}
+      - uses: actions/upload-artifact@v4
+        if: '!cancelled()'
+        with:
+          name: blob-${{ matrix.project }}
+          path: blob-report/
+          retention-days: 14
+
+  # Emulated WebKit is not iOS Safari. This job is the only thing that may be
+  # reported as real-device coverage.
+  real-devices:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright test --config=playwright.grid.config.ts --grep @smoke
+        env:
+          GRID_WS_ENDPOINT: ${{ secrets.DEVICE_GRID_WS_ENDPOINT }}
+
+  report:
+    needs: [pr-mobile, nightly-full]
+    if: '!cancelled()'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with: { pattern: blob-*, path: all-blobs, merge-multiple: true }
+      - run: npx playwright merge-reports --reporter=html,github ./all-blobs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/

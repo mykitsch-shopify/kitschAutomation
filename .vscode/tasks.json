@@ -1,0 +1,102 @@
+{
+  // Tasks for the runs people do most often, so they are two keystrokes rather
+  // than a remembered command line. Everything headless unless it says
+  // otherwise.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "verify (the whole gate)",
+      "type": "shell",
+      "command": "npm run verify",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": ["$tsc"],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "review (tsc + eslint + rules)",
+      "type": "shell",
+      "command": "npm run review",
+      "group": "build",
+      "problemMatcher": ["$tsc", "$eslint-stylish"]
+    },
+    {
+      "label": "unit tests",
+      "type": "shell",
+      "command": "npm run test:unit",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "preflight (live) — do our selectors match the theme?",
+      "type": "shell",
+      "command": "npm run preflight",
+      "options": { "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "daily: ad-landing (live, headless)",
+      "type": "shell",
+      "command": "npm run audit:ad-landing",
+      "options": { "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "daily: top-products (live, headless)",
+      "type": "shell",
+      "command": "npm run audit:top-products",
+      "options": { "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "daily: ad-landing (live, HEADED — watch it)",
+      "type": "shell",
+      "command": "npm run audit:ad-landing -- --headed --slow-mo 300",
+      "options": { "env": { "KITSCH_BASE_URL": "https://www.mykitsch.com" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "specs: desktop chrome (headless)",
+      "type": "shell",
+      "command": "npm run test:desktop",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "specs: desktop chrome (headed)",
+      "type": "shell",
+      "command": "npm run test:desktop:headed",
+      "problemMatcher": []
+    },
+    {
+      "label": "specs: Playwright UI mode",
+      "type": "shell",
+      "command": "npx playwright test --ui",
+      "problemMatcher": []
+    },
+    {
+      "label": "detection controls (all)",
+      "type": "shell",
+      "command": "npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection && npm run test:ad-landing-detection",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      // Background task the ad-landing debug config depends on. isBackground
+      // with an endsPattern, or VS Code waits forever for a server that never
+      // exits.
+      "label": "fixture: ad-landing",
+      "type": "shell",
+      "command": "npm run ad-landing:fixture",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": [{ "regexp": "^.*$", "file": 0, "location": 1, "message": 2 }],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "ad-landing fixture",
+          "endsPattern": "listening|on http"
+        }
+      },
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    }
+  ]
+}

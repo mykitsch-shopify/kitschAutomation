@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="specs: all desktop browsers" type="js.build_tools.npm" nameIsGenerated="false">
+    <package-json value="$PROJECT_DIR$/package.json" />
+    <command value="run" />
+    <scripts>
+      <script value="test:desktop:all" />
+    </scripts>
+    <node-interpreter value="project" />
+    <envs>
+      <env name="NO_PROXY" value="127.0.0.1,localhost" /></envs>
+    <method v="2" />
+  </configuration>
+</component>

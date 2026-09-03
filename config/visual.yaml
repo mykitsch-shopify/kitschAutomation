@@ -1,0 +1,149 @@
+# Visual regression contract.
+#
+# What this catches that nothing else here does: a page that is correct in
+# every assertable way and wrong to look at. Every other check in this repo
+# reads the DOM — a price is present, a selector matches, a string is
+# translated. None of them notice a collapsed grid, a hero image that stopped
+# loading, a footer that has climbed into the header, or copy that overflows
+# its button. Those reach the customer as "the site is broken" and reach us as
+# nothing at all.
+#
+# ── Why this is the hardest check here to keep honest ────────────────────
+#
+# A screenshot diff fails on anything that moved, and on a live storefront
+# almost everything moves: a rotating banner, a review count, a "3 left in
+# stock" badge, a lazily-loaded image, an A/B variant. A suite that cries wolf
+# every morning gets its baselines re-blessed without being looked at, and a
+# re-blessed baseline is worse than no baseline — it is a check that has been
+# taught to agree with whatever it sees.
+#
+# So three rules, and they are the whole design:
+#
+#   1. MASK what is legitimately dynamic. Named below, per area, with a reason.
+#      A mask is a deliberate blind spot and it is written down as one.
+#   2. FREEZE what can be frozen — animation, carousel autoplay, caret blink.
+#   3. Compare at a THRESHOLD, not pixel-exact. Font rendering differs between
+#      machines, and a check that only passes on the machine that made the
+#      baseline is not a check.
+#
+# Baselines live in visual/baselines/<project>/. They are committed, because a
+# baseline nobody can review in a diff is not a baseline. Regenerate with
+# `npm run visual:bless` and READ THE DIFF before committing it.
+
+# Target the fixture by default, like everything else here. A live baseline is
+# a legitimate thing to want, and it belongs to a specific store and a specific
+# viewport — see docs/VISUAL-REGRESSION.md before pointing this at mykitsch.com.
+
+# Pages to photograph. Kept small on purpose: every entry is a baseline
+# somebody has to review on every intended change, and a suite of forty
+# screenshots is one nobody reads.
+pages:
+  - id: home
+    path: /
+    why: 'The page most traffic lands on. A broken hero here is the whole store.'
+  - id: collection
+    # `/collections/hair-tools` 404s on mykitsch.com — it was a fixture path,
+    # and it was fixed in config/i18n.yaml and left wrong here, so the
+    # collection shots failed on a page that does not exist. One path, both
+    # targets: the fixture serves this alias too.
+    path: /collections/all
+    why: 'Grid layout — the thing most likely to collapse on a breakpoint change.'
+    # Shot to a fixed height instead of full-page, on live evidence.
+    #
+    # The first live comparison failed here: baseline 390x6044, actual
+    # 390x5626 three minutes later. One grid row's worth (418px) of content had
+    # gone, and everything below it shifted up — which Playwright counted as
+    # "622608 pixels (ratio 0.27) are different" even though only 163,020
+    # pixels of content actually changed. Two frames of different heights are
+    # not comparable at all, so no threshold and no mask fixes it.
+    #
+    # A paginated grid has no stable full-page height by construction: how tall
+    # it is depends on how many products are in it and how many batches loaded.
+    # The `why` above is the answer to what to do about that — this shot exists
+    # to catch a grid COLLAPSING, and that shows in the first rows. The
+    # remaining 4,000px is product photography that turns over with the
+    # merchandising calendar and was never what the baseline was for.
+    #
+    # 2400px is ~3 rows at mobile and ~2 at desktop: enough to see the grid
+    # form, bounded enough to hold still.
+    clip_height_px: 2400
+  - id: pdp
+    path: /products/winter-welcome-kit-combos
+    why: 'Price, buy button and gallery in one frame. The conversion path.'
+  - id: cart
+    path: /cart
+    why: 'Totals and the checkout control. Layout breakage here costs orders.'
+  # A localized page, and not as an afterthought.
+  #
+  # The first version of this file photographed English only, and the detection
+  # control caught it: the seeded German layout overflow — a real, visible
+  # defect — passed, because no configured shot was ever in German. That is the
+  # exact hole a screenshot suite is supposed to close. Translated copy is
+  # longer than English in every one of these markets; German is the worst of
+  # them, and long copy in a fixed-width button is a layout break no DOM
+  # assertion notices.
+  - id: home-de
+    path: /de/
+    why: 'German copy runs ~30% longer than English. The market most likely to overflow.'
+
+# Viewports. Mobile first because 80% of this store's traffic is, and because a
+# desktop-only baseline would have missed every mobile-only regression.
+viewports:
+  - id: mobile
+    width: 390
+    height: 844
+  - id: desktop
+    width: 1280
+    height: 900
+
+# ── Masks ────────────────────────────────────────────────────────────────
+# Every entry is a region the comparison ignores. Each one is a place a real
+# regression could hide, so each needs a reason that is about the page being
+# genuinely non-deterministic — never "this kept failing".
+masks:
+  - selector: '[data-testid="promo-banner"]'
+    why: 'Rotates on a timer and carries a countdown. Never the same twice.'
+  - selector: '[class*="oke-sr"], [class*="review"]'
+    why: 'Review counts and star averages change as reviews arrive.'
+  - selector: 'video, [class*="video"]'
+    why: 'A paused frame is whichever frame the decoder reached.'
+  - selector: '[class*="afterpay"], [class*="klarna"]'
+    why: 'Third-party instalment widgets render asynchronously and reflow.'
+  # ── Added after the first live bless failed to settle ──────────────────
+  # `home @ desktop` could not produce two consecutive identical screenshots:
+  # 725k, then 191k, then 188k, then 321k pixels different — 4-14% of the frame
+  # still moving after four attempts over 20 seconds. Everything below is a
+  # thing this theme animates on its own schedule, evidenced by the discovery
+  # runs against mykitsch.com.
+  - selector: '[class*="announcement"]'
+    why: 'The announcement bar rotates its messages on a timer — 10 items observed.'
+  - selector: '[class*="keen-slider"], [class*="slider"], [class*="carousel"], [class*="marquee"]'
+    why: 'Hero and product carousels advance on their own; a paused frame is whichever frame it reached.'
+  - selector: '[class*="rivo"]'
+    why: 'The Rivo loyalty widget mounts late and animates its own scroller.'
+
+# How different is too different, as a fraction of the frame. Not zero: font
+# hinting and sub-pixel antialiasing differ between machines and CI images, and
+# a zero threshold means the suite only ever passes where the baseline was made.
+max_diff_ratio: 0.02
+
+# Pixels whose colour differs by less than this are treated as equal. Absorbs
+# antialiasing without absorbing a real colour change.
+pixel_threshold: 0.2
+
+# How long to wait for a page to hold still before giving up.
+#
+# Before comparing anything, Playwright takes screenshots until two consecutive
+# ones are IDENTICAL. That is a separate gate from `max_diff_ratio`, and no
+# threshold relaxes it — a page that never settles can never be photographed,
+# however wide the comparison tolerance.
+#
+# The fixture settles immediately. A live marketing homepage carries a rotating
+# announcement bar, a hero carousel and a handful of third-party widgets that
+# mount on their own schedule, so it needs longer even with those masked.
+#
+# If a page still cannot settle at this budget, the answer is another mask or
+# removing the page from `pages` — NOT a bigger number and NOT a wider
+# `max_diff_ratio`. A page that will not hold still has no meaningful baseline,
+# and pretending otherwise produces a check that passes on noise.
+stability_timeout_ms: 45000

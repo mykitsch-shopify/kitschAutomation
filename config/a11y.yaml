@@ -1,0 +1,125 @@
+# Accessibility contract — across every market we sell in.
+#
+# Two layers, and the second is the reason this file exists.
+#
+# 1. Standard WCAG scanning (axe-core) on every route, in every locale.
+#
+# 2. Locale-specific accessibility, which axe cannot see. axe checks a page
+#    against WCAG; it has no idea which language the page is meant to be in. A
+#    German page that declares lang="en" passes every axe rule and is still
+#    broken for a screen-reader user, because the reader pronounces German text
+#    with English phonemes. Likewise alt text left in English on a French
+#    page: sighted users never notice, and it is the only thing a blind customer
+#    in that market gets.
+#
+#    That first failure is not hypothetical here. The locale suite found the
+#    live product pages returning 200 and declaring `lang="en"` in all four
+#    target locales — which is this exact defect, on the conversion path.
+#
+# Those two failures are invisible to a generic scan and are exactly what
+# "accessibility across countries and regions" means, so they are checked
+# explicitly below.
+
+# Locales to scan. Each names the `lang` attribute the page must declare and
+# the market it serves, so a report says which country is affected rather than
+# which URL prefix.
+#
+# ── Scope: ES, DE, IT, FR plus the EN source ─────────────────────────────
+#
+# The same four markets as config/i18n.yaml, and for the same reason. This file
+# used to also list JP and KR; the store does not serve them, so every route in
+# those locales 404s.
+#
+# The audit handled that correctly — a non-200 page becomes a `not_scanned`
+# harness finding, never a pass — so nothing was ever falsely reported clean.
+# What it produced instead was volume: eight harness findings a run, every run,
+# about markets we do not sell in. That is the noise that trains people to skim
+# past the "could not check" section, which is where the real ones live.
+#
+# **Korean and Japanese accessibility is unverified, not passing.** Add the
+# blocks back if either market goes live; nothing in the audit assumed a count.
+locales:
+  - code: en
+    lang: en
+    market: US
+    source: true
+  - code: fr
+    lang: fr
+    market: FR
+  - code: de
+    lang: de
+    market: DE
+  - code: it
+    lang: it
+    market: IT
+  - code: es
+    lang: es
+    market: ES
+
+# Routes scanned in every locale. Kept to the paths that carry the journey —
+# scanning the whole catalogue daily would take hours and find the same theme
+# defects on every product.
+routes:
+  - path: /
+    name: Home
+  - path: /collections/all
+    name: Collection
+  # `self-draining-soap-dish` 404s on the live store — the trailing `-1` is
+  # part of the handle. config/top-products.yaml recorded that weeks ago and
+  # this file was not updated, so the Product row 404'd in every locale.
+  #
+  # It reported honestly (`not_scanned`, a harness finding) rather than as a
+  # pass, which is the audit working. But the product page is the conversion
+  # path and it went unscanned for weeks while the report said so quietly, in
+  # the section nobody reads first.
+  #
+  # Same class of mistake as `/collections/hair-tools` in config/i18n.yaml.
+  # When a handle is corrected, grep the other configs for the old one.
+  - path: /products/self-draining-soap-dish-1
+    name: Product
+  - path: /cart
+    name: Cart
+
+# ── WCAG scanning ────────────────────────────────────────────────────────
+# WCAG 2.2 AA is the level the jurisdictions we sell into converge on: the EU
+# Accessibility Act (FR/DE/IT/ES) and Section 508 and ADA practice (US) align
+# closely enough that AA is the honest bar.
+wcag:
+  tags: [wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa]
+
+# axe reports an impact per violation. This maps it onto the four severities
+# the rest of the suite uses, so an a11y finding routes like any other.
+severities:
+  critical: critical
+  serious: major
+  moderate: minor
+  minor: minor
+  # Locale-specific rules, which axe does not produce.
+  html_lang_mismatch: major
+  untranslated_alt: major
+  untranslated_aria_label: minor
+  locale_only_violation: major
+
+thresholds:
+  # A run may not introduce any critical or major. Minors are tracked and
+  # budgeted rather than blocking, because a theme carries a long tail of them
+  # and a gate nobody can ever pass is a gate people switch off.
+  max_critical: 0
+  max_major: 0
+  max_minor: 25
+  # Alt text this short is a code or a unit, not prose, and comparing it across
+  # locales produces noise rather than findings.
+  min_alt_chars_to_compare: 12
+
+# Rules that are known-failing and accepted, each with a reason and an owner.
+# An exemption with no reason is indistinguishable from a rule someone turned
+# off because it was inconvenient.
+exemptions:
+  - rule: color-contrast
+    route: /
+    locales: [all]
+    reason: >-
+      Brand palette sign-off pending with design. Tracked separately; listed
+      here so the number is visible rather than silently excluded.
+    owner: design
+    review_by: 2026-10-01
