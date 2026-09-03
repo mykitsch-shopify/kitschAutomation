@@ -5,38 +5,55 @@
 ## What it runs
 
 ```
-npm run precommit
+npm run ci:offline
 ```
 
-Four offline gates: TypeScript, ESLint (including the four Kitsch rules), the
-reviewer + bugbot pass, and the unit tests. Around 25 seconds. It is the same
-command the pre-commit hook runs locally and the same command the `guardrails`
-job runs in GitHub Actions — pinned to each other by
-`tools/lib/ci-parity.test.ts`, because a CI gate that checks something
-different from the local one teaches people the local one is decorative.
+The whole offline tier, in cost order so a cheap failure surfaces first:
 
-## What it does not run, and why
+| stage | what it proves |
+|---|---|
+| `npm run precommit` | TypeScript, ESLint with the four Kitsch rules, reviewer + bugbot, unit tests |
+| `parity:clean` | the locale gate passes against a clean catalogue |
+| `test:i18n`, `test:kits` | the fixture storefront renders correctly in every locale |
+| seven `*-detection` runs | each suite still FAILS against a known-broken fixture |
 
-Everything that needs a browser or the live store:
+The detection controls are the reason any of this is evidence. A tier that runs
+the suites and skips the controls reports green from checks nobody has shown can
+go red.
 
-| tier | what it needs | where it runs |
-|---|---|---|
-| detection controls | Chromium | GitHub Actions, every push |
-| nightly audits | Chromium + `SHOPIFY_ADMIN_READONLY_TOKEN` | GitHub Actions, 03:00 UTC |
-| release gate | Chromium + live storefront | GitHub Actions, on tags |
+`ci:offline` composes `npm run precommit` rather than restating typecheck,
+eslint, reviewer and unit tests. One definition of the static gate, shared by
+the local hook, the GitHub `guardrails` job and Heroku.
 
-Heroku dynos have no root, so `npx playwright install --with-deps chromium`
-cannot install the system libraries Chromium links against. Getting browsers
-onto a Heroku CI dyno means an `Aptfile` and the community apt buildpack,
-maintained by hand against Playwright's dependency list. GitHub Actions
-installs the same browser in one line and is already running these tiers, so
-duplicating them here would buy nothing and add a second place for the browser
-version to drift.
+## How the browser gets there
 
-That split is the point rather than a limitation: Heroku CI answers "did this
-commit break the harness?" in under a minute on every push, and GitHub Actions
-answers "is the store still correct?" on a schedule, holding the credentials
-that question needs.
+`npx playwright install --with-deps chromium` cannot work on a dyno: the
+`--with-deps` half shells out to apt-get and there is no root. So it is split.
+
+- **`Aptfile` + `heroku-community/apt`** installs the shared libraries at build
+  time. The list is Playwright's own, read out of `playwright-core`'s bundle
+  rather than copied from a blog post, and `ci-parity.test.ts` fails if the two
+  drift. Heroku-24 is Ubuntu 24.04, so the `t64` package names are the correct
+  ones — the pre-t64 names do not resolve there at all.
+- **`test-setup`** then runs `npx playwright install chromium`, which only
+  downloads the browser.
+- **`PLAYWRIGHT_BROWSERS_PATH=0`** puts it under `node_modules` so the path is
+  stable between the setup and test steps.
+
+Fonts are in the Aptfile too, though Playwright does not list them: its own CI
+image already has them and a dyno does not. Without them Chromium falls back to
+whatever it can find, text metrics shift, and rendered-page assertions become a
+coin flip.
+
+## What still does not run here
+
+| tier | why not |
+|---|---|
+| visual regression | baselines live in `visual/baselines/fixture-linux/` and were blessed on a different Linux image. A Heroku dyno would diff against someone else's font rendering and report a layout regression that is nothing of the kind. Adding it means blessing a second baseline set from a Heroku run and maintaining both — a decision, not an oversight. |
+| nightly audits | need `SHOPIFY_ADMIN_READONLY_TOKEN` and the live storefront |
+| release gate | needs the live storefront |
+
+Those stay on GitHub Actions, which already holds the credentials.
 
 ## Settings that are not cosmetic
 

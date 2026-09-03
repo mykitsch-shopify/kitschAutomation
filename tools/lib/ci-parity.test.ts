@@ -47,14 +47,84 @@ const testEnv = app.environments?.test;
 const runsIn = (job: string): readonly string[] =>
   (workflow.jobs[job]?.steps ?? []).flatMap((step) => (step.run === undefined ? [] : [step.run]));
 
-void test('Heroku CI runs the same gate GitHub Actions runs on a push', () => {
+const scripts = (
+  JSON.parse(readFileSync('package.json', 'utf8')) as {
+    readonly scripts?: Record<string, string>;
+  }
+).scripts;
+
+void test('Heroku CI runs a script this repo actually defines', () => {
   const heroku = testEnv?.scripts?.test;
   assert.ok(heroku !== undefined, 'app.json declares no environments.test.scripts.test');
+  const named = /^npm run ([\w:-]+)$/u.exec(heroku.trim())?.[1];
   assert.ok(
-    runsIn('guardrails').some((command) => command.trim() === heroku.trim()),
-    `app.json runs "${heroku}", which is not a command the guardrails job runs. ` +
-      'Two CI systems checking different things means one of them is lying about ' +
-      'the state of the branch.',
+    named !== undefined && scripts?.[named] !== undefined,
+    `app.json runs "${heroku}", which is not an npm script in package.json. ` +
+      'Heroku would fail at the test step with "Missing script", after a full build.',
+  );
+});
+
+void test('the Heroku tier covers the static gate, not a second copy of it', () => {
+  // `ci:offline` composes `npm run precommit` rather than restating typecheck,
+  // eslint, reviewer and unit tests. One definition of the static gate, used by
+  // the local hook, the guardrails job and Heroku alike — restating it here
+  // would be a fourth copy, and the last six drifts in this repository all
+  // started as a second one.
+  assert.match(scripts?.['ci:offline'] ?? '', /\bnpm run precommit\b/u);
+  assert.ok(
+    runsIn('guardrails').some((command) => command.trim() === 'npm run precommit'),
+    'the guardrails job no longer runs npm run precommit, so the two CI systems ' +
+      'have stopped sharing a definition of the static gate',
+  );
+});
+
+void test('every detection control GitHub runs, Heroku runs too', () => {
+  // The controls are the reason any of this is evidence: each proves its suite
+  // still fails against a known-broken fixture. A CI tier that runs the suites
+  // and skips the controls reports green from checks nobody has shown can go
+  // red.
+  const offline = scripts?.['ci:offline'] ?? '';
+  const inWorkflow = [...runsIn('controls').join('\n').matchAll(/npm run ([\w:-]+-detection)/gu)].map(
+    (match) => match[1] ?? '',
+  );
+  assert.ok(inWorkflow.length >= 5, `expected the controls job to run several; saw ${String(inWorkflow.length)}`);
+  for (const control of inWorkflow) {
+    assert.ok(offline.includes(control), `ci:offline does not run ${control}, but the controls job does`);
+  }
+});
+
+void test('the Aptfile matches Playwright\'s own dependency list', () => {
+  // Hand-maintained lists of shared libraries go stale silently: Chromium
+  // gains a dependency, the dyno cannot launch it, and the failure surfaces as
+  // a browser that will not start rather than as a missing package. So the
+  // Aptfile is checked against the list inside the installed playwright-core
+  // bundle — the same array `--with-deps` would install.
+  //
+  // Ubuntu 24.04 (which Heroku-24 is) renamed several of these with a t64
+  // suffix during the 64-bit time_t transition; the pre-t64 names do not
+  // resolve there at all.
+  const bundle = readFileSync('node_modules/playwright-core/lib/coreBundle.js', 'utf8');
+  const at = bundle.indexOf('libasound2t64');
+  if (at === -1) return; // A future Playwright may reshape this; not a failure of ours.
+  const slice = bundle.slice(at, at + 900);
+  const wanted = `libasound2t64${slice.slice(13, slice.indexOf(']'))}`
+    .replace(/["\s]/gu, '')
+    .split(',')
+    .filter((name) => name !== '');
+
+  const declared = new Set(
+    readFileSync('Aptfile', 'utf8')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#')),
+  );
+
+  const missing = wanted.filter((name) => !declared.has(name));
+  assert.deepEqual(
+    missing,
+    [],
+    'Aptfile is missing packages Playwright declares for ubuntu24.04 chromium. ' +
+      'Chromium will install and then fail to launch on the dyno.',
   );
 });
 

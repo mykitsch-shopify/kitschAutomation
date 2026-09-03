@@ -22,6 +22,7 @@
     "audit:top-products": "tsx tools/top-products-audit.ts",
     "audit:translation-backlog": "tsx tools/translation-backlog-audit.ts",
     "brief": "tsx tools/render-brief.ts",
+    "ci:offline": "npm run precommit && npm run parity:clean && npm run test:i18n && npm run test:kits && npm run test:kits-detection && npm run test:detection && npm run test:compare-at-detection && npm run test:top-products-detection && npm run test:ad-landing-detection && npm run test:translation-backlog-detection && npm run test:a11y-detection && npm run test:health-check-detection",
     "compare-at:fixture": "tsx fixtures/compare-at/server.ts",
     "daily": "tsx tools/daily.ts",
     "gate:release": "tsx tools/release-gate.ts",
