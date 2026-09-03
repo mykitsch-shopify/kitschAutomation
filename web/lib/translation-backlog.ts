@@ -56,6 +56,21 @@ export type BacklogTask = {
   readonly handle: string | undefined;
   readonly locales: readonly string[];
   readonly dueOn: string | undefined;
+  /**
+   * Who the task belongs to, as Asana names them.
+   *
+   * Carried all the way to the closer rather than dropped here, because
+   * closing a task is a statement about somebody's work and the closer cannot
+   * make it safely without knowing whose. It was dropped here once: the export
+   * held the assignee, this type did not, `report.json` therefore could not,
+   * and `asana-close.ts` closed 116 tasks belonging to a colleague who had not
+   * asked for any of it. The information existed at every step but the one
+   * that needed it.
+   *
+   * Undefined means Asana reported no assignee, which is a real state and not
+   * a licence to close.
+   */
+  readonly assignee: string | undefined;
 };
 
 /** One translatable field, as seen in both languages. */
@@ -182,13 +197,27 @@ export const parseTask = (
   name: string,
   notes: string,
   dueOn?: string,
+  assignee?: string,
 ): BacklogTask => ({
   gid,
   name,
   handle: parseHandle(notes),
   locales: parseLocales(notes),
   ...(dueOn === undefined ? { dueOn: undefined } : { dueOn }),
+  ...(assignee === undefined ? { assignee: undefined } : { assignee }),
 });
+
+/**
+ * Whether this task belongs to the person running the closer.
+ *
+ * Name comparison, matching how `asana-pull.ts` filters, because a name is what
+ * the export carries and what an operator can type. Case- and space-insensitive
+ * so "Dinesh" and "dinesh" are the same person; an unassigned task belongs to
+ * nobody and is never a match.
+ */
+export const belongsTo = (task: BacklogTask, assignee: string): boolean =>
+  task.assignee !== undefined &&
+  task.assignee.trim().toLowerCase() === assignee.trim().toLowerCase();
 
 /**
  * Not every task on the board is a per-product translation job. Banner and page

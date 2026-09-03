@@ -51,7 +51,11 @@ const flag = (name: string): string | undefined => {
 const reportPath = flag('--report') ?? 'translation-backlog-report/report.json';
 
 type Entry = {
-  readonly task: { readonly gid: string; readonly name: string };
+  readonly task: {
+    readonly gid: string;
+    readonly name: string;
+    readonly assignee?: string | null;
+  };
   readonly verdict: string;
   readonly note: string;
   readonly byLocale?: Readonly<Record<string, string>>;
@@ -104,7 +108,65 @@ if (/127\.0\.0\.1|localhost|\[::1\]/u.test(target)) {
   process.exit(2);
 }
 
-const closeable = results.filter((entry) => entry.verdict === 'closeable');
+/**
+ * Whose tasks this run is allowed to touch.
+ *
+ * Required for `--confirm`, and the reason is a run that already happened: on
+ * 2026-09-03 this tool closed 116 tasks in 146 seconds, every one of them
+ * assigned to a colleague who had not asked for it and did not know it was
+ * running. Nothing in the chain was wrong about the translations — the audit's
+ * verdicts held up. What was wrong is that "this translation is finished" was
+ * treated as sufficient reason to close somebody else's task.
+ *
+ * The export knew the assignee. The audit dropped it. This tool never had it
+ * and never asked. So the guard lives here, where the write happens, and it is
+ * mandatory rather than an option somebody has to remember at 10pm.
+ */
+const assignee = flag('--assignee') ?? process.env.ASANA_ASSIGNEE;
+
+if (confirm && (assignee === undefined || assignee.trim() === '')) {
+  write('');
+  write('  Refusing to close anything without --assignee.');
+  write('');
+  write('  Closing a task is a statement about somebody else\'s work. This tool');
+  write('  once closed 116 tasks belonging to a colleague because it never asked');
+  write('  whose they were, so it now insists:');
+  write('');
+  write('    npm run asana:close -- --assignee "Your Name" --confirm');
+  write('');
+  write('  The name is matched against the assignee Asana reports, exactly as');
+  write('  `npm run asana:pull -- --assignee` does.');
+  write('');
+  process.exit(2);
+}
+
+const belongsToUs = (entry: Entry): boolean =>
+  assignee !== undefined &&
+  (entry.task.assignee ?? '').trim().toLowerCase() === assignee.trim().toLowerCase();
+
+const verdictCloseable = results.filter((entry) => entry.verdict === 'closeable');
+
+/**
+ * A report that predates the assignee field cannot be checked, and an
+ * unanswerable question is not a pass. Re-run the audit rather than trusting a
+ * file that has no opinion about whose work it describes.
+ */
+if (confirm && verdictCloseable.every((entry) => entry.task.assignee === undefined)) {
+  write('');
+  write(`  ${reportPath} carries no assignee for any task.`);
+  write('');
+  write('  That is the shape of report this tool produced before it learned to');
+  write('  ask, so the --assignee guard would pass over it without checking');
+  write('  anything. Re-run the audit to produce a report that can answer:');
+  write('');
+  write('    npm run asana:pull -- --assignee "Your Name" --project <gid>');
+  write('    npm run audit:translation-backlog -- --base-url https://www.mykitsch.com');
+  write('');
+  process.exit(2);
+}
+
+const notOurs = confirm ? verdictCloseable.filter((entry) => !belongsToUs(entry)) : [];
+const closeable = confirm ? verdictCloseable.filter(belongsToUs) : verdictCloseable;
 const held = results.filter((entry) => entry.verdict !== 'closeable');
 
 write('');
@@ -115,7 +177,21 @@ write('');
 write(`  report   ${reportPath}`);
 write(`  target   ${target === '' ? '(not recorded)' : target}`);
 write(`  closeable ${String(closeable.length)} of ${String(results.length)}`);
+if (assignee !== undefined) write(`  assignee  ${assignee}`);
 write('');
+
+if (notOurs.length > 0) {
+  write(`  NOT CLOSING ${String(notOurs.length)} task(s) — verified done, but not ${assignee ?? '?'}'s:`);
+  write('');
+  for (const entry of notOurs) {
+    write(`  skip     ${entry.task.name}`);
+    write(`           assigned to ${entry.task.assignee ?? '(nobody)'}`);
+  }
+  write('');
+  write('  The check passed on these; the decision to close them is not ours to');
+  write('  make. Tell their assignee what the audit found and let them close.');
+  write('');
+}
 
 for (const entry of held) {
   write(`  keep     ${entry.task.name}`);

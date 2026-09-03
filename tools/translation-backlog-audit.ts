@@ -108,13 +108,20 @@ type Export = {
     readonly name: string;
     readonly notes: string;
     readonly due_on?: string | null;
+    readonly assignee?: string | null;
   }[];
   readonly captured?: string;
 };
 
 const parsed: Export = JSON.parse(readFileSync(tasksPath, 'utf8')) as Export;
 const allTasks: readonly BacklogTask[] = parsed.tasks.map((entry) =>
-  parseTask(entry.gid, entry.name, entry.notes, entry.due_on ?? undefined),
+  parseTask(
+    entry.gid,
+    entry.name,
+    entry.notes,
+    entry.due_on ?? undefined,
+    entry.assignee ?? undefined,
+  ),
 );
 const products = allTasks.filter(isProductTask);
 const unresolved = allTasks.filter(needsHandle);
