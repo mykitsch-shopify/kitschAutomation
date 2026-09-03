@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Kitsch QA automation suite — locale parity (content + render), web specs, mobile smoke",
   "engines": {
-    "node": ">=22"
+    "node": "22.x || 24.x"
   },
   "scripts": {
     "a11y:daily": "tsx tools/a11y-audit.ts",

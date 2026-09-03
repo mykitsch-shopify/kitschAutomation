@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { parse } from 'yaml';
@@ -81,6 +81,49 @@ void test('the Heroku test environment keeps the dev dependencies it needs', () 
   // eslint and no test runner, and the failure reads as a broken repo.
   assert.equal(testEnv?.env?.NODE_ENV, 'test');
   assert.equal(testEnv?.env?.NPM_CONFIG_PRODUCTION, 'false');
+});
+
+void test('every CI runner uses a Node major this repo declares', () => {
+  // `engines.node` was ">=22", and Heroku's build log said what that costs:
+  //
+  //   ! The requested Node.js version is using a wide range (>=22) that can
+  //   ! resolve to a Node.js major version higher than you intended.
+  //   ! The resolved Node.js version has been limited to the Active LTS (24.20.0)
+  //
+  // So Heroku ran 24 while every GitHub workflow pins 22, and neither number
+  // was a decision anybody made. Both majors are known-good for the offline
+  // gate — Heroku run #4 was green on 24.20.0, and Actions has been green on
+  // 22 — so the range names both rather than pretending to one.
+  //
+  // What this test refuses is the silent version: a workflow moving to a major
+  // package.json does not permit, or the range narrowing under a workflow
+  // still pinned to the major it drops.
+  const engines = JSON.parse(readFileSync('package.json', 'utf8')) as {
+    readonly engines?: { readonly node?: string };
+  };
+  const declared = (engines.engines?.node ?? '')
+    .split('||')
+    .map((part) => part.trim().replace(/\.x$/u, ''));
+
+  assert.ok(declared.length > 0 && declared[0] !== '', 'package.json must declare engines.node');
+  assert.ok(
+    !(engines.engines?.node ?? '').includes('>='),
+    'engines.node must name majors, not an open range — Heroku silently clamps ">=" to Active LTS',
+  );
+
+  const workflows = readdirSync('.github/workflows').filter((name) => name.endsWith('.yml'));
+  assert.ok(workflows.length > 0, 'no workflows found to check');
+
+  for (const name of workflows) {
+    const body = readFileSync(`.github/workflows/${name}`, 'utf8');
+    for (const [, version] of body.matchAll(/node-version:\s*'?(\d+)/gu)) {
+      assert.ok(
+        declared.includes(version ?? ''),
+        `${name} pins node-version ${version ?? '?'}, which engines.node ` +
+          `("${engines.engines?.node ?? ''}") does not permit`,
+      );
+    }
+  }
 });
 
 void test('app.json declares no dyno formation', () => {

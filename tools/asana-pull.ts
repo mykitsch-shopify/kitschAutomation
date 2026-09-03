@@ -92,6 +92,24 @@ type Page = {
   readonly next_page?: { readonly offset: string } | null;
 };
 
+/**
+ * Describes a token without printing it.
+ *
+ * A 401 is nearly always the token, and the fastest way to see why is to look
+ * at its shape — but a diagnostic that echoes a live credential into a
+ * terminal, a CI log or a pasted transcript has created a second problem while
+ * explaining the first. So this reports the shape and nothing else.
+ */
+const describeToken = (value: string): string => {
+  if (value === '') return 'empty';
+  const wellFormed = /^2\/\d+\/\d+:[0-9a-f]{32}$/u.test(value);
+  const notes: string[] = [`${String(value.length)} characters`];
+  if (value !== value.trim()) notes.push('has leading or trailing whitespace');
+  if (!value.startsWith('2/')) notes.push(`starts "${value.slice(0, 3).replace(/./gu, '?')}", not "2/"`);
+  if (/["']/u.test(value)) notes.push('contains a quote character');
+  return `${wellFormed ? 'the expected shape' : 'NOT the expected shape'} (${notes.join(', ')})`;
+};
+
 const api = async (path: string): Promise<Page> => {
   const response = await fetch(`https://app.asana.com/api/1.0${path}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
@@ -101,7 +119,14 @@ const api = async (path: string): Promise<Page> => {
     throw new Error(
       `Asana ${String(response.status)} on ${path}\n${body.slice(0, 400)}\n\n` +
         (response.status === 401
-          ? '  A 401 is the token, not the query. Check ASANA_TOKEN is current.'
+          ? '  A 401 is the token, not the query. Three things it usually is:\n\n' +
+            `    shape     an Asana PAT looks like 2/<user gid>/<token gid>:<32 hex>.\n` +
+            `              This one is ${describeToken(token)}.\n` +
+            '    stray     characters copied in with it. On Windows,\n' +
+            '              set "ASANA_TOKEN=...2/1234/5678:abcd" stores the leading\n' +
+            '              dots too, and the request goes out with them.\n' +
+            '    expired   PATs can be revoked from Asana > My Settings > Apps.\n\n' +
+            '  Echo it back before assuming it is fine: echo %ASANA_TOKEN%'
           : response.status === 403
             ? '  A 403 means the token is valid but has no access to that project.'
             : ''),
