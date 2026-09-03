@@ -71,6 +71,33 @@ and any single shard is a fair sample rather than whatever sorts first.
 `asana:close` acts on the last report, so each shard is a safe batch: audit,
 read, close, next.
 
+### A wall of `unverified` is throttling, not products
+
+The full 506-task run returned 116 closeable and ~380 `unverified — could not
+read copy`. The 20-task smoke run an hour earlier returned 1 unverified in 20.
+
+**Products do not become unreadable in the order they were checked.** The store
+does. There was no pacing between page loads — ~2,500 navigations back to back
+— and a refused or slow page lands in the same `not_observed` verdict as a
+genuinely unreadable one, so throttling wears the clothes of hundreds of
+individually mysterious products.
+
+The audit now paces at `--delay 250` by default, prints the HTTP status
+distribution, and detects the cliff explicitly: if unverified climbs sharply
+between the first quarter of the run and the last, it says so once instead of
+reporting it 380 times.
+
+**What throttling cannot do is manufacture a false `closeable`.** A read that
+fails yields `unverified`; `closeable` requires copy that was actually read and
+actually differed from English. Tasks closed on a throttled run were closed on
+real evidence.
+
+Re-read the unread ones in smaller, slower batches:
+
+```bash
+npm run audit:translation-backlog -- --shard 1/8 --delay 750
+```
+
 ### First real measurement — 2 September
 
 Twenty tasks: **17 closeable, 2 still open, 1 unverified.** The first time this
