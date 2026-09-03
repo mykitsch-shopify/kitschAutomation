@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 
 import { ESLint } from 'eslint';
@@ -61,31 +61,55 @@ const GENERATED = [
  */
 const SOURCE = ['tools', 'web', 'i18n', 'visual', 'core', 'config'] as const;
 
-const gitIgnores = (path: string): boolean => {
-  try {
-    execFileSync('git', ['check-ignore', '-q', '--no-index', path], {
-      stdio: ['ignore', 'ignore', 'ignore'],
-    });
-    return true;
-  } catch {
-    // Exit 1 means "not ignored", which is an answer rather than a failure.
-    return false;
-  }
+/**
+ * What git says about a path: ignored, not ignored, or no answer.
+ *
+ * `git check-ignore -q` exits 0 for ignored and 1 for not — but 128 when there
+ * is no repository to ask, which is the case in any build that unpacks a
+ * tarball rather than cloning (Heroku CI among them). Collapsing that into
+ * `false` is how the first version of this file reported ".gitignore does not
+ * cover allure-results/" on a tree whose .gitignore was perfect. A harness that
+ * could not look is not a finding, and this file of all files should not
+ * confuse the two.
+ */
+const gitVerdict = (path: string): 'ignored' | 'not-ignored' | 'no-answer' => {
+  const result = spawnSync('git', ['check-ignore', '-q', '--no-index', path], {
+    stdio: ['ignore', 'ignore', 'ignore'],
+  });
+  if (result.error !== undefined) return 'no-answer';
+  if (result.status === 0) return 'ignored';
+  if (result.status === 1) return 'not-ignored';
+  return 'no-answer';
 };
 
-void test('git ignores every report directory this repo can generate', () => {
+const gitCanAnswer = (): boolean => gitVerdict('.gitignore') !== 'no-answer';
+
+const SKIP_NO_GIT = {
+  skip: 'no git checkout here, so git has no opinion to check — not a passing .gitignore',
+} as const;
+
+void test('git ignores every report directory this repo can generate', (t) => {
+  if (!gitCanAnswer()) {
+    t.skip(SKIP_NO_GIT.skip);
+    return;
+  }
   for (const dir of GENERATED) {
-    assert.ok(
-      gitIgnores(`${dir}/index.html`),
+    assert.equal(
+      gitVerdict(`${dir}/index.html`),
+      'ignored',
       `.gitignore does not cover ${dir}/ — a run would offer thousands of generated ` +
         `files to the next "git add ."`,
     );
   }
 });
 
-void test('git does not ignore the source tree', () => {
+void test('git does not ignore the source tree', (t) => {
+  if (!gitCanAnswer()) {
+    t.skip(SKIP_NO_GIT.skip);
+    return;
+  }
   for (const dir of SOURCE) {
-    assert.equal(gitIgnores(`${dir}/x.ts`), false, `.gitignore must not swallow ${dir}/`);
+    assert.equal(gitVerdict(`${dir}/x.ts`), 'not-ignored', `.gitignore must not swallow ${dir}/`);
   }
 });
 
