@@ -226,3 +226,34 @@ void test('a workflow taking its target from a repo variable checks it arrived',
     );
   }
 });
+
+void test('the VS Code Test Explorer looks where the unit tests actually are', () => {
+  // .vscode/settings.json tells the node:test adapter which directories to
+  // scan, and package.json's test:unit script globs its own list. Two lists of
+  // the same directories, kept in step by hand — the shape of every drift this
+  // file already pins.
+  //
+  // The failure it prevents is quiet: a Test Explorer that has stopped looking
+  // at a directory renders identically to a directory containing no tests. You
+  // do not get an error, you get a shorter tree, and the missing tests are the
+  // ones nobody notices are missing.
+  const settings = JSON.parse(
+    readFileSync('.vscode/settings.json', 'utf8').replace(/^\s*\/\/.*$/gmu, ''),
+  ) as { readonly 'nodejs-testing.include'?: readonly string[] };
+
+  const explorer = new Set(settings['nodejs-testing.include'] ?? []);
+  assert.ok(explorer.size > 0, '.vscode/settings.json declares no nodejs-testing.include');
+
+  const globbed = [...(scripts?.['test:unit'] ?? '').matchAll(/"([\w/-]+)\/\*\.test\.ts"/gu)].map(
+    (match) => match[1] ?? '',
+  );
+  assert.ok(globbed.length > 0, 'could not read the directories out of the test:unit script');
+
+  for (const dir of globbed) {
+    assert.ok(
+      explorer.has(dir),
+      `test:unit runs ${dir}/*.test.ts but the VS Code Test Explorer does not scan ${dir}. ` +
+        'Those tests would run in CI and be invisible in the editor.',
+    );
+  }
+});

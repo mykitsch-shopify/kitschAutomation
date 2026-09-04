@@ -4,6 +4,11 @@
     "ms-playwright.playwright",
     // Surfaces the Playwright and Kitsch rules as you type, so a conditional
     // assertion is caught before it is committed rather than in CI.
-    "dbaeumer.vscode-eslint"
+    "dbaeumer.vscode-eslint",
+    // A Test Explorer tree for the 365 unit tests. The Playwright extension
+    // above only discovers files matching playwright.config.ts's testMatch —
+    // web/specs, i18n/specs, visual/specs — so without this the unit tests are
+    // invisible in the editor and the only signal is an exit code.
+    "connor4312.nodejs-testing"
   ]
 }
