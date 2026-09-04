@@ -101,6 +101,21 @@ jobs:
       # Render layer: formatting, hreflang, meta tags, encoding, overflow.
       # Reads the English baseline the content layer just pulled, so the
       # "no untranslated strings" scan cannot drift from the live catalogue.
+      # An unset repository variable resolves to an EMPTY STRING here, not to
+      # nothing — and an empty KITSCH_BASE_URL is not the fixture URL, so the
+      # config used to conclude it was pointed at a real store and then fail on
+      # every navigation. Checked before the browser starts.
+      - name: A target was actually supplied
+        run: |
+          if [ -z "${KITSCH_BASE_URL}" ]; then
+            echo "::error::KITSCH_BASE_URL is empty — the repository variable" \
+                 "KITSCH_DEV_STORE_URL is not set. Set it under Settings >" \
+                 "Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+        env:
+          KITSCH_BASE_URL: ${{ vars.KITSCH_DEV_STORE_URL }}
+
       - name: Render-layer parity
         run: npx playwright test --project=i18n-mobile
         env:

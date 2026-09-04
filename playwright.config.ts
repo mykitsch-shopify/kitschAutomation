@@ -23,7 +23,51 @@ const fixtureURL = `http://127.0.0.1:${fixturePort}`;
 // Absent an explicit target, the local storefront fixture is the safe default:
 // it is deterministic, it is offline, and it cannot take a real store's
 // analytics or rate limits with it.
-const baseURL = process.env.KITSCH_BASE_URL ?? fixtureURL;
+//
+// ── Set-but-empty is a misconfiguration, not a default ───────────────────
+//
+// `??` falls back on undefined and null. It does NOT fall back on '', and an
+// environment variable is very easily empty: GitHub Actions substitutes an
+// empty string for a repository variable that does not exist, so
+//
+//   env:
+//     KITSCH_BASE_URL: ${{ vars.KITSCH_DEV_STORE_URL }}   # variable unset
+//
+// arrives here as ''. That produced a run of 1,032 failures, every one of them
+// `page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL`,
+// which reads as a broken suite rather than a missing variable.
+//
+// The navigation errors were the mild half. `usingFixture` is computed by
+// comparing against the fixture URL, so '' is not the fixture — and the whole
+// config then believed it was pointed at a REAL STORE. It announced "real
+// store. Results are evidence about this storefront", took the production
+// timeouts, and skipped starting the fixture server. An empty variable
+// silently inverted the one guard this file exists to provide.
+//
+// So absent and empty are treated as different things, because they are:
+// nobody sets a variable to empty on purpose. Absent means "no target given,
+// use the fixture" — the documented local default. Empty means somebody
+// intended to pass a target and passed nothing, and the honest response is to
+// stop rather than to quietly run 1,032 tests against a fixture and report
+// them as a matrix result.
+const requestedURL = process.env.KITSCH_BASE_URL;
+if (requestedURL !== undefined && requestedURL.trim() === '') {
+  process.stderr.write(
+    '\n  KITSCH_BASE_URL is set but empty.\n\n' +
+      '  Something meant to give this run a target and gave it nothing. In GitHub\n' +
+      '  Actions that is usually `${{ vars.NAME }}` for a repository variable that\n' +
+      '  does not exist — the expression resolves to an empty string rather than\n' +
+      '  failing.\n\n' +
+      '  Refusing to fall back to the fixture: a matrix job that meant to exercise a\n' +
+      '  store and quietly exercised a mock would report a green run that proves\n' +
+      '  nothing about either.\n\n' +
+      '  Either set the variable, or unset KITSCH_BASE_URL entirely to run against\n' +
+      '  the local fixture on purpose.\n\n',
+  );
+  process.exit(2);
+}
+
+const baseURL = requestedURL ?? fixtureURL;
 const usingFixture = baseURL === fixtureURL;
 
 /**

@@ -14,10 +14,33 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # `${{ vars.NAME }}` for a repository variable that does not exist resolves to
+  # an EMPTY STRING, not to nothing. On 2026-09-04 that produced 1,032 failures,
+  # every one "Cannot navigate to invalid URL", and — because an empty string is
+  # not the fixture URL — playwright.config.ts believed it was pointed at a real
+  # store. The config now refuses an empty value outright; the `target` job below
+  # says so once, before six matrix jobs spend twenty minutes discovering it.
   KITSCH_BASE_URL: ${{ vars.KITSCH_DEV_STORE_URL }}
 
 jobs:
+  target:
+    # Fails in seconds, with the fix, rather than in six parallel jobs.
+    runs-on: ubuntu-latest
+    steps:
+      - name: A target was actually supplied
+        run: |
+          if [ -z "${KITSCH_BASE_URL}" ]; then
+            echo "::error::KITSCH_BASE_URL is empty. The repository variable" \
+                 "KITSCH_DEV_STORE_URL is not set, so \${{ vars.KITSCH_DEV_STORE_URL }}" \
+                 "resolved to an empty string. Set it under Settings > Secrets and" \
+                 "variables > Actions > Variables, or change this workflow to run" \
+                 "against the fixture on purpose by not setting KITSCH_BASE_URL at all."
+            exit 1
+          fi
+          echo "target: ${KITSCH_BASE_URL}"
+
   pr-mobile:
+    needs: target
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     strategy:
@@ -43,6 +66,7 @@ jobs:
           retention-days: 7
 
   nightly-full:
+    needs: target
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:

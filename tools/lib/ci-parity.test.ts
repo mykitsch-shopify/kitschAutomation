@@ -203,3 +203,26 @@ void test('app.json declares no dyno formation', () => {
   // somebody reasonably expected this repo to be deployable.
   assert.equal(app.formation, undefined);
 });
+
+void test('a workflow taking its target from a repo variable checks it arrived', () => {
+  // `${{ vars.NAME }}` for a variable that does not exist resolves to an empty
+  // string, and an empty KITSCH_BASE_URL is worse than a missing one: it is not
+  // the fixture URL, so playwright.config.ts used to conclude it was pointed at
+  // a real store, announce "results are evidence about this storefront", and
+  // then fail 1,032 times on "Cannot navigate to invalid URL".
+  //
+  // The config refuses an empty value now. This pins the other half: a workflow
+  // that sources the target from a repository variable must also verify one
+  // arrived, so the failure costs seconds rather than six parallel jobs.
+  const dir = '.github/workflows';
+  for (const name of readdirSync(dir).filter((f) => f.endsWith('.yml'))) {
+    const body = readFileSync(`${dir}/${name}`, 'utf8');
+    if (!/KITSCH_BASE_URL:\s*\$\{\{\s*vars\./u.test(body)) continue;
+    assert.match(
+      body,
+      /-z "\$\{KITSCH_BASE_URL\}"/u,
+      `${name} takes KITSCH_BASE_URL from a repository variable but never checks that one ` +
+        'arrived. An unset variable becomes an empty string and the run proves nothing.',
+    );
+  }
+});
