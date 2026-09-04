@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-04T13:15:29.959Z",
+  "captured": "2026-09-04T11:48:13.196Z",
   "source": "project:1209073782503680",
   "tasks": [
     {
@@ -70,6 +70,13 @@
       "name": "Translate Product: Recycled Chiffon Polka Dot Bow Barrette",
       "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: recycled-chiffon-polka-dot-bow-barrette\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7260038037685\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/recycled-chiffon-polka-dot-bow-barrette",
       "due_on": "2026-07-17",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215165674885726",
+      "name": "Translate Product: Strengthening Bond Repair Solid Hair Mask",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bond-repair-solid-treatment\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7462818152629\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/bond-repair-solid-treatment",
+      "due_on": "2026-07-13",
       "assignee": "Dinesh"
     },
     {

@@ -4,6 +4,21 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
 
+  // Where the unit tests live. Must stay in step with the test:unit script in
+  // package.json; tools/lib/ci-parity.test.ts holds the two together, because a
+  // Test Explorer that silently stops listing a directory looks exactly like a
+  // directory with no tests in it.
+  "nodejs-testing.include": [
+    "i18n/lib",
+    "web/lib",
+    "visual/lib",
+    "tools/lib",
+    "tools/review"
+  ],
+  "nodejs-testing.extensions": [
+    { "extensions": ["ts"], "parameters": ["--import", "tsx"] }
+  ],
+
   "eslint.useFlatConfig": true,
   "eslint.validate": ["typescript", "javascript"],
 

@@ -24,7 +24,11 @@
       "type": "shell",
       "command": "npm run test:unit",
       "group": "test",
-      "problemMatcher": []
+      "problemMatcher": [],
+      // Show the run. Without this the panel can close on success and the only
+      // evidence left is "exited with code 0", which is a pass you have to take
+      // on trust rather than a result you have read.
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
     },
     {
       "label": "preflight (live) — do our selectors match the theme?",
