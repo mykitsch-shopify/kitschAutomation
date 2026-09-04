@@ -62,7 +62,9 @@ export type FindingKind =
   /** No expected rate configured, so the auto-ship rate was not verified. */
   | 'autoship_rate_unverified'
   /** Our own failure: a selector matched nothing. */
-  | 'not_observed';
+  | 'not_observed'
+  /** A check that failed on everything it touched. One cause, not N defects. */
+  | 'uniform_failure';
 
 export const SEVERITY_OF: Readonly<Record<FindingKind, Severity>> = {
   // Two codes where one was intended is revenue leaving on every order.
@@ -87,6 +89,9 @@ export const SEVERITY_OF: Readonly<Record<FindingKind, Severity>> = {
   non_stacking_unverifiable: 'minor',
   autoship_rate_unverified: 'minor',
   not_observed: 'harness',
+  // A statement about the run, not an extra defect: the per-target findings
+  // keep their own severity. This says what their shape means.
+  uniform_failure: 'harness',
 };
 
 export type CheckName =
@@ -352,7 +357,14 @@ export const judgePage = (
   const price = toCents(observation.priceText ?? '');
   const compareAt = toCents(observation.compareAtText ?? '');
   if (observation.priceText === undefined) {
-    add('not_observed', 'compare_at', 'no price element matched; nothing about this page verified');
+    add(
+      'not_observed',
+      'compare_at',
+      observation.soldOut === true
+        ? 'no price element matched — expected on a sold-out page, which this one is. ' +
+          'Stock was read; the compare-at maths was not.'
+        : 'no price element matched, so the compare-at maths was not checked on this page',
+    );
   } else if (compareAt !== undefined && price !== undefined && compareAt <= price) {
     // A strikethrough that is not a reduction is a false discount claim.
     add(

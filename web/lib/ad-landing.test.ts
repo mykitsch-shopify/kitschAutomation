@@ -17,6 +17,7 @@ import {
   type PageSpec,
   type StackObservation,
 } from './ad-landing.js';
+import { loadTopProductsConfig } from './top-products.js';
 
 const kinds = (findings: readonly { readonly kind: string }[]): readonly string[] =>
   findings.map((f) => f.kind).sort();
@@ -365,4 +366,37 @@ void test('tally: harness stays out of what is routed to the business', () => {
   assert.equal(counts.critical, 1);
   assert.equal(counts.harness, 1);
   assert.equal(clientFindings(findings).length, 1);
+});
+
+// ── the drift that produced the 2026-09-04 run ───────────────────────────
+
+void test('config: ad-landing and top-products agree on how to read a price', () => {
+  // Both files point at the same PDP on the same theme. They disagreed:
+  // top-products.yaml had been corrected against the live store
+  // (`.main-product span.text-red-700`), ad-landing.yaml still carried the
+  // generic Shopify names it shipped with (`.price-item--sale`). The result was
+  // "no price element matched; nothing about this page verified" on 18 of 29
+  // pages, every morning, while the top-10 check read prices from the same
+  // store without trouble.
+  //
+  // Sixth instance of two configs that must agree being kept in step by hand.
+  // Pinned on the theme-specific part rather than string equality, because the
+  // two files legitimately differ in what else they list.
+  const ad = loadAdLandingConfig().selectors.price ?? '';
+  const products = loadTopProductsConfig().selectors.price ?? '';
+
+  const themeParts = products
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.includes('.main-product'));
+
+  assert.ok(themeParts.length > 0, 'top-products.yaml has lost its theme-specific price selectors');
+  for (const part of themeParts) {
+    assert.ok(
+      ad.includes(part),
+      `config/ad-landing.yaml price selector is missing "${part}", which config/top-products.yaml ` +
+        'uses to read a price off this theme. One of these files has learned something the ' +
+        'other has not.',
+    );
+  }
 });

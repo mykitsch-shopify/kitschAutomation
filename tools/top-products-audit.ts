@@ -5,6 +5,7 @@ import { type Page } from '@playwright/test';
 import { allureDir, buildMatrix, writeAllureCases, writeEnvironment } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import { toCents } from '../web/lib/compare-at.js';
+import { detectUniformFailures } from '../web/lib/uniform-failure.js';
 import {
   ALL_CHECKS,
   auditConfig,
@@ -304,6 +305,35 @@ if (withCart && reachedAny && config.checks.includes('discount_stacking')) {
   findings.push(...judgeCart(config, cart));
 }
 await browser.close();
+
+/**
+ * One cause, not N defects.
+ *
+ * The 2026-09-04 run reported ten criticals — "clicking add-to-cart did not put
+ * a line in the cart" — one per product, on all ten products, and ten harness
+ * findings for variants on the same ten. Twenty entries, two questions.
+ *
+ * The per-product findings are left alone. Ten products with a broken
+ * add-to-cart button is possible and is critical, and a rule that quietly
+ * demoted it the moment it affected everything would hide the worst outage this
+ * suite can see.
+ */
+const productCount = resolved.length;
+for (const uniform of detectUniformFailures(
+  findings
+    .filter((f) => f.check !== 'config')
+    .map((f) => ({ check: f.check, kind: f.kind, target: f.product })),
+  () => productCount,
+)) {
+  findings.push({
+    severity: 'harness',
+    kind: 'uniform_failure',
+    check: uniform.check as Finding['check'],
+    product: '(run)',
+    detail: uniform.detail,
+  });
+}
+
 
 // Run-level vacuity guard. If nothing loaded, every product "had no defects" —
 // which is also what a total outage looks like. Per-product failures collapse
