@@ -11,6 +11,7 @@ import {
 } from './lib/allure.js';
 import { launchFromArgs } from './lib/browser.js';
 import { toCents } from '../web/lib/compare-at.js';
+import { detectUniformFailures } from '../web/lib/uniform-failure.js';
 import {
   auditConfig,
   clientFindings,
@@ -357,6 +358,43 @@ if (config.siteWideCodes.length > 0) {
 }
 
 await browser.close();
+
+/**
+ * One cause, not N defects.
+ *
+ * The 2026-09-04 run reported nine criticals, "the builder offers 0 options",
+ * on all nine BYOB pages. Nine identical failures are one question — did the
+ * builders break, or did `byob_option` stop matching the theme — and a reader
+ * given nine copies of it spends nine times the attention without getting
+ * closer to the answer.
+ *
+ * The individual findings are left exactly as they are. A rule that demoted
+ * them the moment they affected everything would hide a real site-wide outage
+ * at the moment it mattered most.
+ */
+const targetsPerCheck: Readonly<Record<string, number>> = {
+  compare_at: config.pages.length,
+  autoship_pricing: config.pages.length,
+  byob_flow: config.byob.length,
+  discount_redirect: config.discountRedirects.length,
+  oos_redirect: config.oosRedirects.length,
+};
+
+for (const uniform of detectUniformFailures(
+  findings
+    .filter((f) => f.severity !== 'harness' || f.kind === 'not_observed')
+    .map((f) => ({ check: f.check, kind: f.kind, target: f.target })),
+  (check) => targetsPerCheck[check] ?? 0,
+)) {
+  findings.push({
+    severity: 'harness',
+    kind: 'uniform_failure',
+    check: uniform.check as Finding['check'],
+    target: '(run)',
+    detail: uniform.detail,
+  });
+}
+
 
 // Run-level vacuity guard: if nothing loaded, every page "had no defects",
 // which is also what a total outage looks like. Collapse the per-page failures

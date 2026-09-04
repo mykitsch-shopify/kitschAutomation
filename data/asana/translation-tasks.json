@@ -1,0 +1,90 @@
+{
+  "captured": "2026-09-04T11:48:13.196Z",
+  "source": "project:1209073782503680",
+  "tasks": [
+    {
+      "gid": "1215166406536491",
+      "name": "Translate Product: Ember Retreat Duo: Warm Sugar + Oak & Amber",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: ember-retreat-duo-warm-sugar-oak-amber\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10248206287029\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/ember-retreat-duo-warm-sugar-oak-amber",
+      "due_on": "2026-08-31",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215166228712315",
+      "name": "Translate Product: Lisa Frank Collector's Bundle",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: lisa-frank-collectors-bundle\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10280507736245\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/lisa-frank-collectors-bundle",
+      "due_on": "2026-08-27",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215165817417474",
+      "name": "Translate Product: Welcome Kit",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: welcome-kit\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10385679089845\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/welcome-kit",
+      "due_on": "2026-08-04",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1217503088642233",
+      "name": "Translate Product: Heel Socks – Medium (Checkered)",
+      "notes": "",
+      "due_on": "2026-08-28",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1210821637460740",
+      "name": "Translate \"Our Founder\" page",
+      "notes": "Translate this section into different languages: \nhttps://www.mykitsch.com/pages/our-founder\n    ES\n    DE\n    IT\n    FR\n",
+      "due_on": "2026-08-19",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215166228179331",
+      "name": "Translate Product: Bridgerton x Kitsch Satin Pillow Scrunchies® in Toile in Bloom",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bridgerton-x-kitsch-pillow-scrunchies-r-in-satin-2pc-set-toile-in-bloom\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10295571316917\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\nProduct page:\nhttps://www.mykitsch.com/products/bridgerton-x-kitsch-pillow-scrunchies-r-in-satin-2pc-set-toile-in-bloom",
+      "due_on": "2026-08-27",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215166228207720",
+      "name": "Translate Product: Coastal Hair Perfume Trio Set - Tula Rose, Beachy Gelato, Coastal Sorbet",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: kitsch-hair-perfume-trio-set-tula-rose-beachy-gelato-coastal-sorbet\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10297643106485\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/kitsch-hair-perfume-trio-set-tula-rose-beachy-gelato-coastal-sorbet\n\n",
+      "due_on": "2026-08-27",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215166088392819",
+      "name": "Translate Product: Holiday Duo: Rustic Vanilla + Oak & Amber",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: holiday-duo-rustic-vanilla-oak-amber-duo\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10300920430773\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n\nProduct page:\nhttps://www.mykitsch.com/products/holiday-duo-rustic-vanilla-oak-amber-duo",
+      "due_on": "2026-08-20",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215165817547881",
+      "name": "Translate Product: Shampoo & Conditioner Combo with Free Welcome Kit",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: shampoo-conditioner-combo-with-free-welcome-kit\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/10376200650933\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/shampoo-conditioner-combo-with-free-welcome-kit",
+      "due_on": "2026-08-04",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215165854710612",
+      "name": "Translate Product: Recycled Chiffon Polka Dot Bow Barrette",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: recycled-chiffon-polka-dot-bow-barrette\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7260038037685\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/recycled-chiffon-polka-dot-bow-barrette",
+      "due_on": "2026-07-17",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215165674885726",
+      "name": "Translate Product: Strengthening Bond Repair Solid Hair Mask",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bond-repair-solid-treatment\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7462818152629\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/bond-repair-solid-treatment",
+      "due_on": "2026-07-13",
+      "assignee": "Dinesh"
+    },
+    {
+      "gid": "1215165736913333",
+      "name": "Translate Product: Shampoo + Conditioner 4pc Sampler Set",
+      "notes": "Bucket: Missing all 6 locales\n\n----------------------------------------\n\nProduct handle: bottle-free-beauty-4pc-sampler-set\n\n----------------------------------------\n\nShopify Admin: https://admin.shopify.com/store/mykitsch/products/7467146707125\n\n----------------------------------------\n\nSource audit: Translation audit Excel (see /translation_audit/ outputs)\n\n----------------------------------------\n\nLocales needing translation:\n    es\n    fr\n    de\n    it\n    ja\n    ko\nAuto-created from translation audit on 2026-05-27.\n\nProduct page:\nhttps://www.mykitsch.com/products/bottle-free-beauty-4pc-sampler-set",
+      "due_on": "2026-07-10",
+      "assignee": "Dinesh"
+    }
+  ]
+}

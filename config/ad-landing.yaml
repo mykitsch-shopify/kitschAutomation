@@ -143,8 +143,15 @@ thresholds:
 
 selectors:
   title: '[data-testid="pdp-title"], h1.product__title, .product-single__title'
-  price: '[data-testid="pdp-price"], .price-item--sale, .product__price--sale'
-  compare_at: '[data-testid="pdp-compare-at"], .price-item--regular, .product__price--compare'
+  # Theme-aware, and kept in step with config/top-products.yaml rather than
+  # written again here. This file had `.price-item--sale, .product__price--sale`
+  # — generic Shopify class names this theme does not use — while
+  # top-products.yaml had already been corrected against the live store. The
+  # 2026-09-04 run reported "no price element matched; nothing about this page
+  # verified" on 18 of 29 pages because of it. Sixth instance of this exact
+  # drift, so a unit test now pins the two files together.
+  price: '[data-testid="pdp-price"], .main-product span.text-red-700, .main-product span.price-item, .main-product .product__price--sale'
+  compare_at: '[data-testid="pdp-compare-at"], .main-product s.comp-price__value, .main-product .price-item--regular, .main-product .product__price--compare'
   sold_out: '[data-testid="sold-out"], .product-form__submit[disabled], .price--sold-out'
   add_to_cart: '[data-testid="add-to-cart"], button[name="add"], .product-form__submit'
   # BYOB builders vary; first match wins.

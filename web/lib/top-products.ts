@@ -48,6 +48,8 @@ export const ALL_CHECKS: readonly CheckName[] = [
 
 export type FindingKind =
   /** The list names a product we have no URL for, so it was not checked. */
+  /** A check that failed on everything it touched. One cause, not N defects. */
+  | 'uniform_failure'
   | 'handle_unresolved'
   /** The page at this handle is a different product than the list names. */
   | 'title_mismatch'
@@ -92,6 +94,9 @@ export const SEVERITY_OF: Readonly<Record<FindingKind, Severity>> = {
   description_missing: 'major',
   // A gap in our own list, actionable by us, not a store defect.
   handle_unresolved: 'major',
+  // A statement about the run, not an extra defect: the per-product findings
+  // keep their own severity. This says what their shape means.
+  uniform_failure: 'harness',
   canonical_title_unrecorded: 'minor',
   specifications_missing: 'minor',
   video_missing: 'minor',
